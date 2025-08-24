@@ -1,30 +1,35 @@
 {
   "manifest_version": 3,
-  "name": "法源探測器 (Precedent)",
-  "version": "1.0",
-  "description": "台灣法律案號自動連結與摘要工具",
+  "name": "法源探測器 (CiteRight)",
+  "version": "1.1",
+  "description": "透過官方 API，自動查詢台灣法律案號",
   "permissions": [
-    "scripting",
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "host_permissions": [
-    "http://*/*",
-    "https://*/*"
+    "http://localhost:3000/*",
+    "http://localhost:3002/*"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["style.css"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ]
     }
   ],
-  "icons": {
-    "128": "icon.png"
-  },
   "action": {
-    "default_title": "法源探測器 (Precedent)"
+    "default_title": "CiteRight"
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
   }
 }

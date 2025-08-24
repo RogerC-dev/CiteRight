@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣法律案號測試頁面 - Real Web Data Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .test-section {
+            background: #ecf0f1;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .case-link {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-decoration: none;
+            border: 1px dashed #1976d2;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .case-link:hover {
+            background-color: #bbdefb;
+            border-style: solid;
+        }
+        .api-test {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2980b9; }
+        #results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>台灣法律案號測試頁面 📚</h1>
+        <p><strong>目的：</strong>測試法源探測器在真實網頁環境中識別和處理台灣法律案號的能力，使用真實資料而非僅模擬資料。</p>
+
+        <div class="status info">
+            <strong>伺服器狀態：</strong> <span id="serverStatus">檢查中...</span>
+            <button onclick="checkServerHealth()">檢查伺服器</button>
+            <button onclick="testRealDataEndpoint()">測試真實資料端點</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📋 測試案例 1：一般民事判決</h2>
+        <div class="test-section">
+            <p>最高法院於<strong>110年度台上字第1234號</strong>判決中認為，當事人對於契約條款之解釋應以誠信原則為準。
+            另參見<strong>109年度台上字第5678號</strong>判決及<strong>111年度台上字第9012號</strong>判決。</p>
+
+            <p>台灣高等法院<strong>110年度上字第3456號</strong>判決亦持相同見解，並與台北地方法院
+            <strong>109年度訴字第7890號</strong>判決意旨一致。</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>⚖️ 測試案例 2：憲法法庭判決</h2>
+        <div class="test-section">
+            <p>憲法法庭<strong>111年憲判字第13號</strong>判決宣告相關法條違憲，此判決影響深遠。
+            另可參考<strong>110年憲判字第8號</strong>判決之見解。</p>
+
+            <p>此外，<strong>112年憲判字第5號</strong>判決進一步闡釋相關憲法原則。</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📜 測試案例 3：大法官解釋</h2>
+        <div class="test-section">
+            <p>大法官<strong>釋字第748號</strong>解釋確立同性婚姻之憲法地位。相關解釋尚包括
+            <strong>釋字第554號</strong>、<strong>釋字第626號</strong>等。</p>
+
+            <p><strong>釋字第809號</strong>解釋則針對刑事訴訟程序提出重要見解。</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🔧 測試案例 4：混合格式</h2>
+        <div class="test-section">
+            <p>綜合參考<strong>民國110年度台上字第2468號</strong>判決、<strong>111年憲判字第7號</strong>判決，
+            以及<strong>釋字第755號</strong>解釋，可知相關法理發展脈絡。</p>
+
+            <p>最高行政法院<strong>110年度判字第135號</strong>判決與智慧財產法院
+            <strong>109年度民專上字第24號</strong>判決亦值得參考。</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🌐 真實資料 API 測試</h2>
+        <div class="api-test">
+            <h3>手動測試特定案號</h3>
+            <p>年度：<input type="text" id="testYear" value="110" placeholder="110"></p>
+            <p>字別：<input type="text" id="testCaseType" value="台上" placeholder="台上"></p>
+            <p>案號：<input type="text" id="testNumber" value="1234" placeholder="1234"></p>
+            <button onclick="testSpecificCase()">測試此案號</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        // Check server health
+        async function checkServerHealth() {
+            const statusEl = document.getElementById('serverStatus');
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                statusEl.innerHTML = `✅ 正常運行 (快取: ${data.cacheSize} 筆, 運行時間: ${Math.floor(data.uptime)}秒)`;
+                statusEl.className = 'success';
+            } catch (error) {
+                statusEl.innerHTML = `❌ 無法連接伺服器 - ${error.message}`;
+                statusEl.className = 'error';
+            }
+        }
+
+        // Test real data endpoint
+        async function testRealDataEndpoint() {
+            const resultsEl = document.getElementById('results');
+            resultsEl.innerHTML = '<p>🔄 測試真實資料端點...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE}/test-real-data`);
+                const data = await response.json();
+
+                let html = '<h3>📊 真實資料測試結果</h3>';
+                html += `<p><strong>總計：</strong>${data.summary.total} 個案例</p>`;
+                html += `<p><strong>有真實資料：</strong>${data.summary.withRealData} 個</p>`;
+                html += `<p><strong>有增強資料：</strong>${data.summary.withEnhancement} 個</p>`;
+
+                html += '<h4>詳細結果：</h4>';
+                data.testResults.forEach(result => {
+                    html += `<div class="status ${result.error ? 'error' : 'info'}">`;
+                    html += `<strong>${result.case}</strong><br>`;
+                    if (result.error) {
+                        html += `❌ 錯誤: ${result.error}`;
+                    } else {
+                        html += `📊 信心度: ${result.confidence}<br>`;
+                        html += `🔍 真實資料: ${result.hasRealData ? '✅' : '❌'}<br>`;
+                        html += `🚀 增強資料: ${result.hasEnhancement ? '✅' : '❌'}<br>`;
+                        if (result.sources.length > 0) {
+                            html += `📚 資料來源: ${result.sources.join(', ')}`;
+                        }
+                    }
+                    html += '</div>';
+                });
+
+                resultsEl.innerHTML = html;
+            } catch (error) {
+                resultsEl.innerHTML = `<div class="status error">❌ 測試失敗: ${error.message}</div>`;
+            }
+        }
+
+        // Test specific case
+        async function testSpecificCase() {
+            const year = document.getElementById('testYear').value;
+            const caseType = document.getElementById('testCaseType').value;
+            const number = document.getElementById('testNumber').value;
+            const resultsEl = document.getElementById('results');
+
+            if (!year || !caseType || !number) {
+                resultsEl.innerHTML = '<div class="status error">❌ 請填入所有欄位</div>';
+                return;
+            }
+
+            resultsEl.innerHTML = '<p>🔄 查詢中...</p>';
+
+            try {
+                const url = `${API_BASE}/case?year=${encodeURIComponent(year)}&caseType=${encodeURIComponent(caseType)}&number=${encodeURIComponent(number)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                let html = '<h3>📋 案號查詢結果</h3>';
+                html += `<div class="status ${data.error ? 'error' : 'success'}">`;
+
+                if (data.error) {
+                    html += `❌ ${data.error}`;
+                } else {
+                    html += `<strong>案號：</strong>${year}年度${caseType}字第${number}號<br>`;
+                    html += `<strong>資料來源：</strong>${data.source || '未知'}<br>`;
+                    html += `<strong>信心度：</strong>${data.confidence || '未知'}<br>`;
+                    html += `<strong>判決要旨：</strong>${data.summary || '無可用摘要'}<br>`;
+                    html += `<strong>相關法條：</strong>${data.relevantLaws || '無相關法條'}<br>`;
+                    if (data.backgroundInfo) {
+                        html += `<strong>背景資訊：</strong>${data.backgroundInfo}<br>`;
+                    }
+                    if (data.sourceUrl) {
+                        html += `<strong>查詢連結：</strong><a href="${data.sourceUrl}" target="_blank">點此查看官方資料</a><br>`;
+                    }
+                    if (data.realDataSources && data.realDataSources.length > 0) {
+                        html += `<strong>真實資料來源：</strong>${data.realDataSources.join(', ')}<br>`;
+                    }
+                }
+
+                html += '</div>';
+                html += '<h4>完整 JSON 回應：</h4>';
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+                resultsEl.innerHTML = html;
+            } catch (error) {
+                resultsEl.innerHTML = `<div class="status error">❌ 查詢失敗: ${error.message}</div>`;
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            checkServerHealth();
+            console.log('🚀 法源探測器測試頁面已載入');
+            console.log('📋 頁面包含多種台灣法律案號格式供測試');
+            console.log('🌐 可測試真實資料 API 整合功能');
+        });
+    </script>
+</body>
+</html>
+

@@ -1,151 +1,212 @@
-// Taiwan citation regex pattern
-const taiwanCitationRegex = /(\d{2,3})\s*年度\s*([^\s]+)\s*字第\s*(\d+)\s*號/g;
+// content.js - 法源探測器 (CiteRight)
+// 專業版，整合官方司法院 API 後端
 
-// Create popover HTML (only once)
-function createPopoverHTML() {
-  if (document.getElementById('precedent-popover')) return;
-  
-  const popoverHTML = `
-    <div id="precedent-popover" style="display: none;">
-      <div class="popover-header">
-        <span class="popover-title">判決摘要</span>
-        <button class="close-button">&times;</button>
-      </div>
-      <div class="loader">載入中...</div>
-      <div class="popover-content" style="display: none;"></div>
-    </div>
-  `;
-  
-  document.body.insertAdjacentHTML('beforeend', popoverHTML);
-  
-  // Add close button functionality
-  document.querySelector('#precedent-popover .close-button').addEventListener('click', () => {
-    document.getElementById('precedent-popover').style.display = 'none';
-  });
+const TAIWAN_CASE_PATTERNS = {
+    basic: /(\d{2,3})\s*年度?\s*([\u4e00-\u9fa5]+?)\s*字\s*第\s*(\d+)\s*號/g,
+    constitutional: /(\d{2,3})\s*年\s*憲判字\s*第\s*(\d+)\s*號/g,
+    interpretation: /釋字第(\d+)號/g
+};
+
+function highlightCitations() {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    const textNodes = [];
+    while (walker.nextNode()) {
+        textNodes.push(walker.currentNode);
+    }
+
+    textNodes.forEach(node => {
+        let nodeContent = node.nodeValue;
+        const parent = node.parentNode;
+        if (!parent || parent.nodeName === 'SCRIPT' || parent.nodeName === 'STYLE') {
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0;
+
+        // Combine all regex matches and sort them by index
+        const allMatches = [];
+        for (const key in TAIWAN_CASE_PATTERNS) {
+            for (const match of nodeContent.matchAll(TAIWAN_CASE_PATTERNS[key])) {
+                match.type = key;
+                allMatches.push(match);
+            }
+        }
+        allMatches.sort((a, b) => a.index - b.index);
+
+        allMatches.forEach(match => {
+            if (match.index > lastIndex) {
+                fragment.appendChild(document.createTextNode(nodeContent.substring(lastIndex, match.index)));
+            }
+
+            const span = document.createElement('span');
+            span.className = 'citeright-link';
+            span.textContent = match[0];
+
+            if (match.type === 'basic') {
+                span.dataset.year = match[1];
+                span.dataset.caseType = match[2];
+                span.dataset.number = match[3];
+            } else if (match.type === 'constitutional') {
+                span.dataset.year = match[1];
+                span.dataset.caseType = '憲判';
+                span.dataset.number = match[2];
+            } else if (match.type === 'interpretation') {
+                span.dataset.year = '';
+                span.dataset.caseType = '釋字';
+                span.dataset.number = match[1];
+            }
+
+            fragment.appendChild(span);
+            lastIndex = match.index + match[0].length;
+        });
+
+        if (lastIndex < nodeContent.length) {
+            fragment.appendChild(document.createTextNode(nodeContent.substring(lastIndex)));
+        }
+
+        if (fragment.childNodes.length > 1) { // Only replace if matches were found
+            parent.replaceChild(fragment, node);
+        }
+    });
 }
 
-// Find and replace citations with links
-function findAndReplaceCitations() {
-  const baseURL = 'https://law.judicial.gov.tw/FJUD/data.aspx';
-  
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    null,
-    false
-  );
-  
-  const textNodes = [];
-  let node;
-  
-  // Collect all text nodes first
-  while (node = walker.nextNode()) {
-    if (node.nodeValue.trim() && taiwanCitationRegex.test(node.nodeValue)) {
-      textNodes.push(node);
-    }
-  }
-  
-  // Process each text node
-  textNodes.forEach(textNode => {
-    const text = textNode.nodeValue;
-    const matches = [...text.matchAll(taiwanCitationRegex)];
-    
-    if (matches.length === 0) return;
-    
-    let lastIndex = 0;
-    const fragment = document.createDocumentFragment();
-    
-    matches.forEach(match => {
-      const [fullMatch, year, caseType, number] = match;
-      const startIndex = match.index;
-      
-      // Add text before match
-      if (startIndex > lastIndex) {
-        fragment.appendChild(document.createTextNode(text.substring(lastIndex, startIndex)));
-      }
-      
-      // Create link
-      const link = document.createElement('a');
-      link.href = `${baseURL}?q=jrec;js=0;jyear=${year};jcase=${encodeURIComponent(caseType)};jno=${number}`;
-      link.textContent = fullMatch;
-      link.className = 'precedent-link';
-      link.target = '_blank';
-      link.setAttribute('data-year', year);
-      link.setAttribute('data-case-type', caseType);
-      link.setAttribute('data-number', number);
-      
-      fragment.appendChild(link);
-      
-      lastIndex = startIndex + fullMatch.length;
-    });
-    
-    // Add remaining text
-    if (lastIndex < text.length) {
-      fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
-    }
-    
-    // Replace the text node
-    textNode.parentNode.replaceChild(fragment, textNode);
-  });
-}
+function createPopoverElement() {
+    if (document.getElementById('citeright-popover')) return document.getElementById('citeright-popover');
 
-// Event delegation for link clicks
-document.body.addEventListener('click', (event) => {
-  if (event.target.classList.contains('precedent-link')) {
-    event.preventDefault();
-    
-    const year = event.target.getAttribute('data-year');
-    const caseType = event.target.getAttribute('data-case-type');
-    const number = event.target.getAttribute('data-number');
-    
-    // Show popover at click position
-    const popover = document.getElementById('precedent-popover');
-    popover.style.display = 'block';
-    popover.style.left = event.pageX + 10 + 'px';
-    popover.style.top = event.pageY + 10 + 'px';
-    
-    // Show loading spinner
-    popover.querySelector('.loader').style.display = 'block';
-    popover.querySelector('.popover-content').style.display = 'none';
-    
-    // Send message to background script
-    chrome.runtime.sendMessage({
-      type: 'fetchCaseSummary',
-      payload: { year, caseType, number }
-    });
-  }
-});
-
-// Listen for messages from background script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'caseSummaryResponse') {
-    const popover = document.getElementById('precedent-popover');
-    const loader = popover.querySelector('.loader');
-    const content = popover.querySelector('.popover-content');
-    
-    loader.style.display = 'none';
-    content.style.display = 'block';
-    
-    if (message.error) {
-      content.innerHTML = `<p class="error">載入失敗: ${message.error}</p>`;
-    } else {
-      const { summary, court, date } = message.data;
-      content.innerHTML = `
-        <div class="case-info">
-          <p><strong>審理法院:</strong> ${court || '未知'}</p>
-          <p><strong>判決日期:</strong> ${date || '未知'}</p>
-          <div class="summary">
-            <strong>摘要:</strong>
-            <p>${summary || '無摘要資料'}</p>
-          </div>
+    const popover = document.createElement('div');
+    popover.id = 'citeright-popover';
+    popover.innerHTML = `
+        <div class="citeright-header">
+            <span class="citeright-title">判決摘要</span>
+            <button class="citeright-close">&times;</button>
         </div>
-      `;
+        <div class="citeright-loader">載入中...</div>
+        <div class="citeright-content"></div>
+    `;
+    document.body.appendChild(popover);
+
+    popover.querySelector('.citeright-close').addEventListener('click', () => {
+        popover.style.display = 'none';
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            popover.style.display = 'none';
+        }
+    });
+
+    return popover;
+}
+
+const popover = createPopoverElement();
+let hideTimeout;
+
+document.body.addEventListener('mouseover', async (e) => {
+    if (e.target.classList.contains('citeright-link')) {
+        clearTimeout(hideTimeout);
+        const target = e.target;
+
+        // Position popover intelligently
+        const rect = target.getBoundingClientRect();
+        const popoverWidth = 400;
+        const popoverHeight = 300;
+
+        let left = rect.left + window.scrollX + 15;
+        let top = rect.bottom + window.scrollY + 5;
+
+        // Adjust if popover would go off-screen
+        if (left + popoverWidth > window.innerWidth) {
+            left = rect.right + window.scrollX - popoverWidth - 15;
+        }
+        if (top + popoverHeight > window.innerHeight + window.scrollY) {
+            top = rect.top + window.scrollY - popoverHeight - 5;
+        }
+
+        popover.style.display = 'block';
+        popover.style.left = `${left}px`;
+        popover.style.top = `${top}px`;
+        popover.querySelector('.citeright-loader').style.display = 'block';
+        popover.querySelector('.citeright-content').style.display = 'none';
+
+        const { year, caseType, number } = target.dataset;
+
+        if (!caseType || !number) {
+            popover.querySelector('.citeright-loader').style.display = 'none';
+            popover.querySelector('.citeright-content').style.display = 'block';
+            popover.querySelector('.citeright-content').innerHTML = `<div class="citeright-error">此案號格式暫不支援查詢</div>`;
+            return;
+        }
+
+        try {
+            const url = `http://localhost:3002/api/case?year=${encodeURIComponent(year || '')}&caseType=${encodeURIComponent(caseType)}&number=${encodeURIComponent(number)}`;
+            const response = await fetch(url);
+            const result = await response.json();
+
+            popover.querySelector('.citeright-loader').style.display = 'none';
+            const contentDiv = popover.querySelector('.citeright-content');
+            contentDiv.style.display = 'block';
+
+            if (result.error) {
+                contentDiv.innerHTML = `<div class="citeright-error">${result.error}</div>`;
+                if (result.suggestion) {
+                    contentDiv.innerHTML += `<div class="citeright-suggestion">${result.suggestion}</div>`;
+                }
+            } else if (result.success && result.data) {
+                const data = result.data;
+                const fullContent = data.JFULLCONTENT || '無內容';
+                const truncatedContent = fullContent.length > 400 ?
+                    fullContent.substring(0, 400) + '...' : fullContent;
+
+                contentDiv.innerHTML = `
+                    <div class="info"><strong>案由：</strong> ${data.JTITLE || 'N/A'}</div>
+                    <div class="info"><strong>案號：</strong> ${data.JYEAR || year}年度${data.JCASE || caseType}字第${data.JNO || number}號</div>
+                    <div class="info"><strong>法院：</strong> ${data.JCOURT || 'N/A'}</div>
+                    <div class="info"><strong>審理級別：</strong> ${data.JLEVEL || 'N/A'}</div>
+                    <hr>
+                    <div class="summary">${truncatedContent}</div>
+                    <div class="source-info">📊 資料來源：官方司法院API</div>
+                `;
+            } else {
+                contentDiv.innerHTML = `<div class="citeright-error">無法取得案件資料</div>`;
+            }
+        } catch (error) {
+            popover.querySelector('.citeright-loader').style.display = 'none';
+            const contentDiv = popover.querySelector('.citeright-content');
+            contentDiv.style.display = 'block';
+
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                contentDiv.innerHTML = `
+                    <div class="citeright-error">無法連線至後端服務</div>
+                    <div class="citeright-suggestion">請確認伺服器是否正在運行：<br><code>npm start</code></div>
+                `;
+            } else {
+                contentDiv.innerHTML = `<div class="citeright-error">查詢失敗：${error.message}</div>`;
+            }
+        }
     }
-  }
 });
 
-// Self-invoking function to initialize
-(function() {
-  createPopoverHTML();
-  findAndReplaceCitations();
-})();
+document.body.addEventListener('mouseout', (e) => {
+    if (e.target.classList.contains('citeright-link')) {
+        hideTimeout = setTimeout(() => {
+            popover.style.display = 'none';
+        }, 300);
+    }
+});
+
+popover.addEventListener('mouseover', () => {
+    clearTimeout(hideTimeout);
+});
+
+popover.addEventListener('mouseout', () => {
+    hideTimeout = setTimeout(() => {
+        popover.style.display = 'none';
+    }, 300);
+});
+
+// Initialize the extension
+highlightCitations();
+
+// Add a small indicator that the extension is active
+console.log('🔍 法源探測器 (CiteRight) 已啟動 - 使用官方司法院API');

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 測試確認</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .test-result { padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🔧 API 連接測試</h1>
+
+    <button onclick="testAPI()">測試 API 連接</button>
+    <button onclick="testCase()">測試案號查詢</button>
+    <button onclick="testStats()">測試資料庫統計</button>
+
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:3002';
+
+        async function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test-result">🔄 測試中...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                resultsDiv.innerHTML = `
+                    <div class="test-result success">
+                        ✅ <strong>API 連接成功!</strong><br>
+                        狀態: ${data.status}<br>
+                        訊息: ${data.message}<br>
+                        時間: ${data.timestamp}
+                    </div>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="test-result error">
+                        ❌ <strong>API 連接失敗:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function testCase() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test-result">🔄 測試案號查詢...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/case?year=110&caseType=台上&number=1234`);
+                const data = await response.json();
+
+                if (data.success) {
+                    resultsDiv.innerHTML = `
+                        <div class="test-result success">
+                            ✅ <strong>案號查詢成功!</strong><br>
+                            案號: ${data.caseNumber}<br>
+                            案由: ${data.data.JTITLE}<br>
+                            法院: ${data.data.JCOURT}<br>
+                            資料來源: ${data.source}
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="test-result error">
+                            ❌ <strong>案號查詢失敗:</strong> ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="test-result error">
+                        ❌ <strong>查詢錯誤:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function testStats() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test-result">🔄 測試資料庫統計...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/stats`);
+                const data = await response.json();
+                resultsDiv.innerHTML = `
+                    <div class="test-result success">
+                        ✅ <strong>資料庫統計成功!</strong><br>
+                        總案件數: ${data.totalCases}<br>
+                        最後更新: ${new Date(data.lastUpdated).toLocaleString()}
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="test-result error">
+                        ❌ <strong>統計錯誤:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // 自動執行測試
+        document.addEventListener('DOMContentLoaded', testAPI);
+    </script>
+</body>
+</html>
+

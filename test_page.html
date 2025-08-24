@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣法律案號測試頁面</title>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; line-height: 1.6; margin: 40px; }
+        .case-section { margin: 20px 0; padding: 15px; border-left: 3px solid #1890ff; background: #f8f9fa; }
+        h2 { color: #1890ff; }
+        .highlight { background: yellow; padding: 2px; }
+    </style>
+</head>
+<body>
+    <h1>台灣法律案號測試頁面</h1>
+
+    <div class="case-section">
+        <h2>最高法院案件</h2>
+        <p>根據最高法院<span class="highlight">110年度台上字第1234號</span>判決，以及<span class="highlight">109年度台抗字第567號</span>裁定...</p>
+        <p>另參照<span class="highlight">111年度台非字第89號</span>非常上訴案件。</p>
+    </div>
+
+    <div class="case-section">
+        <h2>憲法相關案件</h2>
+        <p>司法院大法官<span class="highlight">釋字第748號</span>解釋確立同性婚姻權利。</p>
+        <p>憲法法庭<span class="highlight">111年憲判字第13號</span>判決涉及言論自由議題。</p>
+    </div>
+
+    <div class="case-section">
+        <h2>地方法院案件</h2>
+        <p>臺北地方法院<span class="highlight">110年度訴字第552號</span>民事判決...</p>
+        <p>高雄地方法院<span class="highlight">109年度重訴字第12號</span>刑事判決...</p>
+        <p>新北地方法院<span class="highlight">110年度聲字第2482號</span>聲請案...</p>
+    </div>
+
+    <div class="case-section">
+        <h2>智慧財產法院</h2>
+        <p>智慧財產法院<span class="highlight">109年度侵上重更一字第1號</span>著作權案件...</p>
+        <p>另有<span class="highlight">110年度民專上字第789號</span>專利爭議案...</p>
+    </div>
+
+    <div class="case-section">
+        <h2>混合格式測試</h2>
+        <p>參考民國110年度上字第1234號、111年憲判字第13號及釋字第748號等重要判決。</p>
+        <p>本案涉及110年度台上大字第3214號最高法院判決的法理適用。</p>
+    </div>
+
+    <div class="case-section">
+        <h2>動態內容測試</h2>
+        <button onclick="addMoreCases()">動態添加更多案號</button>
+        <div id="dynamic-content"></div>
+    </div>
+
+    <script>
+        function addMoreCases() {
+            const content = document.getElementById('dynamic-content');
+            content.innerHTML += '<p>動態添加：110年度易字第456號、109年度簡字第789號判決。</p>';
+        }
+    </script>
+</body>
+</html>
