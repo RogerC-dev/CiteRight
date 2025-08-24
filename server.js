@@ -8,6 +8,26 @@ const { mockCases, findSimilarCase } = require('./mockDatabase');
 const app = express();
 const PORT = 3000;
 
+// Proxy configuration from environment variables
+const PROXY_CONFIG = {
+  enabled: !!(process.env.PROXY_HOST && process.env.PROXY_PORT),
+  protocol: process.env.PROXY_PROTOCOL || 'https',
+  host: process.env.PROXY_HOST,
+  port: parseInt(process.env.PROXY_PORT) || 8080,
+  auth: process.env.PROXY_AUTH ? {
+    username: process.env.PROXY_AUTH.split(':')[0],
+    password: process.env.PROXY_AUTH.split(':')[1]
+  } : undefined
+};
+
+console.log('Proxy configuration:', {
+  enabled: PROXY_CONFIG.enabled,
+  protocol: PROXY_CONFIG.protocol,
+  host: PROXY_CONFIG.host ? PROXY_CONFIG.host : 'not configured',
+  port: PROXY_CONFIG.port,
+  hasAuth: !!PROXY_CONFIG.auth
+});
+
 // Enable CORS for all routes
 app.use(cors());
 
@@ -35,6 +55,15 @@ const axiosInstance = axios.create({
     rejectUnauthorized: false, // Allow self-signed certificates
     keepAlive: true,
     timeout: 45000
+  }),
+  // Add proxy configuration if enabled
+  ...(PROXY_CONFIG.enabled && {
+    proxy: {
+      protocol: PROXY_CONFIG.protocol,
+      host: PROXY_CONFIG.host,
+      port: PROXY_CONFIG.port,
+      ...(PROXY_CONFIG.auth && { auth: PROXY_CONFIG.auth })
+    }
   }),
   // Retry configuration
   validateStatus: function (status) {
@@ -68,13 +97,25 @@ async function retryRequestWithFallback(requestFunc, maxRetries = 3, baseDelay =
     throw new Error(`NETWORK_RESTRICTED: ${connectivityCheck.message}`);
   }
   
+  // Log proxy configuration for debugging
+  if (PROXY_CONFIG.enabled) {
+    console.log(`Using proxy: ${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`);
+  } else {
+    console.log('Direct connection (no proxy configured)');
+  }
+  
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`Attempt ${attempt}/${maxRetries}`);
+      console.log(`Attempt ${attempt}/${maxRetries}${PROXY_CONFIG.enabled ? ' via proxy' : ''}`);
       const result = await requestFunc();
       return result;
     } catch (error) {
       console.log(`Attempt ${attempt} failed:`, error.message);
+      
+      // Add proxy-specific error handling
+      if (PROXY_CONFIG.enabled && (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT')) {
+        console.log('Proxy connection issue detected. Check proxy server status.');
+      }
       
       if (attempt === maxRetries) {
         throw error;
@@ -374,7 +415,11 @@ app.get('/api/status', async (req, res) => {
       status: 'restricted',
       message: connectivityCheck.message,
       timestamp: new Date().toISOString(),
-      canAccessJudicial: false
+      canAccessJudicial: false,
+      proxy: {
+        enabled: PROXY_CONFIG.enabled,
+        configured: !!PROXY_CONFIG.host
+      }
     });
   }
   
@@ -385,14 +430,25 @@ app.get('/api/status', async (req, res) => {
     res.json({ 
       status: 'online',
       canAccessJudicial: true,
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString(),
+      proxy: {
+        enabled: PROXY_CONFIG.enabled,
+        host: PROXY_CONFIG.enabled ? PROXY_CONFIG.host : null,
+        port: PROXY_CONFIG.enabled ? PROXY_CONFIG.port : null,
+        protocol: PROXY_CONFIG.enabled ? PROXY_CONFIG.protocol : null
+      }
     });
   } catch (error) {
     res.json({ 
       status: 'offline', 
       error: error.message,
       canAccessJudicial: false,
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString(),
+      proxy: {
+        enabled: PROXY_CONFIG.enabled,
+        configured: !!PROXY_CONFIG.host,
+        error: PROXY_CONFIG.enabled ? 'Proxy connection may be failing' : null
+      }
     });
   }
 });
@@ -480,6 +536,15 @@ app.get('/api/network', async (req, res) => {
   res.json({
     connectivity: connectivityCheck,
     tests: results,
+    proxy: {
+      enabled: PROXY_CONFIG.enabled,
+      configuration: PROXY_CONFIG.enabled ? {
+        protocol: PROXY_CONFIG.protocol,
+        host: PROXY_CONFIG.host,
+        port: PROXY_CONFIG.port,
+        hasAuth: !!PROXY_CONFIG.auth
+      } : null
+    },
     environment: {
       platform: process.platform,
       nodeVersion: process.version,
