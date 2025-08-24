@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>法源探測器 (CiteRight) 測試頁面</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .case-example {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .server-status {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 法源探測器 (CiteRight) 測試頁面</h1>
+        <p>使用官方司法院 API 的智能法律案號識別工具</p>
+    </div>
+
+    <div class="server-status">
+        <h3>✅ 伺服器狀態</h3>
+        <p><strong>後端伺服器：</strong> http://localhost:3002</p>
+        <p><strong>API 憑證：</strong> 已設定 (用戶名: vejovje)</p>
+        <p><strong>資料庫：</strong> 已同步官方案例資料</p>
+    </div>
+
+    <div class="instructions">
+        <h3>📋 測試說明</h3>
+        <ol>
+            <li>確認您的 Chrome 擴充套件已載入（檢查 chrome://extensions/）</li>
+            <li>將滑鼠懸停在下方的藍色案號連結上</li>
+            <li>應該會顯示彈出視窗，內含從官方 API 取得的真實判決資料</li>
+            <li>按 ESC 鍵或點擊 ✕ 按鈕可關閉彈出視窗</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h3>🏛️ 最高法院案例</h3>
+        <div class="case-example">
+            <p>在 <strong>110年度台上字第3214號</strong> 判決中，最高法院認為...</p>
+            <p>另可參考 <strong>109年度台上大字第3214號</strong> 的相關見解。</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>⚖️ 憲法法庭判決</h3>
+        <div class="case-example">
+            <p>憲法法庭在 <strong>111年憲判字第13號</strong> 判決中宣告...</p>
+            <p>此判決延續了 <strong>110年憲判字第15號</strong> 的法理。</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>📜 大法官解釋</h3>
+        <div class="case-example">
+            <p>根據 <strong>釋字第748號</strong> 解釋，婚姻自由之平等保護...</p>
+            <p>另參 <strong>釋字第365號</strong> 及 <strong>釋字第712號</strong> 解釋。</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🏛️ 各級法院案例</h3>
+        <div class="case-example">
+            <p>台北地方法院 <strong>110年度訴字第552號</strong> 民事判決指出...</p>
+            <p>高等法院 <strong>109年度上字第1196號</strong> 刑事判決認為...</p>
+            <p>智慧財產權法院 <strong>110年度民專訴字第12號</strong> 判決...</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 混合案例測試</h3>
+        <div class="case-example">
+            <p>本案涉及多個重要判決，包括最高法院 <strong>109年度台上字第5071號</strong>、
+            憲法法庭 <strong>110年憲判字第1號</strong>，以及大法官 <strong>釋字第709號</strong> 解釋。
+            地方法院的 <strong>108年度重訴字第15號</strong> 判決也值得參考。</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔧 除錯資訊</h3>
+        <div class="case-example">
+            <p><strong>如果沒有看到彈出視窗：</strong></p>
+            <ul>
+                <li>按 F12 開啟開發者工具，檢查 Console 是否有錯誤訊息</li>
+                <li>確認擴充套件已啟用：應該會看到「🔍 法源探測器 (CiteRight) 已啟動」</li>
+                <li>檢查後端伺服器是否正在運行：<a href="http://localhost:3002/health" target="_blank">localhost:3002/health</a></li>
+                <li>查看資料庫統計：<a href="http://localhost:3002/api/stats" target="_blank">localhost:3002/api/stats</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 顯示擴充套件載入狀態
+        setTimeout(() => {
+            const links = document.querySelectorAll('.citeright-link');
+            const status = document.querySelector('.server-status');
+            if (links.length > 0) {
+                status.style.background = '#d4edda';
+                status.innerHTML += '<p><strong>✅ 擴充套件狀態：</strong> 已成功識別 ' + links.length + ' 個案號</p>';
+            } else {
+                status.style.background = '#f8d7da';
+                status.innerHTML += '<p><strong>❌ 擴充套件狀態：</strong> 未檢測到案號識別功能</p>';
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

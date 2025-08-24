@@ -2,124 +2,114 @@
 
 /* 案號連結樣式 */
 .citeright-link {
-    background-color: #e6f7ff;
-    border-bottom: 1px dotted #91d5ff;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    padding: 1px 2px;
-    border-radius: 2px;
+    background-color: #e6f7ff !important;
+    border-bottom: 1px dotted #91d5ff !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+    padding: 1px 2px !important;
+    border-radius: 2px !important;
 }
 
 .citeright-link:hover {
-    background-color: #bae7ff;
-    border-bottom: 1px solid #40a9ff;
+    background-color: #bae7ff !important;
+    border-bottom: 1px solid #40a9ff !important;
 }
 
 /* 彈出視窗主容器 */
 #citeright-popover {
-    position: absolute;
-    z-index: 99999;
-    background: #fff;
-    border: 1px solid #e8e8e8;
-    border-radius: 8px;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-    width: 400px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-    color: #333;
-    display: none;
+    position: absolute !important;
+    z-index: 99999 !important;
+    background: #fff !important;
+    border: 1px solid #e8e8e8 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+    width: 450px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    color: #333 !important;
+    display: none !important;
 }
 
 /* 彈出視窗標題區 */
 .citeright-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 16px;
-    border-bottom: 1px solid #f0f0f0;
-    background-color: #fafafa;
-    border-radius: 8px 8px 0 0;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    background-color: #fafafa !important;
+    border-radius: 8px 8px 0 0 !important;
 }
 
 .citeright-title {
-    font-weight: 600;
-    color: #1890ff;
+    font-weight: 600 !important;
+    color: #1890ff !important;
 }
 
 .citeright-close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: #888;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
+    background: none !important;
+    border: none !important;
+    font-size: 20px !important;
+    cursor: pointer !important;
+    color: #888 !important;
+    padding: 0 !important;
+    width: 24px !important;
+    height: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 4px !important;
 }
 
 .citeright-close:hover {
-    background-color: #f5f5f5;
-    color: #d9363e;
+    background-color: #f5f5f5 !important;
+    color: #333 !important;
 }
 
 /* 載入狀態 */
 .citeright-loader {
-    padding: 24px;
-    text-align: center;
-    color: #888;
-    display: block;
+    padding: 24px !important;
+    text-align: center !important;
+    color: #888 !important;
+    display: none !important;
 }
 
 /* 內容區域 */
 .citeright-content {
-    padding: 16px;
-    max-height: 350px;
-    overflow-y: auto;
-    display: none;
+    padding: 16px !important;
+    max-height: 350px !important;
+    overflow-y: auto !important;
+    display: none !important;
 }
 
 .citeright-content .info {
-    margin-bottom: 8px;
-    font-size: 13px;
-}
-
-.citeright-content .info strong {
-    color: #1890ff;
-    font-weight: 600;
+    margin-bottom: 8px !important;
+    color: #333 !important;
 }
 
 .citeright-content hr {
-    border: none;
-    border-top: 1px solid #f0f0f0;
-    margin: 12px 0;
+    border: none !important;
+    border-top: 1px solid #f0f0f0 !important;
+    margin: 12px 0 !important;
 }
 
 .citeright-content .summary {
-    color: #555;
-    white-space: pre-wrap;
-    font-size: 12px;
-    line-height: 1.5;
-    background-color: #fafafa;
-    padding: 8px;
-    border-radius: 4px;
-    border-left: 3px solid #1890ff;
-    margin: 8px 0;
+    color: #555 !important;
+    white-space: pre-wrap !important;
+    background-color: #fafafa !important;
+    padding: 12px !important;
+    border-radius: 4px !important;
+    border-left: 3px solid #1890ff !important;
 }
 
-/* 錯誤訊息 */
 .citeright-error {
-    color: #d32f2f;
-    font-style: italic;
-    padding: 8px;
-    background-color: #ffebee;
-    border-radius: 4px;
-    border-left: 3px solid #d32f2f;
-    margin: 4px 0;
+    color: #d32f2f !important;
+    font-style: italic !important;
+    padding: 12px !important;
+    background-color: #fff2f0 !important;
+    border: 1px solid #ffccc7 !important;
+    border-radius: 4px !important;
 }
 
 /* 建議訊息 */

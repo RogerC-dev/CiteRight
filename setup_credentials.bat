@@ -1,27 +1,27 @@
 @echo off
+chcp 65001 >nul
 echo ================================================
-echo 台灣司法院API憑證設定 - CiteRight專案
+echo Taiwan Judicial Yuan API Credentials Setup
+echo CiteRight Project - Official API Version
 echo ================================================
 echo.
 
-echo 請輸入您的司法院API憑證:
-echo.
-
-set /p JUDICIAL_USER="請輸入用戶名稱 (Username): "
-set /p JUDICIAL_PASS="請輸入密碼 (Password): "
+set /p JUDICIAL_USER="Enter username: "
+set /p JUDICIAL_PASS="Enter password: "
 
 echo.
-echo 正在設定環境變數...
+echo Setting environment variables...
 
-setx JUDICIAL_USER "%JUDICIAL_USER%"
-setx JUDICIAL_PASS "%JUDICIAL_PASS%"
+setx JUDICIAL_USER "%JUDICIAL_USER%" >nul
+setx JUDICIAL_PASS "%JUDICIAL_PASS%" >nul
 
 echo.
-echo ✅ 憑證設定完成!
+echo Credentials setup complete!
 echo.
-echo 現在您可以執行以下命令啟動伺服器:
+echo Now you can run the server with:
 echo node official_server.js
 echo.
-echo 或使用測試頁面的"手動同步"功能來下載真實案例資料
+echo Or use the Manual Sync feature on the test page
+echo to download real case data from the official API
 echo.
 pause

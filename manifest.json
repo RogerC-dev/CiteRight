@@ -1,14 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "法源探測器 (CiteRight)",
-  "version": "1.1",
-  "description": "透過官方 API，自動查詢台灣法律案號",
+  "name": "CiteRight - Taiwan Legal Case Recognition",
+  "version": "1.0",
+  "description": "Automatically identifies Taiwan legal case numbers and displays case information",
   "permissions": [
     "activeTab",
     "storage"
   ],
   "host_permissions": [
-    "http://localhost:3000/*",
     "http://localhost:3002/*"
   ],
   "content_scripts": [
@@ -18,18 +17,10 @@
       ],
       "js": [
         "content.js"
-      ],
-      "css": [
-        "styles.css"
       ]
     }
   ],
   "action": {
-    "default_title": "CiteRight"
-  },
-  "icons": {
-    "16": "icon.png",
-    "48": "icon.png",
-    "128": "icon.png"
+    "default_title": "CiteRight Extension"
   }
 }

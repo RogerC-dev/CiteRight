@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>真實網站測試 - 法律新聞模擬</title>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.8;
+        }
+        .news-article {
+            background: white;
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .article-title {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .article-meta {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .article-content {
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        .highlight-box {
+            background: #ecf0f1;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #3498db;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗞️ 法律新聞網站測試頁面</h1>
+    <p style="color: #7f8c8d;">這是一個模擬真實法律新聞網站的測試頁面，包含多種台灣法院案號</p>
+
+    <div class="news-article">
+        <h2 class="article-title">最高法院重要判決解析</h2>
+        <div class="article-meta">發布時間：2024年8月25日 | 記者：法律組</div>
+        <div class="article-content">
+            <p>最高法院在<strong>110年度台上字第3214號</strong>判決中，對於民事責任的認定標準做出重要說明。該判決推翻了下級法院的認定，認為原告的主張確有理由。</p>
+
+            <div class="highlight-box">
+                本案另可參照最高法院<strong>109年度台上字第5071號</strong>判決的相關見解，兩案在法理適用上具有一致性。
+            </div>
+
+            <p>此外，高等法院<strong>109年度上字第1196號</strong>判決也針對類似爭議提出不同觀點，值得深入比較研究。</p>
+        </div>
+    </div>
+
+    <div class="news-article">
+        <h2 class="article-title">憲法法庭最新判決分析</h2>
+        <div class="article-meta">發布時間：2024年8月20日 | 記者：憲法組</div>
+        <div class="article-content">
+            <p>憲法法庭在<strong>111年憲判字第13號</strong>判決中宣告相關法律條文違憲，此項判決延續了<strong>110年憲判字第15號</strong>的法理脈絡。</p>
+
+            <p>該判決與大法官<strong>釋字第748號</strong>解釋所建立的憲法原則密切相關，特別是在基本權利保障方面。</p>
+
+            <div class="highlight-box">
+                學者認為，此判決連同<strong>釋字第365號</strong>及<strong>釋字第712號</strong>解釋，共同構成了現代憲法學的重要里程碑。
+            </div>
+        </div>
+    </div>
+
+    <div class="news-article">
+        <h2 class="article-title">各級法院重要裁判彙整</h2>
+        <div class="article-meta">發布時間：2024年8月15日 | 記者：司法組</div>
+        <div class="article-content">
+            <p>台北地方法院<strong>110年度訴字第552號</strong>民事判決在契約法適用上提出新見解，該判決已確定。</p>
+
+            <p>智慧財產權法院<strong>110年度民專訴字第12號</strong>判決則就專利權爭議做出詳細論述，對相關產業具有重要指標意義。</p>
+
+            <p>另外，地方法院<strong>108年度重訴字第15號</strong>判決在程序法適用上也值得注意。</p>
+        </div>
+    </div>
+
+    <script>
+        // 檢查擴充套件載入狀況
+        setTimeout(() => {
+            const links = document.querySelectorAll('.citeright-link');
+            if (links.length > 0) {
+                const banner = document.createElement('div');
+                banner.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    background: #27ae60;
+                    color: white;
+                    text-align: center;
+                    padding: 10px;
+                    z-index: 9999;
+                    font-weight: bold;
+                `;
+                banner.innerHTML = `✅ 法源探測器已啟動 - 找到 ${links.length} 個案號 | 請將滑鼠懸停在藍色案號上查看詳細資料`;
+                document.body.appendChild(banner);
+
+                // 5秒後隱藏
+                setTimeout(() => banner.remove(), 5000);
+            }
+        }, 1500);
+    </script>
+</body>
+</html>
