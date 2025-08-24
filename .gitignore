@@ -84,3 +84,6 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Test files (exclude from repository)
+test-fetch-improvements.js
