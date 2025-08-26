@@ -112,7 +112,14 @@ function createPopoverElement() {
       <div class="citeright-content" style="padding:16px;max-height:300px;overflow-y:auto;display:none;background:white;border-radius:0 0 6px 6px;"></div>`;
     document.body.appendChild(popover);
 
-    popover.querySelector('.citeright-close').addEventListener('click', e => { e.stopPropagation(); popover.style.display = 'none'; });
+    // Enhanced close button - handles both close and pin reset
+    popover.querySelector('.citeright-close').addEventListener('click', e => {
+        e.stopPropagation();
+        isPinned = false; // Reset pin state
+        popover.style.display = 'none';
+        updatePinIndicator();
+        console.log('❌ Popover closed and unpinned');
+    });
 
     // Drag improvements
     let drag = { active: false, offsetX: 0, offsetY: 0 };
@@ -137,7 +144,13 @@ function createPopoverElement() {
     });
     window.addEventListener('mouseup', () => { if (drag.active) { drag.active = false; header.style.cursor = 'move'; } });
 
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') popover.style.display = 'none'; });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            isPinned = false;
+            popover.style.display = 'none';
+            updatePinIndicator();
+        }
+    });
     return popover;
 }
 
@@ -145,10 +158,49 @@ function createPopoverElement() {
 const popover = createPopoverElement();
 let hideTimeout;
 
-// Mouseover event for links
+// Track Ctrl key state with improved logic
+let isCtrlPressed = false;
+let isPinned = false; // NEW: Add persistent pin state
+
+// Enhanced Ctrl key listeners - FIX: Don't hide immediately on release
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && !isCtrlPressed) {
+        isCtrlPressed = true;
+        console.log('🎛️ Ctrl pressed - hover mode activated');
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (!e.ctrlKey && isCtrlPressed) {
+        isCtrlPressed = false;
+        console.log('🎛️ Ctrl released');
+
+        // FIX: Don't hide popover immediately when Ctrl is released
+        // Only hide if not pinned and not currently hovering popover
+        if (!isPinned && !isPopoverHovered()) {
+            setTimeout(() => {
+                if (!isPinned && !isPopoverHovered()) {
+                    popover.style.display = 'none';
+                }
+            }, 300); // Delay to allow user to move to popover
+        }
+    }
+});
+
+// Helper function to check if popover is being hovered
+function isPopoverHovered() {
+    return popover.matches(':hover') || popover.contains(document.querySelector(':hover'));
+}
+
+// Mouseover event for links (modified to require Ctrl key)
 document.addEventListener('mouseover', async (e) => {
     if (e.target.classList.contains('citeright-link')) {
-        console.log('🎯 Found citeright-link!', e.target.textContent);
+        // Only proceed if Ctrl key is pressed
+        if (!isCtrlPressed) {
+            return;
+        }
+
+        console.log('🎯 Found citeright-link with Ctrl pressed!', e.target.textContent);
         clearTimeout(hideTimeout);
 
         const target = e.target;
@@ -206,7 +258,7 @@ document.addEventListener('mouseover', async (e) => {
                     <div style="margin-bottom: 8px;"><strong>法院：</strong> ${caseData.JCOURT || '無資料'}</div>
                     <div style="margin-bottom: 8px;"><strong>日期：</strong> ${caseData.JDATE || '無資料'}</div>
                     <hr style="border: none; border-top: 1px solid #eee; margin: 12px 0;">
-                    <div style="color: #555; background: #f8f9fa; padding: 12px; border-radius: 4px;">
+                    <div style="color: #555; background: #f8f9fa; padding: 12px; border-radius: 4px; border-left: 4px solid #1890ff;">
                         ${(caseData.JFULLCONTENT || caseData.JFULL || '暫無內容').substring(0, 400)}...
                     </div>
                 `;
@@ -238,6 +290,125 @@ popover.addEventListener('mouseleave', () => {
         popover.style.display = 'none';
     }, 300);
 });
+
+// Enhanced click-to-pin functionality - NEW FEATURE
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('citeright-link')) {
+        e.preventDefault();
+
+        // Toggle pin state
+        isPinned = !isPinned;
+
+        if (isPinned) {
+            console.log('📌 Popover pinned - will stay open until X is clicked');
+            clearTimeout(hideTimeout);
+
+            // Show popover immediately when pinned
+            showPopoverForTarget(e.target);
+
+            // Update visual indicator
+            updatePinIndicator();
+        } else {
+            console.log('📌 Popover unpinned');
+            updatePinIndicator();
+
+            // Start hide timer if not hovering
+            if (!isCtrlPressed && !isPopoverHovered()) {
+                hideTimeout = setTimeout(() => {
+                    popover.style.display = 'none';
+                }, 300);
+            }
+        }
+    }
+});
+
+// Helper function to show popover for specific target
+async function showPopoverForTarget(target) {
+    console.log('🎯 Showing popover for:', target.textContent);
+    clearTimeout(hideTimeout);
+
+    const rect = target.getBoundingClientRect();
+
+    // Smart positioning
+    let left = rect.left + window.scrollX;
+    let top = rect.top + window.scrollY - 350;
+
+    if (left + 450 > window.innerWidth) {
+        left = window.innerWidth - 460;
+    }
+    if (top < 10) {
+        top = rect.bottom + window.scrollY + 10;
+    }
+
+    popover.style.display = 'block';
+    popover.style.left = Math.max(10, left) + 'px';
+    popover.style.top = Math.max(10, top) + 'px';
+
+    // Show loader
+    const loader = popover.querySelector('.citeright-loader');
+    const content = popover.querySelector('.citeright-content');
+    loader.style.display = 'block';
+    content.style.display = 'none';
+
+    const { year, caseType, number } = target.dataset;
+    console.log('Case data:', { year, caseType, number });
+
+    if (!caseType || !number) {
+        loader.style.display = 'none';
+        content.style.display = 'block';
+        content.innerHTML = `<div style="color: #d32f2f; padding: 12px;">此案號格式暫不支援查詢</div>`;
+        return;
+    }
+
+    try {
+        const apiUrl = caseType === '釋字'
+            ? `http://localhost:3002/api/case?caseType=${encodeURIComponent(caseType)}&number=${number}`
+            : `http://localhost:3002/api/case?year=${year}&caseType=${encodeURIComponent(caseType)}&number=${number}`;
+
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        loader.style.display = 'none';
+        content.style.display = 'block';
+
+        if (data.error) {
+            content.innerHTML = `<div style="color: #d32f2f; padding: 12px;">${data.error}</div>`;
+        } else {
+            const caseData = data.data || data;
+            content.innerHTML = `
+                <div style="margin-bottom: 8px;"><strong>案由：</strong> ${caseData.JTITLE || '無資料'}</div>
+                <div style="margin-bottom: 8px;"><strong>案號：</strong> ${data.caseNumber || (caseData.JYEAR + '年度' + caseData.JCASE + '字第' + caseData.JNO + '號')}</div>
+                <div style="margin-bottom: 8px;"><strong>法院：</strong> ${caseData.JCOURT || '無資料'}</div>
+                <div style="margin-bottom: 8px;"><strong>日期：</strong> ${caseData.JDATE || '無資料'}</div>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 12px 0;">
+                <div style="color: #555; background: #f8f9fa; padding: 12px; border-radius: 4px; border-left: 4px solid #1890ff;">
+                    ${(caseData.JFULLCONTENT || caseData.JFULL || '暫無內容').substring(0, 400)}...
+                </div>
+                ${isPinned ? '<div style="margin-top: 8px; padding: 4px 8px; background: #e6f7ff; border-radius: 4px; font-size: 11px; text-align: center; color: #1890ff;">📌 已固定 - 點擊 X 關閉</div>' : ''}
+            `;
+        }
+    } catch (error) {
+        loader.style.display = 'none';
+        content.style.display = 'block';
+        content.innerHTML = `<div style="color: #d32f2f; padding: 12px;">無法連線至後端服務</div>`;
+    }
+}
+
+// Update pin indicator
+function updatePinIndicator() {
+    const header = popover.querySelector('.citeright-header');
+    const title = header.querySelector('span');
+
+    if (isPinned) {
+        title.innerHTML = '📌 判決摘要 (已固定)';
+        header.style.background = 'linear-gradient(45deg, #f8f9fa, #e3f2fd)';
+        header.style.borderBottom = '1px solid #2196f3';
+    } else {
+        title.innerHTML = '📄 判決摘要';
+        header.style.background = '#f8f9fa';
+        header.style.borderBottom = '1px solid #dee2e6';
+    }
+}
 
 // MutationObserver to handle dynamically loaded content
 (function setupObserver(){
@@ -272,8 +443,10 @@ function initializeExtension() {
         const style = document.createElement('style');
         style.id = 'citeright-style';
         style.textContent = `
-        .citeright-link { background-color:#e6f7ff !important; border-bottom:1px dotted #91d5ff !important; cursor:pointer !important; transition:background-color .2s ease !important; padding:1px 2px !important; border-radius:2px !important; }
+        .citeright-link { background-color:#e6f7ff !important; border-bottom:1px dotted #91d5ff !important; cursor:pointer !important; transition:background-color .2s ease !important; padding:1px 2px !important; border-radius:2px !important; position:relative !important; }
         .citeright-link:hover { background-color:#bae7ff !important; border-bottom:1px solid #40a9ff !important; }
+        .citeright-link:hover::after { content:"按住 Ctrl 鍵查看詳情" !important; position:absolute !important; bottom:100% !important; left:50% !important; transform:translateX(-50%) !important; background:#333 !important; color:white !important; padding:4px 8px !important; border-radius:4px !important; font-size:12px !important; white-space:nowrap !important; z-index:1000 !important; pointer-events:none !important; }
+        .citeright-link:hover::before { content:"" !important; position:absolute !important; bottom:100% !important; left:50% !important; transform:translateX(-50%) translateY(100%) !important; border:4px solid transparent !important; border-top-color:#333 !important; z-index:1000 !important; pointer-events:none !important; }
         `;
         document.head.appendChild(style);
     }
