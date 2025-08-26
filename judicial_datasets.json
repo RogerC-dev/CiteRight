@@ -1,0 +1,1116 @@
+[
+  {
+    "datasetId": 45067,
+    "title": "114年6月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 56901,
+        "resourceFormat": "7Z",
+        "resourceDescription": "114年6月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 56902,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 44350,
+    "title": "114年4月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 56146,
+        "resourceFormat": "7Z",
+        "resourceDescription": "114年4月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 56147,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 44349,
+    "title": "114年5月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 56144,
+        "resourceFormat": "7Z",
+        "resourceDescription": "114年5月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 56145,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 43994,
+    "title": "各級法院各案類新收及終結件數統計",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 55709,
+        "resourceFormat": "ODS",
+        "resourceDescription": "各級法院各案類新收及終結件數"
+      }
+    ]
+  },
+  {
+    "datasetId": 42583,
+    "title": "113年度司法院單位決算",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 55338,
+        "resourceFormat": "PDF",
+        "resourceDescription": "113年度單位決算"
+      }
+    ]
+  },
+  {
+    "datasetId": 43639,
+    "title": "114年3月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 55305,
+        "resourceFormat": "7Z",
+        "resourceDescription": "114年3月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 55306,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 43286,
+    "title": "114年2月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54909,
+        "resourceFormat": "7Z",
+        "resourceDescription": "114年2月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54910,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42934,
+    "title": "114年1月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54517,
+        "resourceFormat": "7Z",
+        "resourceDescription": "114年1月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54518,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42581,
+    "title": "113年12月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54122,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年12月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54124,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42569,
+    "title": "113年1月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54098,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年1月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54099,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42570,
+    "title": "113年2月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54100,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年2月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54101,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42571,
+    "title": "113年3月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54102,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年3月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54103,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42572,
+    "title": "113年4月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54104,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年4月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54105,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42573,
+    "title": "113年5月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54106,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年5月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54107,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42574,
+    "title": "113年6月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54108,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年6月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54109,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42575,
+    "title": "113年7月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54110,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年7月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54111,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42576,
+    "title": "113年8月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54112,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年8月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54113,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42577,
+    "title": "113年9月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54114,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年9月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54115,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42578,
+    "title": "113年10月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54116,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年10月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54117,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 42579,
+    "title": "113年11月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 54118,
+        "resourceFormat": "7Z",
+        "resourceDescription": "113年11月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 54119,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 37182,
+    "title": "裁判書用語辭典資料庫",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 48249,
+        "resourceFormat": "CSV",
+        "resourceDescription": "裁判書用語辭典資料庫之名詞、相對應之解釋及類別"
+      }
+    ]
+  },
+  {
+    "datasetId": 32411,
+    "title": "112年8月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 43035,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年8月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 43036,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 35475,
+    "title": "112年9月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 46405,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年9月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 46406,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 35476,
+    "title": "112年10月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 46407,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年10月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 46408,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 35477,
+    "title": "112年11月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 46409,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年11月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 46410,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 35478,
+    "title": "112年12月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 46411,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年12月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 46412,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 31225,
+    "title": "112年7月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 41841,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年7月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 41842,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 22892,
+    "title": "法拍屋動產及不動產待拍公告資料集",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 31675,
+        "resourceFormat": "JSON",
+        "resourceDescription": "https://aomp109.judicial.gov.tw/judbp/opendata/Foreclosure.json"
+      }
+    ]
+  },
+  {
+    "datasetId": 22893,
+    "title": "法拍屋動產及不動產拍定公告資料集",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 31676,
+        "resourceFormat": "JSON",
+        "resourceDescription": "https://aomp109.judicial.gov.tw/judbp/opendata/Foreclosure_decide.json"
+      }
+    ]
+  },
+  {
+    "datasetId": 29886,
+    "title": "102年司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 40428,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      },
+      {
+        "fileSetId": 40431,
+        "resourceFormat": "7Z",
+        "resourceDescription": "102年司法院及所屬各級法院之終結案件資料"
+      }
+    ]
+  },
+  {
+    "datasetId": 29887,
+    "title": "103年司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 40430,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      },
+      {
+        "fileSetId": 40432,
+        "resourceFormat": "7Z",
+        "resourceDescription": "103年司法院及所屬各級法院之終結案件資料"
+      }
+    ]
+  },
+  {
+    "datasetId": 29888,
+    "title": "104年司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 40433,
+        "resourceFormat": "7Z",
+        "resourceDescription": "104年司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 40434,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 29889,
+    "title": "107年司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 40435,
+        "resourceFormat": "7Z",
+        "resourceDescription": "107年司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 40436,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 29890,
+    "title": "109年司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 40437,
+        "resourceFormat": "7Z",
+        "resourceDescription": "109年司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 40438,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 29891,
+    "title": "110年2月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 40439,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年2月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 40440,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 29036,
+    "title": "112年6月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 39572,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年6月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 39573,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 28701,
+    "title": "112年5月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 39174,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年5月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 39175,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 28037,
+    "title": "112年4月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 38432,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年4月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 38433,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 27707,
+    "title": "112年3月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 38063,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年3月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 38064,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 26538,
+    "title": "112年2月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 35854,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年2月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 35855,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 25378,
+    "title": "112年1月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 34654,
+        "resourceFormat": "7Z",
+        "resourceDescription": "112年1月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 34655,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 24728,
+    "title": "111年12月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 33961,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年12月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 33962,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 24706,
+    "title": "111年11月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 33778,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年11月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 33779,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 24375,
+    "title": "111年10月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 33218,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年10月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 33219,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 23217,
+    "title": "111年9月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 32006,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年9月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 32007,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 22057,
+    "title": "111年8月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 30762,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年8月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 30763,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 19942,
+    "title": "111年7月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 22804,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年7月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 22805,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 19596,
+    "title": "111年6月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 22436,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年6月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 22437,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 16510,
+    "title": "111年5月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 19307,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年5月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 19308,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 15343,
+    "title": "111年4月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 18118,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年4月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 18119,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 12816,
+    "title": "110年10月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15429,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年10月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15430,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 14981,
+    "title": "111年3月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 17717,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年3月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 17718,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法院統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 14636,
+    "title": "111年2月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 17349,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年2月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 17350,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法院統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 14289,
+    "title": "111年1月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 16982,
+        "resourceFormat": "7Z",
+        "resourceDescription": "111年1月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 16983,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法院統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 13531,
+    "title": "110年12月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 16194,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年12月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 16195,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法院統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 13150,
+    "title": "110年11月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15781,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年11月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15783,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法院統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 12472,
+    "title": "110年9月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15032,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年9月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15033,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 11247,
+    "title": "110年8月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15013,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年8月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15014,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 10914,
+    "title": "110年7月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15029,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年7月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15030,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 10504,
+    "title": "110年6月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15027,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年6月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15028,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 10186,
+    "title": "110年5月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15025,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年5月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15026,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 9515,
+    "title": "110年4月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15023,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年4月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15024,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 9169,
+    "title": "110年3月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15019,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年3月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15020,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 8161,
+    "title": "110年1月司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15015,
+        "resourceFormat": "7Z",
+        "resourceDescription": "110年1月司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15016,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 6903,
+    "title": "108年司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15009,
+        "resourceFormat": "7Z",
+        "resourceDescription": "108年司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15010,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 6901,
+    "title": "106年司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15005,
+        "resourceFormat": "7Z",
+        "resourceDescription": "106年司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15006,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  },
+  {
+    "datasetId": 6900,
+    "title": "105年司法院及所屬各級法院之終結案件資料與欄位說明",
+    "categoryName": "其他",
+    "filesets": [
+      {
+        "fileSetId": 15003,
+        "resourceFormat": "7Z",
+        "resourceDescription": "105年司法院及所屬各級法院之終結案件資料"
+      },
+      {
+        "fileSetId": 15004,
+        "resourceFormat": "7Z",
+        "resourceDescription": "司法統計系統資料欄位說明"
+      }
+    ]
+  }
+]

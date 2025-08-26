@@ -21,6 +21,13 @@ const DB_PATH = './judgments_db.json';
 let lastSyncStatus = {
     lastStart: null,
     lastEnd: null,
+    running: false,
+    error: null,
+    processed: 0,
+    total: 0,
+    addedCases: 0
+};
+
 app.get('/api/sync-status', (req, res) => {
     res.json(lastSyncStatus);
 });
@@ -53,13 +60,6 @@ app.get('/api/fetch-doc', async (req, res) => {
         res.status(500).json({ success: false, error: e.message });
     }
 });
-
-    running: false,
-    error: null,
-    processed: 0,
-    total: 0,
-    addedCases: 0
-};
 
 async function authenticate(user, password) {
     console.log('[Auth] Authenticating...');

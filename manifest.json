@@ -21,6 +21,12 @@
     }
   ],
   "action": {
-    "default_title": "CiteRight Extension"
+    "default_title": "CiteRight Extension",
+    "default_icon": {
+      "16": "icon.png",
+      "32": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
   }
 }
