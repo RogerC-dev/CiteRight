@@ -384,7 +384,6 @@ async function showPopoverForTarget(target) {
                 <div style="color: #555; background: #f8f9fa; padding: 12px; border-radius: 4px; border-left: 4px solid #1890ff;">
                     ${(caseData.JFULLCONTENT || caseData.JFULL || '暫無內容').substring(0, 400)}...
                 </div>
-                ${isPinned ? '<div style="margin-top: 8px; padding: 4px 8px; background: #e6f7ff; border-radius: 4px; font-size: 11px; text-align: center; color: #1890ff;">📌 已固定 - 點擊 X 關閉</div>' : ''}
             `;
         }
     } catch (error) {
@@ -400,7 +399,7 @@ function updatePinIndicator() {
     const title = header.querySelector('span');
 
     if (isPinned) {
-        title.innerHTML = '📌 判決摘要 (已固定)';
+        title.innerHTML = '📌 判決摘要';
         header.style.background = 'linear-gradient(45deg, #f8f9fa, #e3f2fd)';
         header.style.borderBottom = '1px solid #2196f3';
     } else {

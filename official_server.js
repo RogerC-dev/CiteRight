@@ -2,7 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const fs = require('fs/promises');
+const path = require('path');
 const cron = require('node-cron');
+
 // Load .env if present
 try {
     require('dotenv').config();
@@ -14,52 +16,175 @@ try {
 // --- 0. INITIAL SETUP ---
 
 const app = express();
-const PORT = process.env.PORT || 3002; // Changed to port 3002 to avoid all conflicts
-const DB_PATH = './judgments_db.json';
+const PORT = process.env.PORT || 3003; // Changed from 3002 to avoid conflicts
 
-// Track last sync status for diagnostics
+// UPDATED: Use the new processed judicial databases
+const PROCESSED_DATA_DIR = './processed_data';
+const INTERPRETATIONS_DB_PATH = path.join(PROCESSED_DATA_DIR, 'judicial_interpretations_db.json');
+const COURT_CASES_DB_PATH = path.join(PROCESSED_DATA_DIR, 'court_cases_db.json');
+const API_MAPPING_PATH = path.join(PROCESSED_DATA_DIR, 'api_mapping.json');
+
+// Legacy paths for fallback
+const MAIN_DB_PATH = './judicial_cases_database.json';
+const LEGACY_DB_PATH = './judgments_db.json';
+
+// NEW: Enhanced in-memory database for fast searching
+let judicialDatabase = {
+    metadata: {},
+    interpretations: [],
+    courtCases: [],
+    searchIndex: new Map(),
+    courtIndex: new Map(),
+    yearIndex: new Map(),
+    apiMapping: null,
+    loadStatus: 'loading'
+};
+
+// Load the processed judicial databases
+async function loadJudicialDatabase() {
+    try {
+        console.log('[DB] Loading processed judicial databases...');
+
+        // Load interpretations database
+        try {
+            const interpretationsData = await fs.readFile(INTERPRETATIONS_DB_PATH, 'utf8');
+            const interpretationsDB = JSON.parse(interpretationsData);
+            judicialDatabase.interpretations = interpretationsDB.interpretations || [];
+            judicialDatabase.metadata.interpretations = interpretationsDB.metadata;
+            console.log(`[DB] ✅ Loaded ${judicialDatabase.interpretations.length} constitutional interpretations`);
+        } catch (error) {
+            console.warn('[DB] ⚠️ Could not load interpretations database:', error.message);
+        }
+
+        // Load court cases database
+        try {
+            const courtCasesData = await fs.readFile(COURT_CASES_DB_PATH, 'utf8');
+            const courtCasesDB = JSON.parse(courtCasesData);
+            judicialDatabase.courtCases = courtCasesDB.periods || [];
+            judicialDatabase.metadata.courtCases = courtCasesDB.metadata;
+            console.log(`[DB] ✅ Loaded ${judicialDatabase.courtCases.length} court case periods`);
+        } catch (error) {
+            console.warn('[DB] ⚠️ Could not load court cases database:', error.message);
+        }
+
+        // Load API mapping
+        try {
+            const apiMappingData = await fs.readFile(API_MAPPING_PATH, 'utf8');
+            judicialDatabase.apiMapping = JSON.parse(apiMappingData);
+            console.log('[DB] ✅ Loaded API mapping configuration');
+        } catch (error) {
+            console.warn('[DB] ⚠️ Could not load API mapping:', error.message);
+        }
+
+        // Build search indexes
+        buildSearchIndexes();
+        judicialDatabase.loadStatus = 'loaded';
+
+        return true;
+    } catch (error) {
+        console.error('[DB] ❌ Failed to load processed databases:', error.message);
+        console.log('[DB] 🔄 Attempting to load legacy databases...');
+
+        return await loadLegacyDatabases();
+    }
+}
+
+// Fallback to legacy databases
+async function loadLegacyDatabases() {
+    try {
+        // Try main judicial database first
+        try {
+            const data = await fs.readFile(MAIN_DB_PATH, 'utf8');
+            const database = JSON.parse(data);
+            judicialDatabase.courtCases = database.cases || [];
+            judicialDatabase.metadata = database.metadata || {};
+            console.log(`[DB] 📚 Loaded ${judicialDatabase.courtCases.length} cases from main database`);
+        } catch (mainError) {
+            // Try legacy database
+            const legacyData = await fs.readFile(LEGACY_DB_PATH, 'utf8');
+            const legacyDb = JSON.parse(legacyData);
+            judicialDatabase.courtCases = Object.values(legacyDb) || [];
+            console.log(`[DB] 📚 Loaded ${judicialDatabase.courtCases.length} cases from legacy database`);
+        }
+
+        buildSearchIndexes();
+        judicialDatabase.loadStatus = 'legacy';
+        return true;
+    } catch (error) {
+        console.error('[DB] ❌ Failed to load any database:', error.message);
+        judicialDatabase.loadStatus = 'failed';
+        return false;
+    }
+}
+
+// Build search indexes for fast case lookups
+function buildSearchIndexes() {
+    console.log('[DB] 🔍 Building search indexes...');
+
+    judicialDatabase.searchIndex.clear();
+    judicialDatabase.courtIndex.clear();
+    judicialDatabase.yearIndex.clear();
+
+    // Index constitutional interpretations
+    judicialDatabase.interpretations.forEach((interpretation, index) => {
+        const key = `釋字-${interpretation.number}`.toLowerCase();
+        judicialDatabase.searchIndex.set(key, { type: 'interpretation', index });
+    });
+
+    // Index court cases (try both new and legacy formats)
+    judicialDatabase.courtCases.forEach((caseData, index) => {
+        let year, caseType, number, court;
+
+        // Handle different data formats
+        if (caseData.JYEAR) {
+            // Legacy format
+            year = caseData.JYEAR;
+            caseType = caseData.JCASE;
+            number = caseData.JNO;
+            court = caseData.JCOURT;
+        } else if (caseData.period) {
+            // New processed format - extract from period info
+            year = caseData.adYear || caseData.period.split('-')[0];
+            // For processed data, we'll handle searches differently
+        }
+
+        if (year && caseType && number) {
+            const caseKey = `${year}-${caseType}-${number}`.toLowerCase();
+            judicialDatabase.searchIndex.set(caseKey, { type: 'case', index });
+
+            // Court index
+            if (court) {
+                if (!judicialDatabase.courtIndex.has(court)) {
+                    judicialDatabase.courtIndex.set(court, []);
+                }
+                judicialDatabase.courtIndex.get(court).push(index);
+            }
+
+            // Year index
+            if (!judicialDatabase.yearIndex.has(year)) {
+                judicialDatabase.yearIndex.set(year, []);
+            }
+            judicialDatabase.yearIndex.get(year).push(index);
+        }
+    });
+
+    console.log(`[DB] ✅ Indexes built: ${judicialDatabase.searchIndex.size} lookups, ${judicialDatabase.courtIndex.size} courts, ${judicialDatabase.yearIndex.size} years`);
+}
+
+// --- 1. CORE SYNC LOGIC ---
+
+// Sync status tracking
 let lastSyncStatus = {
+    running: false,
     lastStart: null,
     lastEnd: null,
-    running: false,
     error: null,
     processed: 0,
     total: 0,
     addedCases: 0
 };
 
-app.get('/api/sync-status', (req, res) => {
-    res.json(lastSyncStatus);
-});
-
-app.get('/api/auth-test', async (req, res) => {
-    const user = (req.query.user || process.env.JUDICIAL_USER || '').trim();
-    const password = (req.query.pass || process.env.JUDICIAL_PASS || '').trim();
-    if (!user || !password) {
-        return res.status(400).json({ error: 'Missing credentials (user/pass query params or env vars).' });
-    }
-    try {
-        const token = await authenticate(user, password);
-        res.json({ success: true, tokenPreview: token.slice(0, 10) + '...', message: 'Authentication succeeded' });
-    } catch (e) {
-        res.status(401).json({ success: false, error: e.message });
-    }
-});
-
-app.get('/api/fetch-doc', async (req, res) => {
-    const jid = req.query.jid;
-    if (!jid) return res.status(400).json({ error: 'Missing jid query parameter' });
-    const user = process.env.JUDICIAL_USER?.trim();
-    const password = process.env.JUDICIAL_PASS?.trim();
-    if (!user || !password) return res.status(400).json({ error: 'Server missing env credentials' });
-    try {
-        const token = await authenticate(user, password);
-        const docResponse = await axios.post('https://data.judicial.gov.tw/jdg/api/JDoc', { token, j: jid });
-        res.json({ success: true, data: docResponse.data });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
+const DB_PATH = './judgments_db.json'; // Legacy sync path
 
 async function authenticate(user, password) {
     console.log('[Auth] Authenticating...');
@@ -83,8 +208,6 @@ async function authenticate(user, password) {
         throw new Error('Authentication failed: ' + (err.response?.data?.error || err.message));
     }
 }
-
-// --- 1. CORE SYNC LOGIC ---
 
 async function startSyncProcess() {
     if (lastSyncStatus.running) {
@@ -189,232 +312,191 @@ cron.schedule('0 * 0-6 * * *', startSyncProcess, {
 
 console.log('Nightly sync job scheduled to run between 00:00 and 06:00 Taiwan time.');
 
-// --- 3. FRONTEND API ---
+// --- 3. ENHANCED FRONTEND API ---
 
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
+app.use(express.static('public'));
 
-app.get('/api/case', async (req, res) => {
-    const { year, caseType, number } = req.query;
-
-    // Special handling for constitutional interpretations (釋字) which don't have year
-    if (caseType === '釋字') {
-        if (!number) {
-            return res.status(400).json({ error: 'Missing required query parameters for constitutional interpretation: caseType, number' });
-        }
-
-        try {
-            const fileContent = await fs.readFile(DB_PATH, 'utf-8');
-            const db = JSON.parse(fileContent);
-
-            // Find constitutional interpretation case
-            const foundCase = Object.values(db).find(caseData =>
-                caseData.JCASE === '釋字' &&
-                caseData.JNO === number
-            );
-
-            if (foundCase) {
-                res.json({
-                    success: true,
-                    source: 'local_database',
-                    data: foundCase,
-                    caseNumber: `釋字第${number}號`
-                });
-            } else {
-                res.status(404).json({
-                    error: `Constitutional interpretation '釋字第${number}號' not found in local database.`,
-                    suggestion: 'This interpretation may not be in our database yet.'
-                });
-            }
-        } catch (error) {
-            console.error("API Error: Could not read local database.", error);
-            res.status(500).json({ error: 'Could not access the local case database.' });
-        }
-        return;
-    }
-
-    // Regular case handling
-    if (!year || !caseType || !number) {
-        return res.status(400).json({ error: 'Missing required query parameters: year, caseType, number' });
-    }
-
-    try {
-        const fileContent = await fs.readFile(DB_PATH, 'utf-8');
-        const db = JSON.parse(fileContent);
-
-        // Find the case by iterating through the values
-        const foundCase = Object.values(db).find(caseData =>
-            caseData.JYEAR === year &&
-            caseData.JCASE === caseType &&
-            caseData.JNO === number
-        );
-
-        if (foundCase) {
-            res.json({
-                success: true,
-                source: 'local_database',
-                data: foundCase,
-                caseNumber: `${year}年度${caseType}字第${number}號`
-            });
-        } else {
-            res.status(404).json({
-                error: `Case '${year}年度${caseType}字第${number}號' not found in local database.`,
-                suggestion: 'This case may not be in our database yet. The sync runs nightly.'
-            });
-        }
-    } catch (error) {
-        console.error("API Error: Could not read local database.", error);
-        res.status(500).json({ error: 'Could not access the local case database.' });
-    }
-});
-
-// Manual sync endpoint for testing - support both GET and POST
-app.post('/api/sync-now', async (req, res) => {
-    res.json({ message: 'Manual sync started. Check console for progress.', timestamp: new Date().toISOString() });
-    startSyncProcess();
-});
-
-// Add GET version for easy browser testing
-app.get('/api/sync-now', async (req, res) => {
-    res.json({ message: 'Manual sync started. Check console for progress.', timestamp: new Date().toISOString() });
-    startSyncProcess();
-});
-
-// Database stats endpoint
-app.get('/api/stats', async (req, res) => {
-    try {
-        const fileContent = await fs.readFile(DB_PATH, 'utf-8');
-        const db = JSON.parse(fileContent);
-        const cases = Object.values(db);
-
-        const stats = {
-            totalCases: cases.length,
-            yearDistribution: {},
-            caseTypeDistribution: {},
-            lastUpdated: new Date().toISOString()
-        };
-
-        cases.forEach(caseData => {
-            const year = caseData.JYEAR;
-            const caseType = caseData.JCASE;
-
-            stats.yearDistribution[year] = (stats.yearDistribution[year] || 0) + 1;
-            stats.caseTypeDistribution[caseType] = (stats.caseTypeDistribution[caseType] || 0) + 1;
-        });
-
-        res.json(stats);
-    } catch (error) {
-        res.status(500).json({
-            error: 'Could not read database statistics',
-            details: error.message
-        });
-    }
-});
-
+// Health check endpoint
 app.get('/health', (req, res) => {
-    res.status(200).json({
-        status: 'OK',
+    res.json({
+        status: 'ok',
         timestamp: new Date().toISOString(),
-        message: 'CiteRight backend is running'
+        database: {
+            loadStatus: judicialDatabase.loadStatus,
+            interpretations: judicialDatabase.interpretations.length,
+            courtCases: judicialDatabase.courtCases.length,
+            searchIndexSize: judicialDatabase.searchIndex.size
+        }
     });
 });
 
-// Add a homepage route
-app.get('/', (req, res) => {
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="zh-TW">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>法源探測器 (CiteRight) 控制台</title>
-            <style>
-                body { font-family: "Microsoft JhengHei", Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px; }
-                .card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                .btn { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
-                .btn:hover { background: #0056b3; }
-                .status { padding: 10px; border-radius: 5px; margin: 10px 0; }
-                .success { background: #d4edda; border: 1px solid #c3e6cb; }
-                .info { background: #cce7ff; border: 1px solid #b3d9ff; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>🔍 法源探測器 (CiteRight)</h1>
-                <p>Taiwan Legal Case Recognition System</p>
-            </div>
-            
-            <div class="card">
-                <h3>🔧 系統控制</h3>
-                <button class="btn" onclick="manualSync()">立即同步資料</button>
-                <button class="btn" onclick="checkStats()">查看資料庫統計</button>
-                <button class="btn" onclick="window.open('/health', '_blank')">系統健康檢查</button>
-            </div>
+// Database statistics endpoint
+app.get('/api/stats', (req, res) => {
+    res.json({
+        success: true,
+        statistics: {
+            interpretations: {
+                total: judicialDatabase.interpretations.length,
+                metadata: judicialDatabase.metadata.interpretations
+            },
+            courtCases: {
+                total: judicialDatabase.courtCases.length,
+                metadata: judicialDatabase.metadata.courtCases
+            },
+            searchIndex: judicialDatabase.searchIndex.size,
+            loadStatus: judicialDatabase.loadStatus
+        }
+    });
+});
 
-            <div class="card">
-                <h3>📊 快速狀態</h3>
-                <div id="status" class="status info">載入中...</div>
-                <div id="stats"></div>
-            </div>
+// Enhanced case search endpoint
+app.get('/api/case', async (req, res) => {
+    if (judicialDatabase.loadStatus === 'loading') {
+        return res.status(503).json({
+            error: 'Database is still loading, please try again in a moment'
+        });
+    }
 
-            <div class="card">
-                <h3>🌐 API 端點</h3>
-                <ul>
-                    <li><strong>案件查詢:</strong> GET /api/case?year=110&caseType=台上&number=3214</li>
-                    <li><strong>立即同步:</strong> POST /api/sync-now</li>
-                    <li><strong>資料庫統計:</strong> GET /api/stats</li>
-                    <li><strong>健康檢查:</strong> GET /health</li>
-                </ul>
-            </div>
+    if (judicialDatabase.loadStatus === 'failed') {
+        return res.status(500).json({
+            error: 'Database failed to load'
+        });
+    }
 
-            <script>
-                function manualSync() {
-                    document.getElementById('status').textContent = '正在觸發手動同步...';
-                    fetch('/api/sync-now', { method: 'POST' })
-                        .then(response => response.json())
-                        .then(data => {
-                            document.getElementById('status').textContent = '✅ 同步已觸發！請檢查控制台日誌';
-                            document.getElementById('status').className = 'status success';
-                        })
-                        .catch(error => {
-                            document.getElementById('status').textContent = '❌ 同步失敗: ' + error.message;
-                        });
+    const { year, caseType, number, query } = req.query;
+
+    // Handle constitutional interpretations (釋字)
+    if (caseType === '釋字' || (query && query.includes('釋字'))) {
+        const interpNumber = number || (query && query.match(/釋字第?(\d+)號?/)?.[1]);
+
+        if (!interpNumber) {
+            return res.status(400).json({
+                error: 'Missing interpretation number for constitutional interpretation search'
+            });
+        }
+
+        const interpretation = judicialDatabase.interpretations.find(
+            item => item.number === parseInt(interpNumber)
+        );
+
+        if (interpretation) {
+            return res.json({
+                success: true,
+                source: 'processed_interpretations_database',
+                data: interpretation,
+                caseNumber: `釋字第${interpNumber}號`,
+                urls: {
+                    view: `https://aomp.judicial.gov.tw/juds/FilePage.aspx?id=${interpretation.fileSetId}`,
+                    download: `https://aomp.judicial.gov.tw/juds/Download.ashx?id=${interpretation.fileSetId}`
                 }
+            });
+        }
 
-                function checkStats() {
-                    fetch('/api/stats')
-                        .then(response => response.json())
-                        .then(data => {
-                            document.getElementById('stats').innerHTML = 
-                                '<h4>資料庫統計:</h4>' +
-                                '<p>總案件數: ' + data.totalCases + '</p>' +
-                                '<p>最後更新: ' + new Date(data.lastUpdated).toLocaleString() + '</p>';
-                        })
-                        .catch(error => console.error('Error:', error));
-                }
+        return res.status(404).json({
+            error: `Constitutional interpretation '釋字第${interpNumber}號' not found`,
+            availableInterpretations: judicialDatabase.interpretations.length,
+            suggestion: 'Try searching with a different interpretation number'
+        });
+    }
 
-                // Load initial stats
-                checkStats();
-                document.getElementById('status').textContent = '✅ 系統運行正常';
-                document.getElementById('status').className = 'status success';
-            </script>
-        </body>
-        </html>
-    `);
+    // Handle general case search
+    if (!year || !caseType || !number) {
+        return res.status(400).json({
+            error: 'Missing required query parameters: year, caseType, number'
+        });
+    }
+
+    // Search in database
+    const searchKey = `${year}-${caseType}-${number}`.toLowerCase();
+    const searchResult = judicialDatabase.searchIndex.get(searchKey);
+
+    if (searchResult && searchResult.type === 'case') {
+        const foundCase = judicialDatabase.courtCases[searchResult.index];
+        return res.json({
+            success: true,
+            source: judicialDatabase.loadStatus === 'loaded' ? 'processed_database' : 'legacy_database',
+            data: foundCase,
+            caseNumber: `${year}年度${caseType}字第${number}號`
+        });
+    }
+
+    return res.status(404).json({
+        error: `Case '${year}年度${caseType}字第${number}號' not found`,
+        searchedKey: searchKey,
+        databaseSize: judicialDatabase.courtCases.length
+    });
+});
+
+// Search interpretations endpoint
+app.get('/api/search/interpretations', (req, res) => {
+    const { q, limit = 20 } = req.query;
+
+    let results = judicialDatabase.interpretations;
+
+    if (q && q.trim()) {
+        const searchTerm = q.toLowerCase().trim();
+        results = judicialDatabase.interpretations.filter(item =>
+            item.title.toLowerCase().includes(searchTerm) ||
+            item.number.toString().includes(searchTerm)
+        );
+    }
+
+    results = results.slice(0, parseInt(limit));
+
+    res.json({
+        success: true,
+        results: results,
+        total: results.length,
+        query: q
+    });
 });
 
 // --- 4. START SERVER ---
 
-app.listen(PORT, () => {
-    console.log(`法源探測器 (CiteRight) backend server running on http://localhost:${PORT}`);
-    console.log(`API endpoint: http://localhost:${PORT}/api/case`);
-    console.log(`Health check: http://localhost:${PORT}/health`);
-    console.log(`Database stats: http://localhost:${PORT}/api/stats`);
-    console.log(`Manual sync: POST http://localhost:${PORT}/api/sync-now`);
-    console.log('\nTo set up API credentials:');
-    console.log('set JUDICIAL_USER=your_username');
-    console.log('set JUDICIAL_PASS=your_password');
+// Start server
+async function startServer() {
+    console.log('[Server] 🚀 Starting CiteRight Legal Server...');
+
+    // Load databases first
+    const dbLoaded = await loadJudicialDatabase();
+    if (!dbLoaded) {
+        console.warn('[Server] ⚠️ Server starting without complete database');
+    }
+
+    app.listen(PORT, () => {
+        console.log(`[Server] ✅ Server running on http://localhost:${PORT}`);
+        console.log(`[Server] 📊 Database status: ${judicialDatabase.loadStatus}`);
+        console.log(`[Server] 📚 Interpretations: ${judicialDatabase.interpretations.length}`);
+        console.log(`[Server] 📁 Court cases: ${judicialDatabase.courtCases.length}`);
+        console.log('[Server] 🔗 Available endpoints:');
+        console.log('  GET /health - Server health check');
+        console.log('  GET /api/stats - Database statistics');
+        console.log('  GET /api/case - Case lookup');
+        console.log('  GET /api/search/interpretations - Search interpretations');
+    });
+}
+
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+    console.log('[Server] 🛑 Shutting down gracefully...');
+    process.exit(0);
 });
 
-module.exports = app;
+process.on('SIGTERM', () => {
+    console.log('[Server] 🛑 Received SIGTERM, shutting down...');
+    process.exit(0);
+});
+
+// Start the server
+startServer().catch(error => {
+    console.error('[Server] ❌ Failed to start server:', error);
+    process.exit(1);
+});

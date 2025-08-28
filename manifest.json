@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "CiteRight - Taiwan Legal Case Recognition",
-  "version": "1.0",
-  "description": "Automatically identifies Taiwan legal case numbers and displays case information",
+  "version": "1.1",
+  "description": "Automatically identifies Taiwan legal case numbers and displays case information with enhanced judicial interpretations database",
   "permissions": [
     "activeTab",
     "storage"
   ],
   "host_permissions": [
-    "http://localhost:3002/*"
+    "http://localhost:3002/*",
+    "https://aomp.judicial.gov.tw/*"
   ],
   "content_scripts": [
     {
@@ -16,10 +17,15 @@
         "<all_urls>"
       ],
       "js": [
+        "processed_data/api_reader_fixed.js",
+        "judicial_extension_api.js",
         "content.js"
       ]
     }
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_title": "CiteRight Extension",
     "default_icon": {
@@ -28,5 +34,14 @@
       "48": "icon.png",
       "128": "icon.png"
     }
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "processed_data/*.json",
+        "processed_data/*.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
