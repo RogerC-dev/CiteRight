@@ -56,10 +56,11 @@ function highlightCitations() {
     function processTextNode(node) {
         if (seenNodes.has(node)) return;
         if (!node.parentNode) return;
-        // Skip inside our own spans or script/style/inputs
+        // Skip inside our own spans or script/style/inputs, and side panels
         const parentTag = node.parentNode.tagName;
         if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA' || parentTag === 'INPUT') return;
         if (node.parentNode.closest && node.parentNode.closest('.citeright-link')) return;
+        if (node.parentNode.closest && node.parentNode.closest('#citeright-sidepanel')) return;
         const original = node.textContent;
         if (!original || !original.trim()) return;
 
@@ -207,18 +208,33 @@ function createPopoverElement() {
 // Create popover
 const popover = createPopoverElement();
 let hideTimeout;
+let showTimeout;              // Delay before showing popover
+let currentHoveredLaw = null; // Track currently hovered law to prevent duplicates
 
 // Enhanced state management for better UX
 let isCtrlPressed = false;    // Current Ctrl key state
 let isActivated = false;      // Whether hover mode is activated
 let activationTimeout;        // Auto-deactivation timeout
 let bookmarkedLaws = [];      // Saved bookmarks
+let isPinned = false;         // Pin state for popovers
 
 // Helper function to update activation status
 function updateActivationStatus() {
     const title = popover.querySelector('#citeright-title');
     if (title) {
         title.textContent = isActivated ? '台灣法源資訊 (滑鼠模式)' : '台灣法源資訊';
+    }
+}
+
+// Helper function to generate unique law identifier
+function getLawIdentifier(target) {
+    const { legalType, caseType, lawName, article, paragraph, year, number } = target.dataset;
+    if (legalType === 'law_article') {
+        return `${lawName}第${article}條${paragraph ? `第${paragraph}項` : ''}`;
+    } else if (caseType === '釋字') {
+        return `釋字第${number}號`;
+    } else {
+        return `${year}年${caseType}字第${number}號`;
     }
 }
 
@@ -362,13 +378,18 @@ function openSidePanel() {
         font-family: "Microsoft JhengHei", Arial, sans-serif; font-size: 14px;
         box-shadow: -8px 0 24px rgba(0,0,0,0.15); transform: translateX(100%);
         transition: transform 0.3s ease-out; overflow: hidden; display: flex; flex-direction: column;
+        min-width: 350px; max-width: 80vw;
     `;
     
     sidePanel.innerHTML = `
+        <div id="resize-handle" style="position: absolute; left: -3px; top: 0; bottom: 0; width: 6px; background: #1890ff; cursor: ew-resize; z-index: 1; opacity: 0.7; transition: opacity 0.2s;"></div>
         <div style="background: linear-gradient(135deg, #1890ff, #096dd9); color: white; padding: 20px; flex-shrink: 0;">
             <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 12px;">
                 <h2 style="margin: 0; font-size: 18px; font-weight: 600;">${currentLawData.title}</h2>
-                <button id="close-sidepanel" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 8px; cursor: pointer; font-size: 18px; width: 36px; height: 36px; margin-left: auto;">&times;</button>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button id="view-bookmarks-top" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; font-family: inherit; transition: all 0.2s;">📖 查看我的書籤</button>
+                    <button id="close-sidepanel" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 8px; cursor: pointer; font-size: 18px; width: 36px; height: 36px;">&times;</button>
+                </div>
             </div>
             <div style="font-size: 13px; opacity: 0.9;">
                 ${currentLawData.type} · ${currentLawData.number ? `第${currentLawData.number}${currentLawData.type === '釋字' ? '號' : currentLawData.type === '法條' ? '條' : '號'}` : ''}
@@ -408,6 +429,13 @@ function openSidePanel() {
     sidePanel.querySelector('#close-sidepanel').addEventListener('click', () => {
         sidePanel.style.transform = 'translateX(100%)';
         setTimeout(() => sidePanel.remove(), 300);
+        
+        // Also close bookmark panel if it's open
+        const bookmarkPanel = document.querySelector('#citeright-bookmarks-panel');
+        if (bookmarkPanel) {
+            bookmarkPanel.style.transform = 'translateX(100%)';
+            setTimeout(() => bookmarkPanel.remove(), 300);
+        }
     });
     
     sidePanel.querySelector('#bookmark-from-panel').addEventListener('click', () => {
@@ -415,6 +443,10 @@ function openSidePanel() {
     });
     
     sidePanel.querySelector('#view-bookmarks').addEventListener('click', () => {
+        showBookmarksPanel();
+    });
+    
+    sidePanel.querySelector('#view-bookmarks-top').addEventListener('click', () => {
         showBookmarksPanel();
     });
     
@@ -433,6 +465,57 @@ function openSidePanel() {
             }
         });
     }
+    
+    // Add resize functionality
+    const resizeHandle = sidePanel.querySelector('#resize-handle');
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 450;
+    
+    resizeHandle.addEventListener('mouseenter', () => {
+        resizeHandle.style.opacity = '1';
+    });
+    
+    resizeHandle.addEventListener('mouseleave', () => {
+        if (!isResizing) {
+            resizeHandle.style.opacity = '0.7';
+        }
+    });
+    
+    resizeHandle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = parseInt(window.getComputedStyle(sidePanel).width, 10);
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        
+        const deltaX = startX - e.clientX; // Reverse for right-side panel
+        let newWidth = startWidth + deltaX;
+        
+        // Apply constraints
+        newWidth = Math.max(350, Math.min(newWidth, window.innerWidth * 0.8));
+        
+        sidePanel.style.width = newWidth + 'px';
+        
+        // Update bookmark panel position if it exists
+        const bookmarkPanel = document.querySelector('#citeright-bookmarks-panel');
+        if (bookmarkPanel) {
+            bookmarkPanel.style.right = newWidth + 'px';
+        }
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            resizeHandle.style.opacity = '0.7';
+        }
+    });
 }
 
 // Show bookmarks panel
@@ -443,10 +526,14 @@ function showBookmarksPanel() {
         bookmarkedLaws = JSON.parse(savedBookmarks);
     }
     
+    // Calculate side panel width for proper positioning
+    const sidePanel = document.querySelector('#citeright-sidepanel');
+    const sidePanelWidth = sidePanel ? parseInt(window.getComputedStyle(sidePanel).width, 10) : 450;
+    
     const bookmarksPanel = document.createElement('div');
-    bookmarksPanel.id = 'citeright-bookmarks';
+    bookmarksPanel.id = 'citeright-bookmarks-panel';
     bookmarksPanel.style.cssText = `
-        position: fixed; top: 0; right: 450px; width: 400px; height: 100vh;
+        position: fixed; top: 0; right: ${sidePanelWidth}px; width: 400px; height: 100vh;
         background: #f8f9fa; border-left: 2px solid #e8e8e8; z-index: 2147483646;
         font-family: "Microsoft JhengHei"; overflow-y: auto; transform: translateX(100%);
         transition: transform 0.3s ease-out;
@@ -539,21 +626,48 @@ document.addEventListener('mouseover', async (e) => {
             return;
         }
 
-        console.log('⚖️ 法律引用偵測:', e.target.textContent);
+        // Prevent duplicate popups for same law
+        const lawId = getLawIdentifier(e.target);
+        if (currentHoveredLaw === lawId && popover.style.display === 'block') {
+            return;
+        }
+        currentHoveredLaw = lawId;
 
-        const target = e.target;
-        const rect = target.getBoundingClientRect();
+        // Clear any existing timeouts
+        clearTimeout(showTimeout);
+        clearTimeout(hideTimeout);
+
+        // Small delay before showing popover for better UX
+        showTimeout = setTimeout(async () => {
+            console.log('⚖️ 法律引用偵測:', e.target.textContent);
+
+            const target = e.target;
+            const rect = target.getBoundingClientRect();
 
         // Smart positioning close to underline
         let left = rect.left + window.scrollX;
         let top = rect.bottom + window.scrollY + 8; // Close to underline
 
-        // Keep within screen bounds
-        if (left + 480 > window.innerWidth) {
-            left = Math.max(10, window.innerWidth - 490);
+        // Keep within screen bounds - improved boundary detection
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const scrollTop = window.scrollY;
+        const scrollLeft = window.scrollX;
+
+        // Horizontal bounds check
+        if (left + 480 > scrollLeft + viewportWidth) {
+            left = Math.max(scrollLeft + 10, scrollLeft + viewportWidth - 490);
         }
-        if (top + 350 > window.innerHeight + window.scrollY) {
-            top = rect.top + window.scrollY - 360; // Show above if no space below
+        if (left < scrollLeft + 10) {
+            left = scrollLeft + 10;
+        }
+
+        // Vertical bounds check 
+        if (top + 350 > scrollTop + viewportHeight) {
+            top = rect.top + scrollTop - 360; // Show above if no space below
+        }
+        if (top < scrollTop + 10) {
+            top = scrollTop + 10; // Don't go above viewport
         }
 
         popover.style.display = 'block';
@@ -755,17 +869,39 @@ document.addEventListener('mouseover', async (e) => {
                 </div>
             `;
         }
+        }, 150); // 150ms delay for better UX
     }
 });
 
-// Click blank area to close popover
+// Clear current hovered law when mouse leaves
+document.addEventListener('mouseout', (e) => {
+    if (e.target.classList.contains('citeright-link')) {
+        // Clear timeout if mouse leaves before delay completes
+        clearTimeout(showTimeout);
+        currentHoveredLaw = null;
+    }
+});
+
+// Click blank area or X button to close popover
 document.addEventListener('click', (e) => {
     if (isActivated && popover.style.display === 'block') {
-        // Don't close if clicking on popover, legal links, or buttons
+        // Close if clicking X button
+        if (e.target.classList.contains('citeright-close')) {
+            popover.style.display = 'none';
+            isPinned = false;
+            currentHoveredLaw = null;
+            return;
+        }
+        
+        // Close if clicking blank area (not on popover, legal links, or buttons)
         if (!e.target.closest('#citeright-popover') && 
             !e.target.classList.contains('citeright-link') &&
             !e.target.closest('.citeright-link')) {
-            popover.style.display = 'none';
+            // Only close if not pinned
+            if (!isPinned) {
+                popover.style.display = 'none';
+                currentHoveredLaw = null;
+            }
         }
     }
 });
@@ -809,12 +945,26 @@ async function showPopoverForTarget(target) {
     let left = rect.left + window.scrollX;
     let top = rect.bottom + window.scrollY + 8; // Close to underline
 
-    // Keep within screen bounds
-    if (left + 450 > window.innerWidth) {
-        left = Math.max(10, window.innerWidth - 460);
+    // Keep within screen bounds - improved boundary detection
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const scrollTop = window.scrollY;
+    const scrollLeft = window.scrollX;
+
+    // Horizontal bounds check
+    if (left + 450 > scrollLeft + viewportWidth) {
+        left = Math.max(scrollLeft + 10, scrollLeft + viewportWidth - 460);
     }
-    if (top + 350 > window.innerHeight + window.scrollY) {
-        top = rect.top + window.scrollY - 360; // Show above if no space below
+    if (left < scrollLeft + 10) {
+        left = scrollLeft + 10;
+    }
+
+    // Vertical bounds check
+    if (top + 350 > scrollTop + viewportHeight) {
+        top = rect.top + scrollTop - 360; // Show above if no space below
+    }
+    if (top < scrollTop + 10) {
+        top = scrollTop + 10; // Don't go above viewport
     }
 
     popover.style.display = 'block';
