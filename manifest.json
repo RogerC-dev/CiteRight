@@ -29,6 +29,7 @@
   },
   "action": {
     "default_title": "CiteRight Extension",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icon.png",
       "32": "icon.png",

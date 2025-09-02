@@ -261,40 +261,74 @@ app.get('/api/debug', async (req, res) => {
     }
 });
 
-// Start server with port detection
-function startServer() {
-    const ports = [3000, 3002, 3004, 3005, 3006];
-    
-    function tryPort(portIndex) {
-        if (portIndex >= ports.length) {
-            console.error('❌ All ports are in use');
-            process.exit(1);
-        }
+// Kill existing process on port 3000 and start server
+async function killExistingProcess(port) {
+    try {
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execPromise = util.promisify(exec);
         
-        const port = ports[portIndex];
-        
-        const server = app.listen(port, () => {
-            console.log(`✅ Server running on http://localhost:${port}`);
-            console.log('🔗 Available endpoints:');
-            console.log(`  📊 Health: http://localhost:${port}/health`);
-            console.log(`  🔍 Debug: http://localhost:${port}/api/debug`);
-            console.log(`  ⚖️ Constitutional interpretation: http://localhost:${port}/api/case?caseType=釋字&number=712`);
-            console.log(`  📖 Search laws: http://localhost:${port}/api/laws/search?q=民法`);
-            console.log(`  📑 Law details: http://localhost:${port}/api/laws/1`);
-        });
-        
-        server.on('error', (err) => {
-            if (err.code === 'EADDRINUSE') {
-                console.log(`⚠️ Port ${port} in use, trying next...`);
-                tryPort(portIndex + 1);
-            } else {
-                console.error('❌ Server error:', err.message);
-                process.exit(1);
+        // Find process using port 3000
+        const { stdout } = await execPromise(`netstat -ano | findstr :${port}`);
+        if (stdout.trim()) {
+            const lines = stdout.trim().split('\n');
+            const pids = new Set();
+            
+            for (const line of lines) {
+                if (line.includes('LISTENING')) {
+                    const parts = line.trim().split(/\s+/);
+                    const pid = parts[parts.length - 1];
+                    if (pid && pid !== '0') {
+                        pids.add(pid);
+                    }
+                }
             }
-        });
+            
+            // Kill all processes using the port
+            for (const pid of pids) {
+                try {
+                    await execPromise(`taskkill /PID ${pid} /F`);
+                    console.log(`🔪 Killed process ${pid} using port ${port}`);
+                } catch (e) {
+                    // Process might already be dead, ignore
+                }
+            }
+            
+            // Wait a moment for processes to fully terminate
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    } catch (error) {
+        // No processes found or error occurred, continue
+        console.log('🔍 No existing processes found on port 3000 or error checking');
     }
+}
+
+async function startServer() {
+    const port = 3000;
     
-    tryPort(0);
+    console.log('🔍 Checking for existing processes on port 3000...');
+    await killExistingProcess(port);
+    
+    console.log(`🚀 Starting server on port ${port}...`);
+    const server = app.listen(port, () => {
+        console.log(`✅ Server running on http://localhost:${port}`);
+        console.log('🔗 Available endpoints:');
+        console.log(`  📊 Health: http://localhost:${port}/health`);
+        console.log(`  🔍 Debug: http://localhost:${port}/api/debug`);
+        console.log(`  ⚖️ Constitutional interpretation: http://localhost:${port}/api/case?caseType=釋字&number=712`);
+        console.log(`  📖 Search laws: http://localhost:${port}/api/laws/search?q=民法`);
+        console.log(`  📑 Law details: http://localhost:${port}/api/laws/1`);
+    });
+    
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`❌ Port ${port} is still in use after cleanup attempt`);
+            console.error('Please manually kill the process or restart your system');
+        } else {
+            console.error('❌ Server error:', err.message);
+        }
+        process.exit(1);
+    });
 }
 
 // Graceful shutdown

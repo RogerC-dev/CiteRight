@@ -56,11 +56,15 @@ function highlightCitations() {
     function processTextNode(node) {
         if (seenNodes.has(node)) return;
         if (!node.parentNode) return;
-        // Skip inside our own spans or script/style/inputs, and side panels
+        // Skip inside our own spans or script/style/inputs
         const parentTag = node.parentNode.tagName;
         if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA' || parentTag === 'INPUT') return;
         if (node.parentNode.closest && node.parentNode.closest('.citeright-link')) return;
-        if (node.parentNode.closest && node.parentNode.closest('#citeright-sidepanel')) return;
+        
+        // Skip side panel headers and bookmark panel content, but allow side panel content
+        if (node.parentNode.closest && node.parentNode.closest('#citeright-bookmarks-panel')) return;
+        const sidePanelHeader = node.parentNode.closest && node.parentNode.closest('#citeright-sidepanel > div:first-child');
+        if (sidePanelHeader) return;
         const original = node.textContent;
         if (!original || !original.trim()) return;
 
@@ -123,7 +127,7 @@ function createPopoverElement() {
     if (existing) existing.remove();
     const popover = document.createElement('div');
     popover.id = 'citeright-popover';
-    popover.style.cssText = `position:fixed;z-index:2147483647;background:#fff;border:2px solid #1890ff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.15);width:480px;max-width:95vw;font-family:"Microsoft JhengHei","Noto Sans TC",Arial,sans-serif;font-size:14px;color:#333;display:none;pointer-events:auto;backdrop-filter:blur(8px);`;
+    popover.style.cssText = `position:fixed;z-index:2147483650;background:#fff;border:2px solid #1890ff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.15);width:480px;max-width:95vw;font-family:"Microsoft JhengHei","Noto Sans TC",Arial,sans-serif;font-size:14px;color:#333;display:none;pointer-events:auto;backdrop-filter:blur(8px);`;
     popover.innerHTML = `
       <div class="citeright-header" style="padding:14px 18px;background:linear-gradient(135deg,#1890ff,#096dd9);color:white;border-bottom:none;display:flex;justify-content:space-between;align-items:center;border-radius:10px 10px 0 0;cursor:move;user-select:none;">
         <div style="display:flex;align-items:center;gap:8px;">
@@ -262,7 +266,7 @@ document.addEventListener('keydown', (e) => {
             console.log('❌ 滑鼠懸停模式已停用');
             popover.style.display = 'none';
             clearTimeout(activationTimeout);
-            showActivationNotification('滑鼠懸停模式已停用', '再按 Ctrl 重新啟用', '#ff4d4f');
+            showActivationNotification('滑鼠懸停模式已停用', '再按 Ctrl 重新啟用', '#d73527');
         }
         
         updateActivationStatus();
@@ -276,13 +280,13 @@ document.addEventListener('keyup', (e) => {
 });
 
 // Show activation notification with custom message
-function showActivationNotification(title, subtitle, bgColor = '#52c41a') {
+function showActivationNotification(title, subtitle, bgColor = '#389e0d') {
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed; top: 20px; right: 20px; z-index: 2147483648;
-        background: ${bgColor}; color: white;
+        background: ${bgColor}; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         padding: 12px 16px; border-radius: 8px; font-family: "Microsoft JhengHei";
-        font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         animation: slideIn 0.3s ease-out;
     `;
     notification.innerHTML = `
@@ -336,17 +340,21 @@ function addToBookmarks() {
     );
     
     if (exists) {
-        showActivationNotification('已存在書籤', '此法條已經在您的書籤中', '#ff9500');
+        showActivationNotification('已存在書籤', '此法條已經在您的書籤中', '#e67e22');
         return;
     }
     
-    // Add to bookmarks
+    // Add to bookmarks with full content
     bookmarkedLaws.push({
         id: currentLawData.id || `${currentLawData.type}_${currentLawData.number}`,
         type: currentLawData.type,
         title: currentLawData.title,
         number: currentLawData.number,
-        content: currentLawData.content,
+        content: currentLawData.fullContent || currentLawData.content, // Save full content
+        fullContent: currentLawData.fullContent || currentLawData.content, // Ensure fullContent is available
+        officialUrl: currentLawData.officialUrl,
+        lawData: currentLawData.lawData,
+        articleData: currentLawData.articleData,
         dateAdded: new Date().toISOString()
     });
     
@@ -626,11 +634,12 @@ document.addEventListener('mouseover', async (e) => {
             return;
         }
 
-        // Prevent duplicate popups for same law
+        // Prevent duplicate popups for same law - simplified
         const lawId = getLawIdentifier(e.target);
         if (currentHoveredLaw === lawId && popover.style.display === 'block') {
             return;
         }
+        
         currentHoveredLaw = lawId;
 
         // Clear any existing timeouts
@@ -1138,19 +1147,19 @@ function initializeExtension() {
     }, 300);
 }
 
-// Listen for messages from background script (context menu activation)
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+// Listen for messages from background script and popup
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "activateCiteRight") {
         isActivated = true;
         isPinned = false;
         console.log('⚖️ 透過右鍵選單啟用台灣法源探測器');
         showActivationNotification();
-        updatePinIndicator();
+        updateActivationStatus();
         
         // If there's selected text, try to highlight it immediately
         if (message.selectedText) {
             console.log('📝 選取文字:', message.selectedText);
-            // Re-run highlighting to catch any new legal references
             highlightCitations();
         }
         
@@ -1161,6 +1170,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 isActivated = false;
                 popover.style.display = 'none';
                 console.log('⏰ 法源探測器已自動停用 (5分鐘無操作)');
+                updateActivationStatus();
             }
         }, 300000);
         
@@ -1171,10 +1181,62 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         popover.style.display = 'none';
         clearTimeout(activationTimeout);
         console.log('❌ 透過右鍵選單停用台灣法源探測器');
-        updatePinIndicator();
+        updateActivationStatus();
         sendResponse({ success: true });
+    } else if (message.action === "toggleExtension") {
+        isActivated = message.enabled;
+        if (isActivated) {
+            console.log('⚖️ 滑鼠懸停模式已透過彈出視窗啟用');
+            showActivationNotification('滑鼠懸停模式已啟用', '移動滑鼠至法條引用查看詳情');
+            
+            // Set auto-deactivation timer
+            clearTimeout(activationTimeout);
+            activationTimeout = setTimeout(() => {
+                if (!isPinned) {
+                    isActivated = false;
+                    popover.style.display = 'none';
+                    console.log('⏰ 滑鼠懸停模式已自動停用 (3分鐘無操作)');
+                    updateActivationStatus();
+                }
+            }, 180000);
+        } else {
+            console.log('❌ 滑鼠懸停模式已透過彈出視窗停用');
+            popover.style.display = 'none';
+            clearTimeout(activationTimeout);
+            isPinned = false;
+        }
+        updateActivationStatus();
+        sendResponse({ success: true });
+    } else if (message.action === "openBookmarks") {
+        console.log('📚 透過彈出視窗開啟書籤面板');
+        showBookmarksPanel();
+        sendResponse({ success: true });
+    } else if (message.action === "getStatus") {
+        sendResponse({
+            activated: isActivated,
+            pinned: isPinned,
+            bookmarkCount: bookmarkedLaws.length
+        });
     }
-});
+    });
+}
+
+// Global activation function for testing
+window.activateCiteRight = function() {
+    isActivated = true;
+    showActivationNotification('CiteRight 已手動啟用', '移動滑鼠至法條引用查看詳情');
+    console.log('⚖️ CiteRight manually activated via console');
+    updateActivationStatus();
+};
+
+window.deactivateCiteRight = function() {
+    isActivated = false;
+    isPinned = false;
+    popover.style.display = 'none';
+    clearTimeout(activationTimeout);
+    console.log('❌ CiteRight manually deactivated via console');
+    updateActivationStatus();
+};
 
 // Run initialization
 if (document.readyState === 'loading') {
