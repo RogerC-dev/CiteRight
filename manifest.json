@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "CiteRight - Taiwan Legal Case Recognition",
-  "version": "1.1",
-  "description": "Automatically identifies Taiwan legal case numbers and displays case information with enhanced judicial interpretations database",
+  "name": "台灣法源探測器 (CiteRight)",
+  "version": "2.0",
+  "description": "自動識別並高亮顯示台灣法律條文、釋字、判決書等法源資料，提供即時法律資訊查詢",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "contextMenus"
   ],
   "host_permissions": [
-    "http://localhost:3002/*",
+    "http://localhost:3000/*",
     "https://aomp.judicial.gov.tw/*"
   ],
   "content_scripts": [

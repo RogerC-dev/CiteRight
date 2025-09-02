@@ -35,6 +35,40 @@ async function loadDatabases() {
 // Initialize databases
 loadDatabases();
 
+// Create context menu on extension startup
+chrome.runtime.onStartup.addListener(createContextMenu);
+chrome.runtime.onInstalled.addListener(createContextMenu);
+
+function createContextMenu() {
+  chrome.contextMenus.create({
+    id: "activate-citeright",
+    title: "⚖️ 啟用台灣法源探測器",
+    contexts: ["selection", "page"]
+  });
+  
+  chrome.contextMenus.create({
+    id: "deactivate-citeright", 
+    title: "❌ 停用台灣法源探測器",
+    contexts: ["page"]
+  });
+}
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === "activate-citeright") {
+    chrome.tabs.sendMessage(tab.id, {
+      action: "activateCiteRight",
+      selectedText: info.selectionText || null
+    });
+    console.log('⚖️ 透過右鍵選單啟用台灣法源探測器');
+  } else if (info.menuItemId === "deactivate-citeright") {
+    chrome.tabs.sendMessage(tab.id, {
+      action: "deactivateCiteRight"
+    });
+    console.log('❌ 透過右鍵選單停用台灣法源探測器');
+  }
+});
+
 // Enhanced fetch with retry logic
 async function fetchWithRetry(url, options = {}, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
