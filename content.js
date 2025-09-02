@@ -130,8 +130,8 @@ function createPopoverElement() {
           <span id="citeright-title" style="font-weight:600;font-size:16px;">台灣法源資訊</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <button class="citeright-expand" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;transition:all 0.2s;" title="展開至側邊面板">展開</button>
-          <button class="citeright-pin" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:50%;padding:6px;cursor:pointer;font-size:14px;width:28px;height:28px;transition:all 0.2s;" title="釘選/取消釘選">📌</button>
+          <button class="citeright-bookmark" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;transition:all 0.2s;" title="加入書籤">📚 書籤</button>
+          <button class="citeright-expand" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;transition:all 0.2s;" title="展開至側邊面板">📖 展開</button>
           <button class="citeright-close" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:50%;padding:6px;cursor:pointer;font-size:16px;width:28px;height:28px;transition:all 0.2s;">&times;</button>
         </div>
       </div>
@@ -152,29 +152,23 @@ function createPopoverElement() {
       </style>`;
     document.body.appendChild(popover);
 
-    // Close button event
+    // Close button event - only hides popover
     popover.querySelector('.citeright-close').addEventListener('click', e => {
         e.stopPropagation();
-        isPinned = false;
-        isActivated = false;
         popover.style.display = 'none';
-        updatePinIndicator();
-        console.log('❌ 法源探測器已關閉');
+        console.log('❌ 彈出視窗已關閉');
     });
 
-    // Pin button event 
-    popover.querySelector('.citeright-pin').addEventListener('click', e => {
+    // Bookmark button event
+    popover.querySelector('.citeright-bookmark').addEventListener('click', e => {
         e.stopPropagation();
-        isPinned = !isPinned;
-        updatePinIndicator();
-        console.log(`📌 法源探測器${isPinned ? '已釘選' : '已取消釘選'}`);
+        addToBookmarks();
     });
 
-    // Expand button event (placeholder for future side panel)
+    // Expand button event - creates side panel
     popover.querySelector('.citeright-expand').addEventListener('click', e => {
         e.stopPropagation();
-        // TODO: Implement side panel
-        console.log('📊 展開功能開發中...');
+        openSidePanel();
     });
 
     // Drag improvements
@@ -216,105 +210,325 @@ let hideTimeout;
 
 // Enhanced state management for better UX
 let isCtrlPressed = false;    // Current Ctrl key state
-let isPinned = false;         // Whether popover is pinned
-let isActivated = false;      // Whether extension is activated (persistent until deactivated)
+let isActivated = false;      // Whether hover mode is activated
 let activationTimeout;        // Auto-deactivation timeout
+let bookmarkedLaws = [];      // Saved bookmarks
 
-// Helper function to update pin indicator
-function updatePinIndicator() {
-    const pinBtn = popover.querySelector('.citeright-pin');
+// Helper function to update activation status
+function updateActivationStatus() {
     const title = popover.querySelector('#citeright-title');
-    if (pinBtn) {
-        pinBtn.style.background = isPinned ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)';
-        pinBtn.title = isPinned ? '取消釘選' : '釘選視窗';
-    }
-    if (title && isActivated) {
-        title.textContent = isActivated ? '台灣法源資訊 (已啟用)' : '台灣法源資訊';
+    if (title) {
+        title.textContent = isActivated ? '台灣法源資訊 (滑鼠模式)' : '台灣法源資訊';
     }
 }
 
-// Enhanced Ctrl key listeners with activation logic
+// Enhanced Ctrl key listeners - toggles hover mode
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && !isCtrlPressed) {
         isCtrlPressed = true;
         
-        // First Ctrl press activates the extension
-        if (!isActivated) {
-            isActivated = true;
-            console.log('⚖️ 台灣法源探測器已啟用 - 移動滑鼠至法條引用查看詳情');
+        // Ctrl toggles hover mode
+        isActivated = !isActivated;
+        
+        if (isActivated) {
+            console.log('⚖️ 滑鼠懸停模式已啟用');
+            showActivationNotification('滑鼠懸停模式已啟用', '移動滑鼠至法條引用查看詳情');
             
-            // Show activation notification
-            showActivationNotification();
-            
-            // Set auto-deactivation timer (5 minutes)
+            // Set auto-deactivation timer (3 minutes)
             clearTimeout(activationTimeout);
             activationTimeout = setTimeout(() => {
-                if (!isPinned) {
-                    isActivated = false;
-                    popover.style.display = 'none';
-                    console.log('⏰ 法源探測器已自動停用 (5分鐘無操作)');
-                }
-            }, 300000); // 5 minutes
+                isActivated = false;
+                popover.style.display = 'none';
+                console.log('⏰ 滑鼠懸停模式已自動停用 (3分鐘無操作)');
+                updateActivationStatus();
+            }, 180000); // 3 minutes
+        } else {
+            console.log('❌ 滑鼠懸停模式已停用');
+            popover.style.display = 'none';
+            clearTimeout(activationTimeout);
+            showActivationNotification('滑鼠懸停模式已停用', '再按 Ctrl 重新啟用', '#ff4d4f');
         }
         
-        updatePinIndicator();
+        updateActivationStatus();
     }
 });
 
 document.addEventListener('keyup', (e) => {
     if (!e.ctrlKey && isCtrlPressed) {
         isCtrlPressed = false;
-        
-        // Don't hide popover immediately when Ctrl is released if activated
-        if (!isPinned && !isPopoverHovered() && !isActivated) {
-            setTimeout(() => {
-                if (!isPinned && !isPopoverHovered()) {
-                    popover.style.display = 'none';
-                }
-            }, 300);
-        }
     }
 });
 
-// Show activation notification
-function showActivationNotification() {
+// Show activation notification with custom message
+function showActivationNotification(title, subtitle, bgColor = '#52c41a') {
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed; top: 20px; right: 20px; z-index: 2147483648;
-        background: linear-gradient(135deg, #52c41a, #389e0d); color: white;
+        background: ${bgColor}; color: white;
         padding: 12px 16px; border-radius: 8px; font-family: "Microsoft JhengHei";
         font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         animation: slideIn 0.3s ease-out;
     `;
     notification.innerHTML = `
         <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 16px;">⚖️</span>
-            <span>台灣法源探測器已啟用</span>
+            <span style="font-size: 16px;">${isActivated ? '⚖️' : '❌'}</span>
+            <span>${title}</span>
         </div>
         <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">
-            移動滑鼠至法條引用查看詳情
+            ${subtitle}
         </div>
     `;
     
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-    `;
-    document.head.appendChild(style);
+    if (!document.getElementById('slideIn-style')) {
+        const style = document.createElement('style');
+        style.id = 'slideIn-style';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
     document.body.appendChild(notification);
     
     setTimeout(() => {
         notification.remove();
-        style.remove();
-    }, 3000);
+    }, 2500);
 }
 
 // Helper function to check if popover is being hovered
 function isPopoverHovered() {
     return popover.matches(':hover') || popover.contains(document.querySelector(':hover'));
+}
+
+// Global variable to store current law data for bookmarking
+let currentLawData = null;
+
+// Bookmark functionality
+function addToBookmarks() {
+    if (!currentLawData) {
+        console.log('❌ 無法加入書籤：沒有目前的法律資料');
+        return;
+    }
+    
+    // Check if already bookmarked
+    const exists = bookmarkedLaws.find(item => 
+        item.id === currentLawData.id || 
+        (item.type === currentLawData.type && item.number === currentLawData.number)
+    );
+    
+    if (exists) {
+        showActivationNotification('已存在書籤', '此法條已經在您的書籤中', '#ff9500');
+        return;
+    }
+    
+    // Add to bookmarks
+    bookmarkedLaws.push({
+        id: currentLawData.id || `${currentLawData.type}_${currentLawData.number}`,
+        type: currentLawData.type,
+        title: currentLawData.title,
+        number: currentLawData.number,
+        content: currentLawData.content,
+        dateAdded: new Date().toISOString()
+    });
+    
+    // Save to localStorage
+    localStorage.setItem('citeright_bookmarks', JSON.stringify(bookmarkedLaws));
+    
+    showActivationNotification('已加入書籤', `${currentLawData.title}`, '#52c41a');
+    console.log('📚 已加入書籤:', currentLawData.title);
+}
+
+// Side panel functionality
+function openSidePanel() {
+    if (!currentLawData) {
+        console.log('❌ 無法展開側邊面板：沒有目前的法律資料');
+        return;
+    }
+    
+    // Check if side panel already exists
+    const existingPanel = document.getElementById('citeright-sidepanel');
+    if (existingPanel) {
+        existingPanel.remove();
+    }
+    
+    const sidePanel = document.createElement('div');
+    sidePanel.id = 'citeright-sidepanel';
+    sidePanel.style.cssText = `
+        position: fixed; top: 0; right: 0; width: 450px; height: 100vh; 
+        background: white; border-left: 3px solid #1890ff; z-index: 2147483647;
+        font-family: "Microsoft JhengHei", Arial, sans-serif; font-size: 14px;
+        box-shadow: -8px 0 24px rgba(0,0,0,0.15); transform: translateX(100%);
+        transition: transform 0.3s ease-out; overflow: hidden; display: flex; flex-direction: column;
+    `;
+    
+    sidePanel.innerHTML = `
+        <div style="background: linear-gradient(135deg, #1890ff, #096dd9); color: white; padding: 20px; flex-shrink: 0;">
+            <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 12px;">
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600;">${currentLawData.title}</h2>
+                <button id="close-sidepanel" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 8px; cursor: pointer; font-size: 18px; width: 36px; height: 36px; margin-left: auto;">&times;</button>
+            </div>
+            <div style="font-size: 13px; opacity: 0.9;">
+                ${currentLawData.type} · ${currentLawData.number ? `第${currentLawData.number}${currentLawData.type === '釋字' ? '號' : currentLawData.type === '法條' ? '條' : '號'}` : ''}
+            </div>
+        </div>
+        
+        <div style="flex: 1; overflow-y: auto; padding: 20px;">
+            <div id="sidepanel-content">
+                ${currentLawData.fullContent || currentLawData.content || '載入完整內容中...'}
+            </div>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e8e8e8;">
+                <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #1890ff;">相關功能</h3>
+                <div style="display: grid; gap: 10px;">
+                    <button id="bookmark-from-panel" style="padding: 10px; border: 1px solid #d9d9d9; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                        📚 加入書籤
+                    </button>
+                    <button id="view-bookmarks" style="padding: 10px; border: 1px solid #d9d9d9; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                        📖 查看我的書籤
+                    </button>
+                    <button id="official-link" style="padding: 10px; border: 1px solid #d9d9d9; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                        🔗 前往官方頁面
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(sidePanel);
+    
+    // Show panel with animation
+    setTimeout(() => {
+        sidePanel.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Event listeners for side panel
+    sidePanel.querySelector('#close-sidepanel').addEventListener('click', () => {
+        sidePanel.style.transform = 'translateX(100%)';
+        setTimeout(() => sidePanel.remove(), 300);
+    });
+    
+    sidePanel.querySelector('#bookmark-from-panel').addEventListener('click', () => {
+        addToBookmarks();
+    });
+    
+    sidePanel.querySelector('#view-bookmarks').addEventListener('click', () => {
+        showBookmarksPanel();
+    });
+    
+    sidePanel.querySelector('#official-link').addEventListener('click', () => {
+        if (currentLawData.officialUrl) {
+            window.open(currentLawData.officialUrl, '_blank');
+        }
+    });
+    
+    // Load full content if needed
+    if (currentLawData.loadFullContent) {
+        currentLawData.loadFullContent().then(content => {
+            const contentDiv = sidePanel.querySelector('#sidepanel-content');
+            if (contentDiv && content) {
+                contentDiv.innerHTML = content;
+            }
+        });
+    }
+}
+
+// Show bookmarks panel
+function showBookmarksPanel() {
+    // Load bookmarks from localStorage
+    const savedBookmarks = localStorage.getItem('citeright_bookmarks');
+    if (savedBookmarks) {
+        bookmarkedLaws = JSON.parse(savedBookmarks);
+    }
+    
+    const bookmarksPanel = document.createElement('div');
+    bookmarksPanel.id = 'citeright-bookmarks';
+    bookmarksPanel.style.cssText = `
+        position: fixed; top: 0; right: 450px; width: 400px; height: 100vh;
+        background: #f8f9fa; border-left: 2px solid #e8e8e8; z-index: 2147483646;
+        font-family: "Microsoft JhengHei"; overflow-y: auto; transform: translateX(100%);
+        transition: transform 0.3s ease-out;
+    `;
+    
+    bookmarksPanel.innerHTML = `
+        <div style="background: #1890ff; color: white; padding: 20px; position: sticky; top: 0;">
+            <div style="display: flex; justify-content: between; align-items: center;">
+                <h2 style="margin: 0; font-size: 18px;">📚 我的法律書籤</h2>
+                <button id="close-bookmarks" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 6px; cursor: pointer; font-size: 16px; width: 28px; height: 28px; margin-left: auto;">&times;</button>
+            </div>
+            <div style="font-size: 13px; opacity: 0.9; margin-top: 8px;">
+                已儲存 ${bookmarkedLaws.length} 個書籤
+            </div>
+        </div>
+        
+        <div style="padding: 20px;">
+            ${bookmarkedLaws.length === 0 ? `
+                <div style="text-align: center; color: #999; padding: 40px 20px;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
+                    <div>尚未儲存任何書籤</div>
+                    <div style="font-size: 12px; margin-top: 8px;">在法條詳情中點擊「加入書籤」來儲存</div>
+                </div>
+            ` : bookmarkedLaws.map((bookmark, index) => `
+                <div class="bookmark-item" data-bookmark-id="${bookmark.id}" style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; border: 1px solid #e8e8e8; cursor: pointer; transition: all 0.2s;">
+                    <div style="font-weight: 600; color: #1890ff; margin-bottom: 8px;">${bookmark.title}</div>
+                    <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                        ${bookmark.type} · 儲存於 ${new Date(bookmark.dateAdded).toLocaleDateString('zh-TW')}
+                    </div>
+                    <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                        ${bookmark.content ? bookmark.content.substring(0, 100) + '...' : '無內容摘要'}
+                    </div>
+                    <div style="margin-top: 12px; display: flex; gap: 8px;">
+                        <button class="view-bookmark" style="padding: 4px 8px; font-size: 11px; background: #f0f9ff; color: #1890ff; border: 1px solid #91d5ff; border-radius: 4px; cursor: pointer;">查看</button>
+                        <button class="delete-bookmark" style="padding: 4px 8px; font-size: 11px; background: #fff2f0; color: #ff4d4f; border: 1px solid #ffccc7; border-radius: 4px; cursor: pointer;">刪除</button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    document.body.appendChild(bookmarksPanel);
+    
+    // Show with animation
+    setTimeout(() => {
+        bookmarksPanel.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Event listeners
+    bookmarksPanel.querySelector('#close-bookmarks').addEventListener('click', () => {
+        bookmarksPanel.style.transform = 'translateX(100%)';
+        setTimeout(() => bookmarksPanel.remove(), 300);
+    });
+    
+    // Bookmark item interactions
+    bookmarksPanel.querySelectorAll('.view-bookmark').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const bookmarkId = e.target.closest('.bookmark-item').dataset.bookmarkId;
+            const bookmark = bookmarkedLaws.find(b => b.id === bookmarkId);
+            if (bookmark) {
+                currentLawData = bookmark;
+                openSidePanel();
+            }
+        });
+    });
+    
+    bookmarksPanel.querySelectorAll('.delete-bookmark').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const bookmarkId = e.target.closest('.bookmark-item').dataset.bookmarkId;
+            bookmarkedLaws = bookmarkedLaws.filter(b => b.id !== bookmarkId);
+            localStorage.setItem('citeright_bookmarks', JSON.stringify(bookmarkedLaws));
+            e.target.closest('.bookmark-item').remove();
+            
+            // Update counter
+            const counter = bookmarksPanel.querySelector('div[style*="opacity: 0.9"]');
+            if (counter) {
+                counter.textContent = `已儲存 ${bookmarkedLaws.length} 個書籤`;
+            }
+        });
+    });
 }
 
 // Enhanced mouseover event with improved activation logic and database integration
@@ -326,20 +540,20 @@ document.addEventListener('mouseover', async (e) => {
         }
 
         console.log('⚖️ 法律引用偵測:', e.target.textContent);
-        clearTimeout(hideTimeout);
 
         const target = e.target;
         const rect = target.getBoundingClientRect();
 
-        // Smart positioning for the improved popover
+        // Smart positioning close to underline
         let left = rect.left + window.scrollX;
-        let top = rect.top + window.scrollY - 380;
+        let top = rect.bottom + window.scrollY + 8; // Close to underline
 
+        // Keep within screen bounds
         if (left + 480 > window.innerWidth) {
-            left = window.innerWidth - 490;
+            left = Math.max(10, window.innerWidth - 490);
         }
-        if (top < 10) {
-            top = rect.bottom + window.scrollY + 15;
+        if (top + 350 > window.innerHeight + window.scrollY) {
+            top = rect.top + window.scrollY - 360; // Show above if no space below
         }
 
         popover.style.display = 'block';
@@ -394,6 +608,19 @@ document.addEventListener('mouseover', async (e) => {
                     const matchingArticle = articleData.articles.find(art => 
                         art.article_number.includes(article) || art.article_number.includes(`第 ${article} 條`)
                     );
+                    
+                    // Store current law data for bookmarking
+                    currentLawData = {
+                        id: law.id,
+                        type: '法條',
+                        title: `${law.law_name}第${article}條`,
+                        number: article,
+                        content: matchingArticle ? matchingArticle.article_content.substring(0, 500) : '無條文內容',
+                        fullContent: matchingArticle ? matchingArticle.article_content : null,
+                        officialUrl: law.law_url,
+                        lawData: law,
+                        articleData: matchingArticle
+                    };
                     
                     content.innerHTML = `
                         <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e8e8e8;">
@@ -450,6 +677,24 @@ document.addEventListener('mouseover', async (e) => {
 
                 if (data.success && data.data) {
                     const interp = data.data;
+                    
+                    // Store current law data for bookmarking
+                    currentLawData = {
+                        id: `interpretation_${number}`,
+                        type: '釋字',
+                        title: `司法院釋字第${number}號解釋`,
+                        number: number,
+                        content: interp.chinese.description ? interp.chinese.description.substring(0, 500) : '無解釋文',
+                        fullContent: `
+                            ${interp.chinese.issue ? `<h3>解釋爭點</h3><p>${interp.chinese.issue}</p>` : ''}
+                            ${interp.chinese.description ? `<h3>解釋文</h3><p>${interp.chinese.description}</p>` : ''}
+                            ${interp.chinese.reasoning ? `<h3>解釋理由書</h3><p>${interp.chinese.reasoning}</p>` : ''}
+                            ${interp.chinese.fact ? `<h3>事實</h3><p>${interp.chinese.fact}</p>` : ''}
+                        `,
+                        officialUrl: `https://cons.judicial.gov.tw/jcc/zh-tw/jep03/show?expno=${number}`,
+                        interpretationData: interp
+                    };
+                    
                     content.innerHTML = `
                         <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e8e8e8;">
                             <strong style="color: #1890ff; font-size: 16px;">司法院釋字第${number}號解釋</strong>
@@ -513,25 +758,19 @@ document.addEventListener('mouseover', async (e) => {
     }
 });
 
-// Mouseout event
-document.addEventListener('mouseout', (e) => {
-    if (e.target.classList.contains('citeright-link')) {
-        hideTimeout = setTimeout(() => {
+// Click blank area to close popover
+document.addEventListener('click', (e) => {
+    if (isActivated && popover.style.display === 'block') {
+        // Don't close if clicking on popover, legal links, or buttons
+        if (!e.target.closest('#citeright-popover') && 
+            !e.target.classList.contains('citeright-link') &&
+            !e.target.closest('.citeright-link')) {
             popover.style.display = 'none';
-        }, 300);
+        }
     }
 });
 
-// Popover hover events
-popover.addEventListener('mouseenter', () => {
-    clearTimeout(hideTimeout);
-});
-
-popover.addEventListener('mouseleave', () => {
-    hideTimeout = setTimeout(() => {
-        popover.style.display = 'none';
-    }, 300);
-});
+// Popover now only closes on blank click, not on mouse events
 
 // Enhanced click-to-pin functionality - NEW FEATURE
 document.addEventListener('click', (e) => {
@@ -555,11 +794,7 @@ document.addEventListener('click', (e) => {
             updatePinIndicator();
 
             // Start hide timer if not hovering
-            if (!isCtrlPressed && !isPopoverHovered()) {
-                hideTimeout = setTimeout(() => {
-                    popover.style.display = 'none';
-                }, 300);
-            }
+            // Removed auto-hide timeout - only close on blank click
         }
     }
 });
@@ -567,19 +802,19 @@ document.addEventListener('click', (e) => {
 // Helper function to show popover for specific target
 async function showPopoverForTarget(target) {
     console.log('🎯 Showing popover for:', target.textContent);
-    clearTimeout(hideTimeout);
 
     const rect = target.getBoundingClientRect();
 
-    // Smart positioning
+    // Smart positioning close to underline
     let left = rect.left + window.scrollX;
-    let top = rect.top + window.scrollY - 350;
+    let top = rect.bottom + window.scrollY + 8; // Close to underline
 
+    // Keep within screen bounds
     if (left + 450 > window.innerWidth) {
-        left = window.innerWidth - 460;
+        left = Math.max(10, window.innerWidth - 460);
     }
-    if (top < 10) {
-        top = rect.bottom + window.scrollY + 10;
+    if (top + 350 > window.innerHeight + window.scrollY) {
+        top = rect.top + window.scrollY - 360; // Show above if no space below
     }
 
     popover.style.display = 'block';
