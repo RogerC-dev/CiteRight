@@ -61,10 +61,18 @@ function highlightCitations() {
         if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA' || parentTag === 'INPUT') return;
         if (node.parentNode.closest && node.parentNode.closest('.citeright-link')) return;
         
-        // Skip side panel headers and bookmark panel content, but allow side panel content
+        // Skip bookmark panel content completely, but allow side panel content with legal highlighting
         if (node.parentNode.closest && node.parentNode.closest('#citeright-bookmarks-panel')) return;
+        
+        // Skip side panel headers but allow content area
         const sidePanelHeader = node.parentNode.closest && node.parentNode.closest('#citeright-sidepanel > div:first-child');
         if (sidePanelHeader) return;
+        
+        // Allow highlighting in legal content areas of side panel
+        const isInLegalContentArea = node.parentNode.closest && node.parentNode.closest('.legal-content-area');
+        if (isInLegalContentArea) {
+            // Continue with highlighting for legal content
+        }
         const original = node.textContent;
         if (!original || !original.trim()) return;
 
@@ -116,9 +124,88 @@ function highlightCitations() {
     return finalCount;
 }
 
+// Helper function to highlight citations in a specific element
+function highlightCitationsInElement(element) {
+    console.log('🔍 Applying highlighting to element:', element);
+    const seenNodes = new WeakSet();
+    let created = 0;
+
+    function processTextNode(node) {
+        if (seenNodes.has(node)) return;
+        if (!node.parentNode) return;
+        
+        // Skip inside our own spans or script/style/inputs
+        const parentTag = node.parentNode.tagName;
+        if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA' || parentTag === 'INPUT') return;
+        if (node.parentNode.closest && node.parentNode.closest('.citeright-link')) return;
+        
+        const original = node.textContent;
+        if (!original || !original.trim()) return;
+
+        let newHTML = original;
+        let changed = false;
+        for (const [key, pattern] of Object.entries(TAIWAN_LEGAL_PATTERNS)) {
+            const fresh = new RegExp(pattern.source, pattern.flags);
+            newHTML = newHTML.replace(fresh, (m, ...groups) => {
+                changed = true;
+                return makeSpan(m, key, groups);
+            });
+        }
+        if (changed) {
+            const wrapper = document.createElement('span');
+            wrapper.innerHTML = newHTML;
+            while (wrapper.firstChild) {
+                node.parentNode.insertBefore(wrapper.firstChild, node);
+            }
+            node.parentNode.removeChild(node);
+            created++;
+        }
+        seenNodes.add(node);
+    }
+
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            if (!node.textContent || !/[字號釋憲判第度年]/.test(node.textContent)) return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+        }
+    });
+
+    const batch = [];
+    while (walker.nextNode()) {
+        batch.push(walker.currentNode);
+    }
+    batch.forEach(processTextNode);
+
+    console.log(`✨ Applied highlighting to ${created} legal references in element`);
+    return created;
+}
+
+// Get current session statistics
+function getSessionStats() {
+    const stats = {
+        hoverCounts: Object.fromEntries(sessionLawCount),
+        currentlyActive: activePopupLaw,
+        currentlyHovered: currentHoveredLaw
+    };
+    console.log('📈 Session Statistics:', stats);
+    return stats;
+}
+
+// Reset session data
+function resetSessionData() {
+    sessionLawCount.clear();
+    activePopupLaw = null;
+    currentHoveredLaw = null;
+    popover.style.display = 'none';
+    console.log('🔄 Reset session data');
+}
+
 // Expose for manual debug
 if (typeof window !== 'undefined') {
     window.citerightForceHighlight = highlightCitations;
+    window.citerightHighlightElement = highlightCitationsInElement;
+    window.citerightSessionStats = getSessionStats;
+    window.citerightResetSession = resetSessionData;
 }
 
 function createPopoverElement() {
@@ -132,7 +219,7 @@ function createPopoverElement() {
       <div class="citeright-header" style="padding:14px 18px;background:linear-gradient(135deg,#1890ff,#096dd9);color:white;border-bottom:none;display:flex;justify-content:space-between;align-items:center;border-radius:10px 10px 0 0;cursor:move;user-select:none;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span id="citeright-icon" style="font-size:18px;">⚖️</span>
-          <span id="citeright-title" style="font-weight:600;font-size:16px;">台灣法源資訊</span>
+          <span id="citeright-title" style="font-weight:600;font-size:16px;color:#f0f8ff;text-shadow: 1px 1px 3px rgba(0,0,0,0.5);opacity:0.95;">台灣法源資訊</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <button class="citeright-bookmark" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;transition:all 0.2s;" title="加入書籤">📚 書籤</button>
@@ -201,9 +288,7 @@ function createPopoverElement() {
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
-            isPinned = false;
             popover.style.display = 'none';
-            updatePinIndicator();
         }
     });
     return popover;
@@ -214,13 +299,15 @@ const popover = createPopoverElement();
 let hideTimeout;
 let showTimeout;              // Delay before showing popover
 let currentHoveredLaw = null; // Track currently hovered law to prevent duplicates
+let activePopupLaw = null;    // Track law currently shown in popup to prevent duplicates
+let popupCooldown = false;    // Prevent rapid popup opening
+let sessionLawCount = new Map(); // Count how many times each law has been hovered
 
 // Enhanced state management for better UX
 let isCtrlPressed = false;    // Current Ctrl key state
 let isActivated = false;      // Whether hover mode is activated
 let activationTimeout;        // Auto-deactivation timeout
 let bookmarkedLaws = [];      // Saved bookmarks
-let isPinned = false;         // Pin state for popovers
 
 // Helper function to update activation status
 function updateActivationStatus() {
@@ -405,7 +492,7 @@ function openSidePanel() {
         </div>
         
         <div style="flex: 1; overflow-y: auto; padding: 20px;">
-            <div id="sidepanel-content">
+            <div id="sidepanel-content" class="legal-content-area">
                 ${currentLawData.fullContent || currentLawData.content || '載入完整內容中...'}
             </div>
             
@@ -464,14 +551,24 @@ function openSidePanel() {
         }
     });
     
-    // Load full content if needed
+    // Load full content and apply highlighting
     if (currentLawData.loadFullContent) {
         currentLawData.loadFullContent().then(content => {
             const contentDiv = sidePanel.querySelector('#sidepanel-content');
             if (contentDiv && content) {
                 contentDiv.innerHTML = content;
+                // Apply highlighting to the new content
+                setTimeout(() => highlightCitationsInElement(contentDiv), 100);
             }
         });
+    } else {
+        // Apply highlighting to existing content
+        setTimeout(() => {
+            const contentDiv = sidePanel.querySelector('#sidepanel-content');
+            if (contentDiv) {
+                highlightCitationsInElement(contentDiv);
+            }
+        }, 100);
     }
     
     // Add resize functionality
@@ -603,7 +700,12 @@ function showBookmarksPanel() {
             const bookmarkId = e.target.closest('.bookmark-item').dataset.bookmarkId;
             const bookmark = bookmarkedLaws.find(b => b.id === bookmarkId);
             if (bookmark) {
-                currentLawData = bookmark;
+                // Ensure we have full content for bookmarks
+                currentLawData = {
+                    ...bookmark,
+                    content: bookmark.fullContent || bookmark.content,
+                    fullContent: bookmark.fullContent || bookmark.content
+                };
                 openSidePanel();
             }
         });
@@ -628,17 +730,64 @@ function showBookmarksPanel() {
 
 // Enhanced mouseover event with improved activation logic and database integration
 document.addEventListener('mouseover', async (e) => {
+    // Prevent popup triggers when hovering over the popup itself or its children
+    if (e.target.closest('#citeright-popover') || e.target.id === 'citeright-popover') {
+        return;
+    }
+    
     if (e.target.classList.contains('citeright-link')) {
-        // Only proceed if extension is activated
+        // Check if extension is enabled from storage
+        chrome.storage.local.get(['citeright_enabled'], function(result) {
+            const isEnabled = result.citeright_enabled || false;
+            if (!isEnabled) {
+                return;
+            }
+        });
+        
+        // Also check activation state
         if (!isActivated) {
             return;
         }
+        
+        // Clear any existing hide timeout when hovering a new law
+        clearTimeout(hideTimeout);
 
-        // Prevent duplicate popups for same law - simplified
+        // Improved duplicate prevention - only prevent if popup is currently open
         const lawId = getLawIdentifier(e.target);
-        if (currentHoveredLaw === lawId && popover.style.display === 'block') {
+        
+        // Track hover count for this law
+        const hoverCount = sessionLawCount.get(lawId) || 0;
+        sessionLawCount.set(lawId, hoverCount + 1);
+        
+        // Only prevent if same law popup is currently displayed
+        if (activePopupLaw === lawId && popover.style.display === 'block') {
+            console.log(`⛔ Same law popup already open (hover #${hoverCount}):`, lawId);
             return;
         }
+        
+        // This check is now handled above, remove duplicate
+        
+        // Don't show popup if in cooldown period for any law
+        if (popupCooldown) {
+            return;
+        }
+        
+        // If different law is showing, hide current popup first
+        if (activePopupLaw && activePopupLaw !== lawId && popover.style.display === 'block') {
+            popover.style.display = 'none';
+            activePopupLaw = null;
+            // Small delay before showing new popup for different law
+            setTimeout(() => {
+                if (!popupCooldown) {
+                    showNewPopup();
+                }
+            }, 100);
+            return;
+        }
+        
+        showNewPopup();
+        
+        function showNewPopup() {
         
         currentHoveredLaw = lawId;
 
@@ -646,8 +795,17 @@ document.addEventListener('mouseover', async (e) => {
         clearTimeout(showTimeout);
         clearTimeout(hideTimeout);
 
-        // Small delay before showing popover for better UX
-        showTimeout = setTimeout(async () => {
+            // Set cooldown and update tracking
+            popupCooldown = true;
+            setTimeout(() => { popupCooldown = false; }, 400); // 400ms cooldown
+            
+            currentHoveredLaw = lawId;
+            activePopupLaw = lawId;
+            
+            console.log(`✨ Showing law popup (hover #${hoverCount}):`, lawId);
+            
+            // Small delay before showing popover for better UX
+            showTimeout = setTimeout(async () => {
             console.log('⚖️ 法律引用偵測:', e.target.textContent);
 
             const target = e.target;
@@ -878,16 +1036,36 @@ document.addEventListener('mouseover', async (e) => {
                 </div>
             `;
         }
-        }, 150); // 150ms delay for better UX
+            }, 150); // 150ms delay for better UX
+        }
     }
 });
 
 // Clear current hovered law when mouse leaves
 document.addEventListener('mouseout', (e) => {
+    // Don't trigger mouseout logic when entering the popup
+    if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#citeright-popover')) {
+        return;
+    }
+    
     if (e.target.classList.contains('citeright-link')) {
         // Clear timeout if mouse leaves before delay completes
         clearTimeout(showTimeout);
-        currentHoveredLaw = null;
+        
+        const lawId = getLawIdentifier(e.target);
+        
+        // Only clear if we're leaving the currently tracked law
+        if (currentHoveredLaw === lawId) {
+            currentHoveredLaw = null;
+        }
+        
+        // Hide popup after short delay if not hovering popover
+        hideTimeout = setTimeout(() => {
+            if (!isPopoverHovered()) {
+                popover.style.display = 'none';
+                activePopupLaw = null;
+            }
+        }, 600);
     }
 });
 
@@ -897,8 +1075,8 @@ document.addEventListener('click', (e) => {
         // Close if clicking X button
         if (e.target.classList.contains('citeright-close')) {
             popover.style.display = 'none';
-            isPinned = false;
             currentHoveredLaw = null;
+            activePopupLaw = null;
             return;
         }
         
@@ -906,46 +1084,289 @@ document.addEventListener('click', (e) => {
         if (!e.target.closest('#citeright-popover') && 
             !e.target.classList.contains('citeright-link') &&
             !e.target.closest('.citeright-link')) {
-            // Only close if not pinned
-            if (!isPinned) {
-                popover.style.display = 'none';
-                currentHoveredLaw = null;
-            }
+            popover.style.display = 'none';
+            currentHoveredLaw = null;
+            activePopupLaw = null;
         }
     }
 });
 
 // Popover now only closes on blank click, not on mouse events
 
-// Enhanced click-to-pin functionality - NEW FEATURE
-document.addEventListener('click', (e) => {
+// Click to show popup with full database data
+document.addEventListener('click', async (e) => {
     if (e.target.classList.contains('citeright-link')) {
         e.preventDefault();
-
-        // Toggle pin state
-        isPinned = !isPinned;
-
-        if (isPinned) {
-            console.log('📌 Popover pinned - will stay open until X is clicked');
-            clearTimeout(hideTimeout);
-
-            // Show popover immediately when pinned
-            showPopoverForTarget(e.target);
-
-            // Update visual indicator
-            updatePinIndicator();
-        } else {
-            console.log('📌 Popover unpinned');
-            updatePinIndicator();
-
-            // Start hide timer if not hovering
-            // Removed auto-hide timeout - only close on blank click
+        
+        const lawId = getLawIdentifier(e.target);
+        
+        // Only prevent if same law popup is currently open
+        if (activePopupLaw === lawId && popover.style.display === 'block') {
+            console.log('⛔ Click ignored - same law popup already open:', lawId);
+            return;
         }
+        
+        // Set as active and display popup
+        activePopupLaw = lawId;
+        
+        // Show popover with full database data
+        await showPopoverForTargetWithData(e.target);
     }
 });
 
-// Helper function to show popover for specific target
+// Enhanced helper function to show popover with full database data
+async function showPopoverForTargetWithData(target) {
+    console.log('🎣 Loading full database data for:', target.textContent);
+    
+    const lawId = getLawIdentifier(target);
+    activePopupLaw = lawId;
+    
+    const rect = target.getBoundingClientRect();
+    positionPopover(rect);
+    
+    popover.style.display = 'block';
+    showPopoverLoader();
+    
+    const { legalType, caseType, lawName, article, paragraph, year, number } = target.dataset;
+    
+    try {
+        if (legalType === 'law_article') {
+            await loadLawArticleData(lawName, article, paragraph);
+        } else if (caseType === '釋字') {
+            await loadInterpretationData(number);
+        } else {
+            await loadCourtCaseData(year, caseType, number);
+        }
+    } catch (error) {
+        showPopoverError(error);
+    }
+}
+
+
+// Helper function to position popover
+function positionPopover(rect) {
+    let left = rect.left + window.scrollX;
+    let top = rect.bottom + window.scrollY + 8;
+    
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const scrollTop = window.scrollY;
+    const scrollLeft = window.scrollX;
+    
+    if (left + 480 > scrollLeft + viewportWidth) {
+        left = Math.max(scrollLeft + 10, scrollLeft + viewportWidth - 490);
+    }
+    if (left < scrollLeft + 10) {
+        left = scrollLeft + 10;
+    }
+    
+    if (top + 350 > scrollTop + viewportHeight) {
+        top = rect.top + scrollTop - 360;
+    }
+    if (top < scrollTop + 10) {
+        top = scrollTop + 10;
+    }
+    
+    popover.style.left = Math.max(10, left) + 'px';
+    popover.style.top = Math.max(10, top) + 'px';
+}
+
+// Helper function to show popover loader
+function showPopoverLoader() {
+    const loader = popover.querySelector('.citeright-loader');
+    const content = popover.querySelector('.citeright-content');
+    loader.style.display = 'block';
+    content.style.display = 'none';
+}
+
+// Helper function to show popover error
+function showPopoverError(error) {
+    const loader = popover.querySelector('.citeright-loader');
+    const content = popover.querySelector('.citeright-content');
+    loader.style.display = 'none';
+    content.style.display = 'block';
+    content.innerHTML = `
+        <div style="color: #ff4d4f; text-align: center; padding: 20px;">
+            <div style="font-size: 24px;">⚠️</div>
+            <div style="margin-top: 8px;">無法連線至法律資料庫</div>
+            <div style="font-size: 12px; margin-top: 4px; color: #666;">請確認後端服務是否正常運行</div>
+        </div>
+    `;
+}
+
+// Helper function to load law article data from database
+async function loadLawArticleData(lawName, article, paragraph) {
+    const apiUrl = `http://localhost:3000/api/laws/search?q=${encodeURIComponent(lawName)}`;
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    
+    const loader = popover.querySelector('.citeright-loader');
+    const content = popover.querySelector('.citeright-content');
+    
+    if (data.success && data.results.length > 0) {
+        const law = data.results[0];
+        const articleUrl = `http://localhost:3000/api/laws/${law.id}`;
+        const articleResponse = await fetch(articleUrl);
+        const articleData = await articleResponse.json();
+        
+        const matchingArticle = articleData.articles.find(art => 
+            art.article_number.includes(article) || art.article_number.includes(`第 ${article} 條`)
+        );
+        
+        currentLawData = {
+            id: law.id,
+            type: '法條',
+            title: `${law.law_name}第${article}條`,
+            number: article,
+            content: matchingArticle ? matchingArticle.article_content.substring(0, 500) : '無條文內容',
+            fullContent: matchingArticle ? matchingArticle.article_content : null,
+            officialUrl: law.law_url,
+            lawData: law,
+            articleData: matchingArticle
+        };
+        
+        loader.style.display = 'none';
+        content.style.display = 'block';
+        content.innerHTML = generateLawArticleHTML(law, matchingArticle, lawName, article, paragraph);
+    } else {
+        loader.style.display = 'none';
+        content.style.display = 'block';
+        content.innerHTML = generateNotFoundHTML('找不到相關法條', `法條名稱：${lawName}`);
+    }
+}
+
+// Helper function to load interpretation data from database
+async function loadInterpretationData(number) {
+    const apiUrl = `http://localhost:3000/api/case?caseType=釋字&number=${number}`;
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    
+    const loader = popover.querySelector('.citeright-loader');
+    const content = popover.querySelector('.citeright-content');
+    
+    if (data.success && data.data) {
+        const interp = data.data;
+        
+        currentLawData = {
+            id: `interpretation_${number}`,
+            type: '釋字',
+            title: `司法院釋字第${number}號解釋`,
+            number: number,
+            content: interp.chinese.description ? interp.chinese.description.substring(0, 500) : '無解釋文',
+            fullContent: `
+                ${interp.chinese.issue ? `<h3>解釋爭點</h3><p>${interp.chinese.issue}</p>` : ''}
+                ${interp.chinese.description ? `<h3>解釋文</h3><p>${interp.chinese.description}</p>` : ''}
+                ${interp.chinese.reasoning ? `<h3>解釋理由書</h3><p>${interp.chinese.reasoning}</p>` : ''}
+                ${interp.chinese.fact ? `<h3>事實</h3><p>${interp.chinese.fact}</p>` : ''}
+            `,
+            officialUrl: `https://cons.judicial.gov.tw/jcc/zh-tw/jep03/show?expno=${number}`,
+            interpretationData: interp
+        };
+        
+        loader.style.display = 'none';
+        content.style.display = 'block';
+        content.innerHTML = generateInterpretationHTML(interp, number);
+    } else {
+        loader.style.display = 'none';
+        content.style.display = 'block';
+        content.innerHTML = generateNotFoundHTML('找不到此號解釋', `釋字第${number}號`);
+    }
+}
+
+// Helper function to load court case data (placeholder)
+async function loadCourtCaseData(year, caseType, number) {
+    const loader = popover.querySelector('.citeright-loader');
+    const content = popover.querySelector('.citeright-content');
+    
+    loader.style.display = 'none';
+    content.style.display = 'block';
+    content.innerHTML = `
+        <div style="color: #999; text-align: center; padding: 20px;">
+            <div style="font-size: 24px;">🏦</div>
+            <div style="margin-top: 8px;">法院判決查詢功能開發中</div>
+            <div style="font-size: 12px; margin-top: 4px;">${year}年度${caseType}字第${number}號</div>
+        </div>
+    `;
+}
+
+// HTML generation functions
+function generateLawArticleHTML(law, matchingArticle, lawName, article, paragraph) {
+    return `
+        <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e8e8e8;">
+            <strong style="color: #1890ff; font-size: 16px;">${law.law_name}</strong>
+            ${law.english_law_name ? `<div style="font-size: 12px; color: #666; margin-top: 2px;">${law.english_law_name}</div>` : ''}
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <strong>條文：</strong><span style="color: #1890ff;">${lawName}第${article}條${paragraph ? `第${paragraph}項` : ''}</span>
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <strong>法規性質：</strong>${law.law_nature || '一般法律'}
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <strong>類別：</strong>${law.law_category || '無分類'}
+        </div>
+        
+        ${matchingArticle ? `
+            <hr style="border: none; border-top: 1px solid #e8e8e8; margin: 12px 0;">
+            <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 4px solid #1890ff;">
+                <div style="font-weight: 600; margin-bottom: 8px; color: #1890ff;">${matchingArticle.article_number}</div>
+                <div style="color: #555; line-height: 1.7;">
+                    ${matchingArticle.article_content || '條文內容載入中...'}
+                </div>
+            </div>
+        ` : generateNotFoundHTML('找不到對應條文內容', '')}
+    `;
+}
+
+function generateInterpretationHTML(interp, number) {
+    return `
+        <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e8e8e8;">
+            <strong style="color: #1890ff; font-size: 16px;">司法院釋字第${number}號解釋</strong>
+            ${interp.date ? `<div style="font-size: 12px; color: #666; margin-top: 2px;">解釋日期：${new Date(interp.date).toLocaleDateString('zh-TW')}</div>` : ''}
+        </div>
+        
+        ${interp.chinese.issue ? `
+            <div style="margin-bottom: 12px;">
+                <strong>解釋爭點：</strong>
+                <div style="color: #555; margin-top: 4px; line-height: 1.6;">
+                    ${interp.chinese.issue.substring(0, 300)}${interp.chinese.issue.length > 300 ? '...' : ''}
+                </div>
+            </div>
+        ` : ''}
+        
+        ${interp.chinese.description ? `
+            <hr style="border: none; border-top: 1px solid #e8e8e8; margin: 12px 0;">
+            <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 4px solid #1890ff;">
+                <div style="font-weight: 600; margin-bottom: 8px; color: #1890ff;">解釋文</div>
+                <div style="color: #555; line-height: 1.7;">
+                    ${interp.chinese.description}
+                </div>
+            </div>
+        ` : ''}
+    `;
+}
+
+function generateNotFoundHTML(title, subtitle) {
+    return `
+        <div style="color: #999; text-align: center; padding: 20px;">
+            <div style="font-size: 24px;">🔍</div>
+            <div style="margin-top: 8px;">${title}</div>
+            ${subtitle ? `<div style="font-size: 12px; margin-top: 4px;">${subtitle}</div>` : ''}
+        </div>
+    `;
+}
+
+// Legacy function for backwards compatibility
 async function showPopoverForTarget(target) {
+    // Legacy function - redirect to new enhanced version
+    return showPopoverForTargetWithData(target);
+}
+
+// Backup function for old implementation
+async function showPopoverForTargetOld(target) {
     console.log('🎯 Showing popover for:', target.textContent);
 
     const rect = target.getBoundingClientRect();
@@ -1029,21 +1450,6 @@ async function showPopoverForTarget(target) {
     }
 }
 
-// Update pin indicator
-function updatePinIndicator() {
-    const header = popover.querySelector('.citeright-header');
-    const title = header.querySelector('span');
-
-    if (isPinned) {
-        title.innerHTML = '📌 判決摘要';
-        header.style.background = 'linear-gradient(45deg, #f8f9fa, #e3f2fd)';
-        header.style.borderBottom = '1px solid #2196f3';
-    } else {
-        title.innerHTML = '📄 判決摘要';
-        header.style.background = '#f8f9fa';
-        header.style.borderBottom = '1px solid #dee2e6';
-    }
-}
 
 // MutationObserver to handle dynamically loaded content
 (function setupObserver(){
@@ -1152,7 +1558,6 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "activateCiteRight") {
         isActivated = true;
-        isPinned = false;
         console.log('⚖️ 透過右鍵選單啟用台灣法源探測器');
         showActivationNotification();
         updateActivationStatus();
@@ -1166,18 +1571,15 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         // Set auto-deactivation timer
         clearTimeout(activationTimeout);
         activationTimeout = setTimeout(() => {
-            if (!isPinned) {
-                isActivated = false;
-                popover.style.display = 'none';
-                console.log('⏰ 法源探測器已自動停用 (5分鐘無操作)');
-                updateActivationStatus();
-            }
+            isActivated = false;
+            popover.style.display = 'none';
+            console.log('⏰ 法源探測器已自動停用 (5分鐘無操作)');
+            updateActivationStatus();
         }, 300000);
         
         sendResponse({ success: true });
     } else if (message.action === "deactivateCiteRight") {
         isActivated = false;
-        isPinned = false;
         popover.style.display = 'none';
         clearTimeout(activationTimeout);
         console.log('❌ 透過右鍵選單停用台灣法源探測器');
@@ -1192,18 +1594,15 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             // Set auto-deactivation timer
             clearTimeout(activationTimeout);
             activationTimeout = setTimeout(() => {
-                if (!isPinned) {
-                    isActivated = false;
-                    popover.style.display = 'none';
-                    console.log('⏰ 滑鼠懸停模式已自動停用 (3分鐘無操作)');
-                    updateActivationStatus();
-                }
+                isActivated = false;
+                popover.style.display = 'none';
+                console.log('⏰ 滑鼠懸停模式已自動停用 (3分鐘無操作)');
+                updateActivationStatus();
             }, 180000);
         } else {
             console.log('❌ 滑鼠懸停模式已透過彈出視窗停用');
             popover.style.display = 'none';
             clearTimeout(activationTimeout);
-            isPinned = false;
         }
         updateActivationStatus();
         sendResponse({ success: true });
@@ -1214,7 +1613,6 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
     } else if (message.action === "getStatus") {
         sendResponse({
             activated: isActivated,
-            pinned: isPinned,
             bookmarkCount: bookmarkedLaws.length
         });
     }
@@ -1231,7 +1629,6 @@ window.activateCiteRight = function() {
 
 window.deactivateCiteRight = function() {
     isActivated = false;
-    isPinned = false;
     popover.style.display = 'none';
     clearTimeout(activationTimeout);
     console.log('❌ CiteRight manually deactivated via console');

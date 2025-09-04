@@ -95,62 +95,10 @@
     <script src="content.js"></script>
     
     <script>
-        // 添加快捷控制按鈕
-        document.addEventListener('DOMContentLoaded', function() {
-            const controlPanel = document.createElement('div');
-            controlPanel.style.cssText = `
-                position: fixed; top: 20px; right: 20px; z-index: 999999;
-                background: white; padding: 15px; border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-family: "Microsoft JhengHei";
-            `;
-            
-            controlPanel.innerHTML = `
-                <div style="margin-bottom: 10px; font-weight: 600; color: #1890ff;">⚖️ CiteRight 控制</div>
-                <button id="activate-btn" style="background: #52c41a; color: white; border: none; padding: 8px 12px; border-radius: 4px; margin: 2px; cursor: pointer; font-size: 12px;">啟用</button>
-                <button id="deactivate-btn" style="background: #ff4d4f; color: white; border: none; padding: 8px 12px; border-radius: 4px; margin: 2px; cursor: pointer; font-size: 12px;">停用</button>
-                <br>
-                <button id="popup-btn" style="background: #1890ff; color: white; border: none; padding: 8px 12px; border-radius: 4px; margin: 2px; cursor: pointer; font-size: 12px;">開啟彈出視窗</button>
-            `;
-            
-            document.body.appendChild(controlPanel);
-            
-            // 綁定事件
-            document.getElementById('activate-btn').addEventListener('click', function() {
-                if (window.activateCiteRight) {
-                    window.activateCiteRight();
-                } else {
-                    console.log('CiteRight 未載入，請重新整理頁面');
-                }
-            });
-            
-            document.getElementById('deactivate-btn').addEventListener('click', function() {
-                if (window.deactivateCiteRight) {
-                    window.deactivateCiteRight();
-                } else {
-                    console.log('CiteRight 未載入，請重新整理頁面');
-                }
-            });
-            
-            document.getElementById('popup-btn').addEventListener('click', function() {
-                window.open('popup.html', 'popup', 'width=400,height=500,scrollbars=no,resizable=no');
-            });
-            
-            console.log('✅ CiteRight 測試頁面已載入');
-            console.log('💡 使用說明：');
-            console.log('   - 點擊右上角按鈕或按 Ctrl 鍵啟用');
-            console.log('   - 將滑鼠移至法條上測試功能');
-        });
-        
-        // 監聽來自彈出視窗的訊息
-        window.addEventListener('message', function(event) {
-            if (event.data && event.data.action === 'toggleExtension') {
-                if (event.data.enabled) {
-                    if (window.activateCiteRight) window.activateCiteRight();
-                } else {
-                    if (window.deactivateCiteRight) window.deactivateCiteRight();
-                }
-            }
-        });
+        console.log('✅ CiteRight 測試頁面已載入');
+        console.log('💡 使用說明：');
+        console.log('   - 按 Ctrl 鍵啟用懸停模式');
+        console.log('   - 將滑鼠移至法條上測試功能');
     </script>
 </body>
 </html>
