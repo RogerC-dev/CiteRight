@@ -4,6 +4,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+*.log
+
+# Claude AI files
+.claude/
+
 # Runtime data
 pids
 *.pid
@@ -52,6 +57,15 @@ jspm_packages/
 # dotenv environment variables file
 .env
 .env.test
+
+# python virtual environment
+.venv
+
+# python bytecode
+__pycache__/
+
+# downloaded data files
+data_files/
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
