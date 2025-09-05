@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CiteRight Extension</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 350px;
+            min-height: 400px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+            color: #333;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .background-shapes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .shape:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            top: -40px;
+            left: -40px;
+            animation-delay: 0s;
+        }
+
+        .shape:nth-child(2) {
+            width: 60px;
+            height: 60px;
+            top: 50%;
+            right: -30px;
+            animation-delay: 2s;
+        }
+
+        .shape:nth-child(3) {
+            width: 40px;
+            height: 40px;
+            bottom: 20px;
+            left: 20px;
+            animation-delay: 4s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            padding: 24px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: 12px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #1890ff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .toggle-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .toggle-section:hover {
+            transform: translateY(-2px);
+        }
+
+        .toggle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .toggle-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: #e0e7ff;
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #1890ff;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(24px);
+        }
+
+        .toggle-description {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            transition: background-color 0.3s ease;
+        }
+
+        .status-dot.active {
+            background: #22c55e;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .action-button {
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(24, 144, 255, 0.4);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+        }
+
+        .action-button.secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1890ff;
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        .action-button.secondary:hover {
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .icon {
+            font-size: 16px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="background-shapes">
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div class="logo">⚖️</div>
+            <div class="title">CiteRight</div>
+            <div class="subtitle">台灣法源探測器</div>
+        </div>
+
+        <div class="toggle-section">
+            <div class="toggle-header">
+                <span class="toggle-label">啟用法律辨識工具</span>
+                <div class="toggle-switch" id="toggleSwitch">
+                    <div class="toggle-slider"></div>
+                </div>
+            </div>
+            <div class="toggle-description">
+                自動識別並顯示台灣法律條文、大法官解釋及法院判決詳情
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">法律辨識工具已停用</span>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="action-button" id="settingsButton">
+                <span class="icon">⚙️</span>
+                擴充功能設定
+            </button>
+
+            <button class="action-button secondary" id="bookmarksButton">
+                <span class="icon">📚</span>
+                我的法律書籤
+            </button>
+        </div>
+
+        <div class="footer">
+            提升您的法律研究效率
+        </div>
+    </div>
+
+    <script>
+        // Extension state management - default to enabled
+        let isEnabled = true;
+        
+        // Check if running in extension context
+        const isExtensionContext = !!(typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id);
+        
+        console.log('🔧 Popup script loaded, extension context:', isExtensionContext);
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎯 DOM loaded, initializing popup...');
+            
+            // DOM elements
+            const toggleSwitch = document.getElementById('toggleSwitch');
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const bookmarksButton = document.getElementById('bookmarksButton');
+            const settingsButton = document.getElementById('settingsButton');
+
+            console.log('📋 DOM elements found:', {
+                toggleSwitch: !!toggleSwitch,
+                statusDot: !!statusDot,
+                statusText: !!statusText,
+                bookmarksButton: !!bookmarksButton,
+                settingsButton: !!settingsButton
+            });
+
+            // Load saved state
+            loadExtensionState();
+
+            // Event listeners
+            if (toggleSwitch) {
+                toggleSwitch.addEventListener('click', toggleExtension);
+                console.log('✅ Toggle switch event listener added');
+            }
+
+            if (bookmarksButton) {
+                bookmarksButton.addEventListener('click', openBookmarks);
+                console.log('✅ Bookmarks button event listener added');
+            }
+            
+            if (settingsButton) {
+                settingsButton.addEventListener('click', openSettings);
+                console.log('✅ Settings button event listener added');
+            }
+            
+            // Add entrance animations
+            const elements = document.querySelectorAll('.toggle-section, .action-button');
+            elements.forEach((el, index) => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+            
+            console.log('🚀 Popup initialization complete');
+        });
+
+        function toggleExtension() {
+            console.log('Toggle clicked, current state:', isEnabled);
+            isEnabled = !isEnabled;
+            updateUI();
+            saveExtensionState();
+            
+            // Send global enable state change to background script
+            if (isExtensionContext) {
+                try {
+                    chrome.runtime.sendMessage({
+                        action: 'GLOBAL_TOGGLE_ENABLE_STATE',
+                        enabled: isEnabled
+                    }, (response) => {
+                        console.log('Global toggle response:', response);
+                    });
+                } catch (e) {
+                    console.log('Error sending to background:', e);
+                }
+            } else {
+                console.log('Not in extension context - background message skipped');
+            }
+            
+            // Send message to current tab's content script
+            if (isExtensionContext) {
+                try {
+                    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+                        if (tabs && tabs[0]) {
+                            chrome.tabs.sendMessage(tabs[0].id, {
+                                action: 'toggleExtension',
+                                enabled: isEnabled
+                            }, (response) => {
+                                console.log('Content script response:', response);
+                            });
+                            console.log('Message sent to content script');
+                        } else {
+                            console.log('No active tab found');
+                        }
+                    });
+                } catch (e) {
+                    console.log('Error sending to content script:', e);
+                }
+            } else {
+                // For testing without extension context
+                alert(`法律辨識工具已${isEnabled ? '啟用' : '停用'}\n\n在實際使用時，請在擴充功能中操作。`);
+            }
+            
+            // Visual feedback
+            toggleSwitch.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                toggleSwitch.style.transform = 'scale(1)';
+            }, 150);
+        }
+
+        function openSettings() {
+            console.log('Settings button clicked');
+            if (isExtensionContext) {
+                try {
+                    // Open index.html in new tab (extension context)
+                    chrome.tabs.create({ 
+                        url: chrome.runtime.getURL('index.html') 
+                    });
+                    console.log('Opening settings via chrome.tabs.create');
+                    
+                    // Close popup after action
+                    if (typeof window.close === 'function') {
+                        setTimeout(() => window.close(), 100);
+                    }
+                } catch (e) {
+                    console.log('Error opening settings:', e);
+                    alert('無法開啟設定頁面。請確認 index.html 檔案存在。');
+                }
+            } else {
+                // For testing - open in new window
+                console.log('Opening settings via window.open (test mode)');
+                window.open('index.html', '_blank');
+            }
+        }
+
+        function openBookmarks() {
+            console.log('Bookmarks button clicked');
+            if (isExtensionContext) {
+                try {
+                    // Send message to content script to open bookmarks
+                    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+                        if (tabs && tabs[0]) {
+                            chrome.tabs.sendMessage(tabs[0].id, {
+                                action: 'openBookmarks'
+                            }, (response) => {
+                                console.log('Bookmarks response:', response);
+                            });
+                            console.log('Bookmarks message sent to content script');
+                        } else {
+                            console.log('No active tab for bookmarks');
+                        }
+                    });
+                    
+                    // Close popup after action
+                    if (typeof window.close === 'function') {
+                        setTimeout(() => window.close(), 100);
+                    }
+                } catch (e) {
+                    console.log('Error opening bookmarks:', e);
+                    alert('無法開啟書籤面板。請確認擴充功能正常運行。');
+                }
+            } else {
+                // For testing without extension context
+                console.log('Chrome tabs not available - showing test message');
+                alert('書籤功能需要在實際擴充功能中使用。\n\n請確認擴充功能已正確安裝。');
+            }
+        }
+
+        function updateUI() {
+            if (isEnabled) {
+                toggleSwitch.classList.add('active');
+                statusDot.classList.add('active');
+                statusText.textContent = '法律辨識工具已啟用';
+            } else {
+                toggleSwitch.classList.remove('active');
+                statusDot.classList.remove('active');
+                statusText.textContent = '法律辨識工具已停用';
+            }
+        }
+
+        function saveExtensionState() {
+            // Save to localStorage
+            localStorage.setItem('citeright-enabled', isEnabled);
+            
+            // For Chrome extension, also use chrome.storage
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.set({'citeright_enabled': isEnabled});
+            }
+        }
+
+        function loadExtensionState() {
+            console.log('Loading extension state, isExtensionContext:', isExtensionContext);
+            
+            // For Chrome extension, use chrome.storage
+            if (isExtensionContext && chrome.storage) {
+                chrome.storage.local.get(['citeright_enabled'], function(result) {
+                    console.log('Chrome storage result:', result);
+                    // Default to enabled if not set
+                    if (result.citeright_enabled !== undefined) {
+                        isEnabled = result.citeright_enabled;
+                    } else {
+                        // First time - default to enabled and save it
+                        isEnabled = true;
+                        saveExtensionState();
+                    }
+                    console.log('Extension state loaded:', isEnabled);
+                    updateUI();
+                });
+            } else {
+                // Fallback to localStorage (for testing)
+                console.log('Using localStorage fallback');
+                const saved = localStorage.getItem('citeright-enabled');
+                if (saved !== null) {
+                    isEnabled = saved === 'true';
+                } else {
+                    // Default to enabled
+                    isEnabled = true;
+                    saveExtensionState();
+                }
+                console.log('Extension state loaded from localStorage:', isEnabled);
+                updateUI();
+            }
+        }
+
+    </script>
+</body>
+</html>

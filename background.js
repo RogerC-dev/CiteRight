@@ -268,7 +268,39 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
   }
 
+  // Listen for global toggle requests from popup
+  if (msg && msg.action === 'GLOBAL_TOGGLE_ENABLE_STATE') {
+    console.log('🔄 Global toggle requested:', msg.enabled);
+    chrome.storage.local.set({ citeright_enabled: msg.enabled }, () => {
+      broadcastEnableState(msg.enabled);
+      sendResponse({ success: true });
+    });
+    return true; // async
+  }
+
   return true; // Keep message channel open for async responses
+});
+
+function broadcastEnableState(enabled) {
+  console.log('📡 Broadcasting enabled state to all tabs:', enabled);
+  try {
+    chrome.tabs.query({}, tabs => {
+      tabs.forEach(t => {
+        if (t.id) {
+          chrome.tabs.sendMessage(t.id, { action: 'setEnabledState', enabled });
+        }
+      });
+    });
+  } catch (e) {
+    console.warn('Broadcast failed', e);
+  }
+}
+
+// React to manual storage changes (e.g., from other components)
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.citeright_enabled) {
+    broadcastEnableState(changes.citeright_enabled.newValue);
+  }
 });
 
 // 擴充功能安裝時的初始化

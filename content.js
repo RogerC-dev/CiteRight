@@ -8,13 +8,84 @@ const TAIWAN_LEGAL_PATTERNS = {
     constitutional: /([0-9０-９]{2,3})\s*年\s*憲判字\s*第\s*([0-9０-９]+)\s*號/g,
     // 司法院大法官解釋: 釋字第748號
     interpretation: /釋字第\s*([0-9０-９]+)\s*號/g,
-    // 法條引用: 民法第184條、刑法第271條第1項
-    law_article: /([\u4e00-\u9fa5]{2,8}法)第\s*([0-9０-９]+(?:\s*條之\s*[0-9０-９]+)?)\s*條(?:第\s*([0-9０-９]+)\s*項)?/g
+    // 法條引用: 民法第184條、刑法第271條第1項、民法第一八四條、刑法第三百二十條第一項第二項
+    law_article: /(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])([\u4e00-\u9fa5]{2,8}法)第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*條之\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*項第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)*)\s*[項款目])?/g,
+    // Mixed law references: 第964條、第965條 (when previous law name should be inferred)
+    mixed_law_article: /(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*條之\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*項第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)*)\s*[項款目])?/g
 };
 
 function toHalfWidthDigits(str) {
     return str.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFF10 + 0x30));
 }
+
+function chineseToArabic(str) {
+    // Convert Chinese numerals to Arabic numerals
+    const chineseNums = {
+        '零': 0, '○': 0,
+        '一': 1, '壹': 1,
+        '二': 2, '貳': 2,
+        '三': 3, '參': 3,
+        '四': 4, '肆': 4,
+        '五': 5, '伍': 5,
+        '六': 6, '陸': 6,
+        '七': 7, '柒': 7,
+        '八': 8, '捌': 8,
+        '九': 9, '玖': 9,
+        '十': 10, '拾': 10,
+        '百': 100, '佰': 100,
+        '千': 1000, '仟': 1000,
+        '萬': 10000
+    };
+    
+    let result = str;
+    
+    // Handle complex Chinese numbers first (e.g., 九百六十四 -> 964)
+    // Match patterns like 九百六十四, 三百二十, etc.
+    result = result.replace(/(一|二|三|四|五|六|七|八|九|壹|貳|參|肆|伍|陸|柒|捌|玖)?(百|佰)?(一|二|三|四|五|六|七|八|九|壹|貳|參|肆|伍|陸|柒|捌|玖)?(十|拾)?(一|二|三|四|五|六|七|八|九|壹|貳|參|肆|伍|陸|柒|捌|玖)?/g, (match) => {
+        if (match.length === 0) return match;
+        
+        let total = 0;
+        let current = 0;
+        let i = 0;
+        
+        while (i < match.length) {
+            const char = match[i];
+            const num = chineseNums[char];
+            
+            if (num !== undefined) {
+                if (num >= 100) {
+                    if (current === 0) current = 1;
+                    total += current * num;
+                    current = 0;
+                } else if (num === 10) {
+                    if (current === 0) current = 1;
+                    current *= 10;
+                } else {
+                    current = num;
+                }
+            }
+            i++;
+        }
+        
+        total += current;
+        return total > 0 ? total.toString() : match;
+    });
+    
+    // Handle simple digit-by-digit replacements (e.g., 一八四 -> 184)
+    for (const [chinese, arabic] of Object.entries(chineseNums)) {
+        if (arabic < 10) {
+            result = result.replace(new RegExp(chinese, 'g'), arabic.toString());
+        }
+    }
+    
+    // Clean up any remaining non-numeric Chinese characters
+    result = result.replace(/[十百千萬拾佰仟]/g, '');
+    
+    return result;
+}
+
+// Context tracking for mixed law references
+let lastLawName = '';
 
 function makeSpan(match, key, groups) {
     let year = '', caseType = '', number = '', lawName = '', article = '', paragraph = '';
@@ -32,8 +103,14 @@ function makeSpan(match, key, groups) {
         number = toHalfWidthDigits(groups[0]);
     } else if (key === 'law_article') {
         lawName = groups[0]; // 民法、刑法等
-        article = toHalfWidthDigits(groups[1]); // 184、271條之1
-        paragraph = groups[2] ? toHalfWidthDigits(groups[2]) : ''; // 第1項
+        lastLawName = lawName; // Store for mixed references
+        article = chineseToArabic(toHalfWidthDigits(groups[1])); // 184、271條之1、一八四、三百二十
+        paragraph = groups[2] ? formatParagraphForDB(chineseToArabic(toHalfWidthDigits(groups[2]))) : ''; // 第1項、第一項第二項 -> -1, -1-2
+        caseType = '法條';
+    } else if (key === 'mixed_law_article') {
+        lawName = lastLawName; // Use the last seen law name
+        article = chineseToArabic(toHalfWidthDigits(groups[0])); // 964、965等
+        paragraph = groups[1] ? formatParagraphForDB(chineseToArabic(toHalfWidthDigits(groups[1]))) : ''; // 第1項 -> -1
         caseType = '法條';
     }
     
@@ -46,6 +123,19 @@ function makeSpan(match, key, groups) {
                 data-paragraph="${paragraph}"
                 data-legal-type="${key}"
                 title="按住 Ctrl 並移動滑鼠查看詳情">${match}</span>`;
+}
+
+// Format paragraph numbers for database lookup (第1項 -> -1, 第1項第2款 -> -1-2)
+function formatParagraphForDB(paragraphStr) {
+    if (!paragraphStr) return '';
+    
+    // Handle multiple items like "1項第2款" -> "1-2"
+    const parts = paragraphStr.split(/項第?|款第?|目第?/).filter(part => part.trim());
+    
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return '-' + parts[0];
+    
+    return '-' + parts.join('-');
 }
 
 function highlightCitations() {
@@ -64,13 +154,18 @@ function highlightCitations() {
         // Skip bookmark panel content completely, but allow side panel content with legal highlighting
         if (node.parentNode.closest && node.parentNode.closest('#citeright-bookmarks-panel')) return;
         
-        // Skip side panel headers but allow content area
+        // Skip side panel headers (blue title column) but allow content area
         const sidePanelHeader = node.parentNode.closest && node.parentNode.closest('#citeright-sidepanel > div:first-child');
         if (sidePanelHeader) return;
         
+        // Skip any elements with blue background (title columns)
+        const hasBlueBackground = node.parentNode.closest && node.parentNode.closest('[style*="background: linear-gradient(135deg, #1890ff"]');
+        if (hasBlueBackground) return;
+        
         // Allow highlighting in legal content areas of side panel
         const isInLegalContentArea = node.parentNode.closest && node.parentNode.closest('.legal-content-area');
-        if (isInLegalContentArea) {
+        const isInSidepanelContent = node.parentNode.closest && node.parentNode.closest('#sidepanel-content');
+        if (isInLegalContentArea || isInSidepanelContent) {
             // Continue with highlighting for legal content
         }
         const original = node.textContent;
@@ -138,6 +233,13 @@ function highlightCitationsInElement(element) {
         const parentTag = node.parentNode.tagName;
         if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA' || parentTag === 'INPUT') return;
         if (node.parentNode.closest && node.parentNode.closest('.citeright-link')) return;
+        
+        // Skip bookmark panel content
+        if (node.parentNode.closest && node.parentNode.closest('#citeright-bookmarks-panel')) return;
+        
+        // Skip elements with blue background (title columns)
+        const hasBlueBackground = node.parentNode.closest && node.parentNode.closest('[style*="background: linear-gradient(135deg, #1890ff"]');
+        if (hasBlueBackground) return;
         
         const original = node.textContent;
         if (!original || !original.trim()) return;
@@ -333,6 +435,12 @@ function getLawIdentifier(target) {
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && !isCtrlPressed) {
         isCtrlPressed = true;
+        
+        // Check if extension is globally enabled first
+        if (!isExtensionEnabled) {
+            showActivationNotification('擴充功能已停用', '請在工具列圖示中啟用擴充功能', '#d73527');
+            return;
+        }
         
         // Ctrl toggles hover mode
         isActivated = !isActivated;
@@ -736,13 +844,10 @@ document.addEventListener('mouseover', async (e) => {
     }
     
     if (e.target.classList.contains('citeright-link')) {
-        // Check if extension is enabled from storage
-        chrome.storage.local.get(['citeright_enabled'], function(result) {
-            const isEnabled = result.citeright_enabled || false;
-            if (!isEnabled) {
-                return;
-            }
-        });
+        // Check if extension is globally enabled
+        if (!isExtensionEnabled) {
+            return;
+        }
         
         // Also check activation state
         if (!isActivated) {
@@ -885,10 +990,23 @@ document.addEventListener('mouseover', async (e) => {
                     const articleResponse = await fetch(articleUrl);
                     const articleData = await articleResponse.json();
                     
-                    // Find matching article
-                    const matchingArticle = articleData.articles.find(art => 
-                        art.article_number.includes(article) || art.article_number.includes(`第 ${article} 條`)
-                    );
+                    // Find matching article (handle different DB formats)
+                    let matchingArticle = articleData.articles.find(art => {
+                        const artNum = art.article_number;
+                        // Try different matching patterns
+                        return artNum.includes(article) || 
+                               artNum.includes(`第 ${article} 條`) ||
+                               artNum.includes(`${article}-`) || // For paragraph format like "188-1"
+                               (paragraph && artNum.includes(`${article}${paragraph}`)); // For "188-1" format
+                    });
+                    
+                    // If paragraph specified but no exact match, try base article
+                    if (!matchingArticle && paragraph) {
+                        matchingArticle = articleData.articles.find(art => {
+                            const artNum = art.article_number;
+                            return artNum.includes(article) || artNum.includes(`第 ${article} 條`);
+                        });
+                    }
                     
                     // Store current law data for bookmarking
                     currentLawData = {
@@ -1098,6 +1216,12 @@ document.addEventListener('click', async (e) => {
     if (e.target.classList.contains('citeright-link')) {
         e.preventDefault();
         
+        // Check if extension is globally enabled
+        if (!isExtensionEnabled) {
+            showActivationNotification('擴充功能已停用', '請在工具列圖示中啟用擴充功能', '#d73527');
+            return;
+        }
+        
         const lawId = getLawIdentifier(e.target);
         
         // Only prevent if same law popup is currently open
@@ -1209,9 +1333,22 @@ async function loadLawArticleData(lawName, article, paragraph) {
         const articleResponse = await fetch(articleUrl);
         const articleData = await articleResponse.json();
         
-        const matchingArticle = articleData.articles.find(art => 
-            art.article_number.includes(article) || art.article_number.includes(`第 ${article} 條`)
-        );
+        let matchingArticle = articleData.articles.find(art => {
+            const artNum = art.article_number;
+            // Try different matching patterns
+            return artNum.includes(article) || 
+                   artNum.includes(`第 ${article} 條`) ||
+                   artNum.includes(`${article}-`) || // For paragraph format like "188-1"
+                   (paragraph && artNum.includes(`${article}${paragraph}`)); // For "188-1" format
+        });
+        
+        // If paragraph specified but no exact match, try base article
+        if (!matchingArticle && paragraph) {
+            matchingArticle = articleData.articles.find(art => {
+                const artNum = art.article_number;
+                return artNum.includes(article) || artNum.includes(`第 ${article} 條`);
+            });
+        }
         
         currentLawData = {
             id: law.id,
@@ -1545,7 +1682,7 @@ function initializeExtension() {
         if (count === 0) {
             // Provide sample test output
             const testText = '在110年度台上字第3214號判決中，以及釋字第748號與109年憲判字第13號';
-            Object.entries(TAIWAN_CASE_PATTERNS).forEach(([k,p]) => {
+            Object.entries(TAIWAN_LEGAL_PATTERNS).forEach(([k,p]) => {
                 const m = testText.match(new RegExp(p.source, p.flags));
                 console.log('Pattern test', k, m);
             });
@@ -1586,23 +1723,17 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         updateActivationStatus();
         sendResponse({ success: true });
     } else if (message.action === "toggleExtension") {
-        isActivated = message.enabled;
-        if (isActivated) {
-            console.log('⚖️ 滑鼠懸停模式已透過彈出視窗啟用');
-            showActivationNotification('滑鼠懸停模式已啟用', '移動滑鼠至法條引用查看詳情');
-            
-            // Set auto-deactivation timer
-            clearTimeout(activationTimeout);
-            activationTimeout = setTimeout(() => {
-                isActivated = false;
-                popover.style.display = 'none';
-                console.log('⏰ 滑鼠懸停模式已自動停用 (3分鐘無操作)');
-                updateActivationStatus();
-            }, 180000);
+        isExtensionEnabled = message.enabled;
+        
+        if (isExtensionEnabled) {
+            console.log('🟢 CiteRight 擴充功能已透過彈出視窗啟用');
+            showActivationNotification('擴充功能已啟用', '按 Ctrl 啟動懸停模式', '#52c41a');
         } else {
-            console.log('❌ 滑鼠懸停模式已透過彈出視窗停用');
+            console.log('🔴 CiteRight 擴充功能已透過彈出視窗停用');
+            isActivated = false;
             popover.style.display = 'none';
             clearTimeout(activationTimeout);
+            showActivationNotification('擴充功能已停用', '所有功能已關閉', '#d73527');
         }
         updateActivationStatus();
         sendResponse({ success: true });
@@ -1619,25 +1750,40 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
     });
 }
 
-// Global activation function for testing
-window.activateCiteRight = function() {
-    isActivated = true;
-    showActivationNotification('CiteRight 已手動啟用', '移動滑鼠至法條引用查看詳情');
-    console.log('⚖️ CiteRight manually activated via console');
-    updateActivationStatus();
-};
+// Global extension enabled state (separate from activation) - default enabled
+let isExtensionEnabled = true;
 
-window.deactivateCiteRight = function() {
-    isActivated = false;
-    popover.style.display = 'none';
-    clearTimeout(activationTimeout);
-    console.log('❌ CiteRight manually deactivated via console');
-    updateActivationStatus();
-};
+// Apply enabled state from background broadcast at startup
+if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get(['citeright_enabled'], res => {
+        // Default to enabled if not set
+        isExtensionEnabled = res.citeright_enabled !== undefined ? res.citeright_enabled : true;
+        if (isExtensionEnabled) {
+            console.log('🟢 CiteRight 擴充功能已啟用');
+        } else {
+            console.log('🔴 CiteRight 擴充功能已停用');
+        }
+        updateActivationStatus();
+    });
+}
 
-// Run initialization
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeExtension);
-} else {
-    initializeExtension();
+// Initialize extension when content script loads
+initializeExtension();
+
+// Extend existing message handler for global enable broadcast
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((msg) => {
+        if (msg.action === 'setEnabledState') {
+            isExtensionEnabled = !!msg.enabled;
+            if (!isExtensionEnabled) {
+                isActivated = false;
+                popover.style.display = 'none';
+                clearTimeout(activationTimeout);
+                showActivationNotification('擴充功能已停用', '所有功能已關閉', '#d73527');
+            } else {
+                showActivationNotification('擴充功能已啟用', '按 Ctrl 啟動懸停模式', '#52c41a');
+            }
+            updateActivationStatus();
+        }
+    });
 }
