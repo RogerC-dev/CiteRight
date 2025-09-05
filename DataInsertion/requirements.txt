@@ -1,5 +1,0 @@
-sqlmodel
-PyMySQL
-python-dotenv
-httpx
-click

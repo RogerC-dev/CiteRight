@@ -2,12 +2,12 @@
   "name": "citeright-backend",
   "version": "1.0.0",
   "description": "Professional Taiwan Legal Case Citation Explorer using Official Judicial Yuan API",
-  "main": "official_server.js",
+  "main": "server/api-server.js",
   "scripts": {
-    "start": "node official_server.js",
-    "dev": "nodemon official_server.js",
-    "sync": "node -e \"require('./official_server.js')\"",
-    "test": "node test_server.js",
+    "start": "node server/api-server.js",
+    "dev": "nodemon server/api-server.js",
+    "sync": "node -e \"require('./server/api-server.js')\"",
+    "test": "node tests/test_server.js",
     "build": "vite build",
     "build:watch": "vite build --watch",
     "dev:extension": "vite build --watch --mode development"

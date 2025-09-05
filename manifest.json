@@ -19,23 +19,21 @@
         "<all_urls>"
       ],
       "js": [
-        "processed_data/api_reader_fixed.js",
-        "judicial_extension_api.js",
-        "content.js"
+        "extension/scripts/content.js"
       ]
     }
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "extension/scripts/background.js"
   },
   "action": {
     "default_title": "CiteRight Extension",
-    "default_popup": "popup.html",
+    "default_popup": "extension/pages/popup.html",
     "default_icon": {
-      "16": "icon.png",
-      "32": "icon.png",
-      "48": "icon.png",
-      "128": "icon.png"
+      "16": "extension/assets/icon.png",
+      "32": "extension/assets/icon.png",
+      "48": "extension/assets/icon.png",
+      "128": "extension/assets/icon.png"
     }
   },
   "web_accessible_resources": [
