@@ -23,9 +23,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-dotenv.load_dotenv("DataInsertion/.env")
+dotenv.load_dotenv("../../.env")
 
-# Get original DATABASE_URL and convert to pymysql if needed
 database_url = os.getenv("DATABASE_URL")
 
 logger.info(f"Using connection string: {database_url}")
