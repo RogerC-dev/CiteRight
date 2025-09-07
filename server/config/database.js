@@ -26,16 +26,16 @@ class Database {
             
             // Test connection and get counts
             const connection = await this.pool.getConnection();
-            const [lawsResult] = await connection.execute('SELECT COUNT(*) as count FROM laws');
-            const [articlesResult] = await connection.execute('SELECT COUNT(*) as count FROM articles');
-            const [interpretationsResult] = await connection.execute('SELECT COUNT(*) as count FROM interpretations');
+            const [lawsResult] = await connection.execute('SELECT COUNT(*) as count FROM Law');
+            const [articlesResult] = await connection.execute('SELECT COUNT(*) as count FROM LawArticle');
+            const [captionsResult] = await connection.execute('SELECT COUNT(*) as count FROM LawCaption');
             connection.release();
             
             console.log(`✅ Connected to database successfully`);
             console.log(`📚 Available data:`);
             console.log(`  • ${lawsResult[0].count} laws`);
             console.log(`  • ${articlesResult[0].count} articles`);
-            console.log(`  • ${interpretationsResult[0].count} constitutional interpretations`);
+            console.log(`  • ${captionsResult[0].count} captions`);
             
             return true;
         } catch (error) {

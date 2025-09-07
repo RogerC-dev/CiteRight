@@ -61,15 +61,15 @@ router.get('/search', asyncHandler(async (req, res) => {
     console.log(`🔍 Searching laws for: "${query}"`);
     
     const [rows] = await database.query(
-        `SELECT id, law_name, english_law_name, law_category, law_nature
-         FROM laws 
-         WHERE law_name LIKE ? OR english_law_name LIKE ?
+        `SELECT LawLevel, LawName, EngLawName, LawCategory, LawURL
+         FROM Law 
+         WHERE LawName LIKE ? OR EngLawName LIKE ?
          ORDER BY 
             CASE 
-                WHEN law_name LIKE ? THEN 1 
-                WHEN law_name LIKE ? THEN 2
+                WHEN LawName LIKE ? THEN 1 
+                WHEN LawName LIKE ? THEN 2
                 ELSE 3 
-            END, law_name
+            END, LawName
          LIMIT ?`,
         [`%${query}%`, `%${query}%`, `${query}%`, `%${query}%`, parseInt(limit)]
     );
@@ -86,20 +86,26 @@ router.get('/search', asyncHandler(async (req, res) => {
 
 /**
  * @swagger
- * /api/laws/{id}:
+ * /api/laws/{lawLevel}/{lawName}:
  *   get:
  *     summary: Get law details
- *     description: Get detailed information about a specific law including its articles
+ *     description: Get detailed information about a specific law including its captions and articles
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: lawLevel
  *         required: true
  *         schema:
- *           type: integer
- *         description: Law ID
+ *           type: string
+ *         description: Law level (e.g., "法律", "命令")
+ *       - in: path
+ *         name: lawName
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Law name (URL encoded)
  *     responses:
  *       200:
- *         description: Law details with articles
+ *         description: Law details with captions and articles
  *         content:
  *           application/json:
  *             schema:
@@ -109,52 +115,53 @@ router.get('/search', asyncHandler(async (req, res) => {
  *                   type: boolean
  *                 law:
  *                   type: object
- *                 articles:
+ *                 captions:
  *                   type: array
  *                   items:
  *                     type: object
- *                 articleCount:
+ *                 captionCount:
  *                   type: number
  *       404:
  *         description: Law not found
  *       500:
  *         description: Server error
  */
-router.get('/:id', asyncHandler(async (req, res) => {
-    const { id } = req.params;
+router.get('/:lawLevel/:lawName', asyncHandler(async (req, res) => {
+    const { lawLevel, lawName } = req.params;
     
     if (!database.isConnected()) {
         throw new ApiError(503, 'Database not connected');
     }
     
-    console.log(`🔍 Getting law details for ID: ${id}`);
+    console.log(`🔍 Getting law details for: ${lawLevel} - ${decodeURIComponent(lawName)}`);
     
     // Get law details
     const [lawRows] = await database.query(
-        `SELECT * FROM laws WHERE id = ?`,
-        [id]
+        `SELECT * FROM Law WHERE LawLevel = ? AND LawName = ?`,
+        [lawLevel, decodeURIComponent(lawName)]
     );
     
     if (lawRows.length === 0) {
         throw new ApiError(404, 'Law not found');
     }
     
-    // Get articles for this law
-    const [articleRows] = await database.query(
-        `SELECT article_number, chapter_section, article_content, english_article_content
-         FROM articles 
-         WHERE law_id = ? 
-         ORDER BY id`,
-        [id]
+    // Get captions and articles for this law
+    const [captionRows] = await database.query(
+        `SELECT lc.Id, lc.CaptionTitle, la.ArticleNo, la.ArticleContent
+         FROM LawCaption lc
+         LEFT JOIN LawArticle la ON lc.Id = la.CaptionId
+         WHERE lc.LawLevel = ? AND lc.LawName = ?
+         ORDER BY lc.Id, la.Id`,
+        [lawLevel, decodeURIComponent(lawName)]
     );
     
-    console.log(`✅ Found law with ${articleRows.length} articles`);
+    console.log(`✅ Found law with ${captionRows.length} caption entries`);
     
     res.json({
         success: true,
         law: lawRows[0],
-        articles: articleRows,
-        articleCount: articleRows.length
+        captions: captionRows,
+        captionCount: captionRows.length
     });
 }));
 

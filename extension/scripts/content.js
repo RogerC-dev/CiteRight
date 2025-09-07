@@ -6,12 +6,13 @@ const TAIWAN_LEGAL_PATTERNS = {
     court_case: /([0-9０-９]{2,3})\s*年度?\s*([\u4e00-\u9fa5]{1,6}?)\s*字\s*第\s*([0-9０-９]+)\s*號/g,
     // 憲法法庭: 111年憲判字第13號  
     constitutional: /([0-9０-９]{2,3})\s*年\s*憲判字\s*第\s*([0-9０-９]+)\s*號/g,
-    // 司法院大法官解釋: 釋字第748號
-    interpretation: /釋字第\s*([0-9０-９]+)\s*號/g,
+    // 司法院大法官解釋: 釋字第748號, 釋字第五八五號
+    interpretation: /釋字第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)\s*號/g,
     // 法條引用: 民法第184條、刑法第271條第1項、民法第一八四條、刑法第三百二十條第一項第二項
-    law_article: /(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])([\u4e00-\u9fa5]{2,8}法)第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*條之\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*項第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)*)\s*[項款目])?/g,
+    // Exclude unwanted prefixes: 根據, 依, 按, 與, 宣告, 主管機關基於, 甲因酒駕違反, 以及, 及, 不符
+    law_article: /(?<!根據|依(?!法)|按|與|宣告|主管機關基於|甲因酒駕違反|以及|及(?!法)|不符)([\u4e00-\u9fa5]{2,8}法)第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:之[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+)\s*[項款目](?:第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+\s*[項款目])*)?/g,
     // Mixed law references: 第964條、第965條 (when previous law name should be inferred)
-    mixed_law_article: /(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*條之\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*項第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)*)\s*[項款目])?/g
+    mixed_law_article: /(?<!根據|依(?!法)|按|與|宣告|主管機關基於|甲因酒駕違反|以及|及(?!法)|不符)(?<!^|\s)第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:之[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+)\s*[項款目](?:第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+\s*[項款目])*)?/g
 };
 
 function toHalfWidthDigits(str) {
@@ -37,49 +38,52 @@ function chineseToArabic(str) {
         '萬': 10000
     };
     
-    let result = str;
+    let result = str.toString();
     
-    // Handle complex Chinese numbers first (e.g., 九百六十四 -> 964)
-    // Match patterns like 九百六十四, 三百二十, etc.
-    result = result.replace(/(一|二|三|四|五|六|七|八|九|壹|貳|參|肆|伍|陸|柒|捌|玖)?(百|佰)?(一|二|三|四|五|六|七|八|九|壹|貳|參|肆|伍|陸|柒|捌|玖)?(十|拾)?(一|二|三|四|五|六|七|八|九|壹|貳|參|肆|伍|陸|柒|捌|玖)?/g, (match) => {
-        if (match.length === 0) return match;
+    // Handle Roman numerals first: I, II, III, IV, V, VI, VII, VIII, IX, X, XI, XII
+    const romanMap = {
+        'XII': '12', 'XI': '11', 'IX': '9', 'VIII': '8', 'VII': '7', 'VI': '6', 'IV': '4', 'III': '3', 'II': '2', 'X': '10', 'V': '5', 'I': '1'
+    };
+    
+    for (const [roman, arabic] of Object.entries(romanMap)) {
+        result = result.replace(new RegExp(roman, 'g'), arabic);
+    }
+    
+    // Handle complex Chinese numbers: 九百六十四 -> 964, 二百七十一 -> 271, etc.
+    result = result.replace(/([\u4e00-\u4e5d\u58f1-\u7396])?([\u767e\u4f70])?([\u4e00-\u4e5d\u58f1-\u7396])?([\u5341\u62fe])?([\u4e00-\u4e5d\u58f1-\u7396])?/g, (match) => {
+        if (match.length === 0 || !/[\u767e\u4f70\u5341\u62fe]/.test(match)) return match;
         
         let total = 0;
-        let current = 0;
-        let i = 0;
+        let temp = 0;
         
-        while (i < match.length) {
+        for (let i = 0; i < match.length; i++) {
             const char = match[i];
-            const num = chineseNums[char];
+            const val = chineseNums[char];
             
-            if (num !== undefined) {
-                if (num >= 100) {
-                    if (current === 0) current = 1;
-                    total += current * num;
-                    current = 0;
-                } else if (num === 10) {
-                    if (current === 0) current = 1;
-                    current *= 10;
-                } else {
-                    current = num;
-                }
+            if (val === undefined) continue;
+            
+            if (val >= 100) {
+                if (temp === 0) temp = 1; // 百 -> 100, not 0*100
+                total += temp * val;
+                temp = 0;
+            } else if (val === 10) {
+                if (temp === 0) temp = 1; // 十 -> 10, not 0*10
+                temp *= 10;
+            } else if (val < 10) {
+                temp = val;
             }
-            i++;
         }
         
-        total += current;
+        total += temp;
         return total > 0 ? total.toString() : match;
     });
     
-    // Handle simple digit-by-digit replacements (e.g., 一八四 -> 184)
+    // Handle simple digit replacements: 一八四 -> 184, 一 -> 1, etc.
     for (const [chinese, arabic] of Object.entries(chineseNums)) {
-        if (arabic < 10) {
+        if (arabic <= 9) {
             result = result.replace(new RegExp(chinese, 'g'), arabic.toString());
         }
     }
-    
-    // Clean up any remaining non-numeric Chinese characters
-    result = result.replace(/[十百千萬拾佰仟]/g, '');
     
     return result;
 }
@@ -129,8 +133,11 @@ function makeSpan(match, key, groups) {
 function formatParagraphForDB(paragraphStr) {
     if (!paragraphStr) return '';
     
+    // Handle Roman numerals and Chinese numerals in paragraphs
+    let processed = chineseToArabic(paragraphStr);
+    
     // Handle multiple items like "1項第2款" -> "1-2"
-    const parts = paragraphStr.split(/項第?|款第?|目第?/).filter(part => part.trim());
+    const parts = processed.split(/項第?|款第?|目第?/).filter(part => part.trim());
     
     if (parts.length === 0) return '';
     if (parts.length === 1) return '-' + parts[0];

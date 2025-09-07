@@ -64,7 +64,7 @@ app.use('*', (req, res) => {
             'GET /health',
             'GET /api/case?caseType=釋字&number=712',
             'GET /api/laws/search?q=民法',
-            'GET /api/laws/:id',
+            'GET /api/laws/{lawLevel}/{lawName}',
             'GET /api/debug',
             'GET /api-docs'
         ]
@@ -97,7 +97,7 @@ async function startServer() {
             console.log(`  🔍 Debug: http://localhost:${config.port}/api/debug`);
             console.log(`  ⚖️ Constitutional interpretation: http://localhost:${config.port}/api/case?caseType=釋字&number=712`);
             console.log(`  📖 Search laws: http://localhost:${config.port}/api/laws/search?q=民法`);
-            console.log(`  📑 Law details: http://localhost:${config.port}/api/laws/1`);
+            console.log(`  📑 Law details: http://localhost:${config.port}/api/laws/法律/民法`);
         });
         
         server.on('error', (err) => {

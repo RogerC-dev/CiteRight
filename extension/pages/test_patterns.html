@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Law Pattern Test</title>
+    <style>
+        .citeright-link {
+            background-color: #e6f7ff !important;
+            border-bottom: 1px dotted #91d5ff !important;
+            cursor: pointer !important;
+            padding: 1px 2px !important;
+            border-radius: 2px !important;
+        }
+        .test-case {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        .excluded {
+            color: #999;
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body>
+    <h1>Law Pattern Testing</h1>
+    
+    <h2>✅ Should Match (Blue Highlighting):</h2>
+    <div class="test-case">民法第188條第1項</div>
+    <div class="test-case">民法第二百二十七條之二第一項</div>
+    <div class="test-case">刑法第271條第1項</div>
+    <div class="test-case">刑法第185條之3第1項第1款</div>
+    <div class="test-case">憲法第7條</div>
+    <div class="test-case">憲法第22條~~保障人民婚姻自由及~~第7條</div>
+    <div class="test-case">道路交通管理處罰條例第35條第1項第1款</div>
+    <div class="test-case">釋字第三八四號</div>
+    <div class="test-case">民法第227條</div>
+    <div class="test-case">憲法第10條</div>
+    <div class="test-case">民法第九百六十四條、第九百六十五條</div>
+    <div class="test-case">行政程序法第一百零二條、第一百零三條</div>
+    <div class="test-case">釋字第五八五號、釋字第六三三</div>
+    <div class="test-case">民法第一百八十八條第一項，民法第188條第1項</div>
+    <div class="test-case">民法第二百七十二條</div>
+    <div class="test-case">刑法第二百七十一條第一項</div>
+    <div class="test-case">行政執行法第11條</div>
+    
+    <h2>❌ Should NOT Match (Excluded):</h2>
+    <div class="test-case excluded">根據民法第188條</div>
+    <div class="test-case excluded">依刑法第271條</div>
+    <div class="test-case excluded">按憲法第7條</div>
+    <div class="test-case excluded">與民法第227條</div>
+    <div class="test-case excluded">宣告違憲法第22條</div>
+    <div class="test-case excluded">主管機關基於行政程序法第102條</div>
+    <div class="test-case excluded">甲因酒駕違反道路交通管理處罰條例第35條</div>
+    <div class="test-case excluded">以及刑法第185條</div>
+    <div class="test-case excluded">及民法第964條</div>
+    <div class="test-case excluded">不符釋字第585號</div>
+
+    <script>
+        // Test our patterns
+        const TAIWAN_LEGAL_PATTERNS = {
+            court_case: /([0-9０-９]{2,3})\s*年度?\s*([\u4e00-\u9fa5]{1,6}?)\s*字\s*第\s*([0-9０-９]+)\s*號/g,
+            constitutional: /([0-9０-９]{2,3})\s*年\s*憲判字\s*第\s*([0-9０-９]+)\s*號/g,
+            interpretation: /釋字第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)\s*號/g,
+            law_article: /(?<!根據|依(?!法)|按|與|宣告|主管機關基於|甲因酒駕違反|以及|及(?!法)|不符)([\u4e00-\u9fa5]{2,8}法)第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:之[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+)\s*[項款目](?:第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+\s*[項款目])*)?/g,
+            mixed_law_article: /(?<!根據|依(?!法)|按|與|宣告|主管機關基於|甲因酒駕違反|以及|及(?!法)|不符)(?<!^|\s)第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:之[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+)\s*[項款目](?:第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拽佰仟萬IVXLCDM]+\s*[項款目])*)?/g
+        };
+
+        function toHalfWidthDigits(str) {
+            return str.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFF10 + 0x30));
+        }
+
+        function chineseToArabic(str) {
+            const chineseNums = {
+                '零': 0, '○': 0, '一': 1, '壹': 1, '二': 2, '貳': 2, '三': 3, '參': 3, '四': 4, '肆': 4,
+                '五': 5, '伍': 5, '六': 6, '陸': 6, '七': 7, '柒': 7, '八': 8, '捌': 8, '九': 9, '玖': 9,
+                '十': 10, '拾': 10, '百': 100, '佰': 100, '千': 1000, '仟': 1000, '萬': 10000
+            };
+            
+            let result = str.toString();
+            
+            // Handle Roman numerals first
+            const romanMap = {
+                'XII': '12', 'XI': '11', 'IX': '9', 'VIII': '8', 'VII': '7', 'VI': '6', 
+                'IV': '4', 'III': '3', 'II': '2', 'X': '10', 'V': '5', 'I': '1'
+            };
+            
+            for (const [roman, arabic] of Object.entries(romanMap)) {
+                result = result.replace(new RegExp(roman, 'g'), arabic);
+            }
+            
+            // Handle complex Chinese numbers
+            result = result.replace(/([\u4e00-\u4e5d\u58f1-\u7396])?([\u767e\u4f70])?([\u4e00-\u4e5d\u58f1-\u7396])?([\u5341\u62fe])?([\u4e00-\u4e5d\u58f1-\u7396])?/g, (match) => {
+                if (match.length === 0 || !/[\u767e\u4f70\u5341\u62fe]/.test(match)) return match;
+                
+                let total = 0, temp = 0;
+                
+                for (let i = 0; i < match.length; i++) {
+                    const char = match[i];
+                    const val = chineseNums[char];
+                    
+                    if (val === undefined) continue;
+                    
+                    if (val >= 100) {
+                        if (temp === 0) temp = 1;
+                        total += temp * val;
+                        temp = 0;
+                    } else if (val === 10) {
+                        if (temp === 0) temp = 1;
+                        temp *= 10;
+                    } else if (val < 10) {
+                        temp = val;
+                    }
+                }
+                
+                total += temp;
+                return total > 0 ? total.toString() : match;
+            });
+            
+            // Handle simple digit replacements
+            for (const [chinese, arabic] of Object.entries(chineseNums)) {
+                if (arabic <= 9) {
+                    result = result.replace(new RegExp(chinese, 'g'), arabic.toString());
+                }
+            }
+            
+            return result;
+        }
+
+        // Apply highlighting to test cases
+        document.querySelectorAll('.test-case').forEach(div => {
+            if (!div.classList.contains('excluded')) {
+                let text = div.textContent;
+                let highlightedText = text;
+                
+                // Apply patterns
+                for (const [key, pattern] of Object.entries(TAIWAN_LEGAL_PATTERNS)) {
+                    const fresh = new RegExp(pattern.source, pattern.flags);
+                    highlightedText = highlightedText.replace(fresh, (match) => {
+                        return `<span class="citeright-link" title="Matched: ${key}">${match}</span>`;
+                    });
+                }
+                
+                div.innerHTML = highlightedText;
+            }
+        });
+
+        console.log('Pattern test completed');
+    </script>
+</body>
+</html>
