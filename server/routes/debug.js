@@ -37,14 +37,27 @@ router.get('/', asyncHandler(async (req, res) => {
         throw new ApiError(503, 'Database not connected');
     }
     
-    // Get sample data from each table
+    // Get comprehensive database statistics
+    const [interpretationCount] = await database.query('SELECT COUNT(*) as total FROM interpretations');
+    const [interpretationZhCount] = await database.query('SELECT COUNT(*) as total FROM interpretations_zh');
+    const [interpretationEnCount] = await database.query('SELECT COUNT(*) as total FROM interpretations_en');
+    const [additionsCount] = await database.query('SELECT COUNT(*) as total FROM interpretation_additions');
     const [sampleLaws] = await database.query('SELECT id, law_name FROM laws LIMIT 5');
-    const [sampleInterpretations] = await database.query('SELECT interpretation_number FROM interpretations LIMIT 5');
+    const [sampleInterpretations] = await database.query('SELECT interpretation_number FROM interpretations ORDER BY interpretation_number DESC LIMIT 5');
     
     res.json({
         status: 'connected',
+        database: { connected: true },
+        interpretations: {
+            total: interpretationCount[0].total,
+            available: interpretationCount[0].total,
+            chinese_content: interpretationZhCount[0].total,
+            english_content: interpretationEnCount[0].total,
+            additions: additionsCount[0].total
+        },
         sampleLaws: sampleLaws,
-        sampleInterpretations: sampleInterpretations.map(row => row.interpretation_number)
+        sampleInterpretations: sampleInterpretations.map(row => row.interpretation_number),
+        lastChecked: new Date().toISOString()
     });
 }));
 

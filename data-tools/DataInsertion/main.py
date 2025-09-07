@@ -1,5 +1,8 @@
+import asyncio
 import os
 import logging
+
+from pathlib import Path
 
 import click
 import dotenv
@@ -23,7 +26,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-dotenv.load_dotenv("../../.env")
+dotenv.load_dotenv(".env")
 
 database_url = os.getenv("DATABASE_URL")
 
@@ -133,6 +136,23 @@ def update_resources():
             session.commit()
         logger.info("Resource update completed.")
 
+async def download_file(file: ResourceFiles):
+    file_type = file.resource_format.lower()
+    file_path = f"downloads/{file.resource.category.category_name}/{file.resource.title}/{file.resource_description}.{file_type}"
+    if Path(file_path).exists():
+        logger.info(f"File {file_path} already exists. Skipping download.")
+        return
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(file.get_download_url())
+            response.raise_for_status()
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+            logger.info(f"Downloaded file {file.file_set_id} to {file_path}")
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Error downloading file {file.file_set_id}: {e}")
+
+
 @click.group()
 def cli():
     """Data insertion tool for judicial data."""
@@ -170,6 +190,39 @@ def sync_all(reset_database):
 def reset_tables():
     """Drop and recreate all database tables."""
     recreate_tables()
+
+@cli.command()
+@click.option('--category-no', prompt='Category number',
+              help='The category number to download files for.')
+def download_by_category_no(category_no):
+    """Download resource files organized by category."""
+    logger.info("Starting categorized file download...")
+    with Session(engine) as session:
+        category = session.exec(sqlmodel.select(Categories).where(Categories.category_no == category_no)).one_or_none()
+        if not category:
+            logger.error(f"Category {category_no} not found.")
+            return
+        category_dir = f"downloads/{category.category_name}/"
+        os.makedirs(category_dir, exist_ok=True)
+        for resource in category.resources:
+            resource_dir = f"{category_dir}/{resource.title}/"
+            os.makedirs(resource_dir, exist_ok=True)
+            for file in resource.resource_files:
+                asyncio.run(download_file(file))
+    logger.info("Categorized file download completed.")
+
+@cli.command()
+def download_files():
+    """Download all resource files."""
+    logger.info("Starting file download...")
+    with Session(engine) as session:
+        files = session.exec(sqlmodel.select(ResourceFiles)).all()
+        os.makedirs("downloads", exist_ok=True)
+        for file in files:
+            category_dir = f"downloads/{file.resource.category.category_name}/{file.resource.title}/"
+            os.makedirs(category_dir, exist_ok=True)
+            asyncio.run(download_file(file))
+    logger.info("File download completed.")
 
 if __name__ == "__main__":
     cli()

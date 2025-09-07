@@ -1,39 +1,41 @@
 // background.js - 法源探測器 (CiteRight) 背景服務腳本
 // Enhanced with processed judicial databases and robust API handling
 
-// Load processed databases
-let judicialDatabases = {
-  interpretations: null,
-  courtCases: null,
-  apiMapping: null
+// API configuration
+const API_BASE_URL = 'http://localhost:3000';
+
+// Database connection status
+let databaseStatus = {
+  connected: false,
+  lastChecked: null,
+  stats: null
 };
 
-// Load databases on startup
-async function loadDatabases() {
+// Check database connection and get stats
+async function checkDatabaseConnection() {
   try {
-    const interpretationsUrl = chrome.runtime.getURL('processed_data/judicial_interpretations_db.json');
-    const courtCasesUrl = chrome.runtime.getURL('processed_data/court_cases_db.json');
-    const apiMappingUrl = chrome.runtime.getURL('processed_data/api_mapping.json');
-
-    const [interpretationsRes, courtCasesRes, apiMappingRes] = await Promise.all([
-      fetch(interpretationsUrl),
-      fetch(courtCasesUrl),
-      fetch(apiMappingUrl)
-    ]);
-
-    judicialDatabases.interpretations = await interpretationsRes.json();
-    judicialDatabases.courtCases = await courtCasesRes.json();
-    judicialDatabases.apiMapping = await apiMappingRes.json();
-
-    console.log('✅ Judicial databases loaded successfully');
-    console.log(`📊 Loaded ${judicialDatabases.interpretations.interpretations.length} interpretations`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/health`);
+    const healthData = await response.json();
+    
+    databaseStatus.connected = healthData.status === 'OK' && healthData.database?.connected;
+    databaseStatus.lastChecked = new Date();
+    
+    if (databaseStatus.connected) {
+      console.log('✅ Database connection verified');
+      // Get database statistics
+      const statsResponse = await fetchWithRetry(`${API_BASE_URL}/api/debug`);
+      databaseStatus.stats = await statsResponse.json();
+    } else {
+      console.warn('⚠️ Database connection failed');
+    }
   } catch (error) {
-    console.error('❌ Error loading databases:', error);
+    console.error('❌ Error checking database connection:', error);
+    databaseStatus.connected = false;
   }
 }
 
-// Initialize databases
-loadDatabases();
+// Initialize database connection
+checkDatabaseConnection();
 
 // Create context menu on extension startup
 chrome.runtime.onStartup.addListener(createContextMenu);
@@ -110,20 +112,58 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3) {
   }
 }
 
-// Find interpretation in local database
-function findInterpretationInDB(interpNum) {
-  if (!judicialDatabases.interpretations) return null;
+// Find interpretation using API
+async function findInterpretationInDB(interpNum) {
+  if (!databaseStatus.connected) {
+    console.warn('Database not connected, cannot search interpretations');
+    return null;
+  }
 
-  return judicialDatabases.interpretations.interpretations.find(
-    item => item.number === parseInt(interpNum)
-  );
+  try {
+    const response = await fetchWithRetry(
+      `${API_BASE_URL}/api/case?caseType=釋字&number=${interpNum}`
+    );
+    
+    if (!response.ok) {
+      console.warn(`No interpretation found for number: ${interpNum}`);
+      return null;
+    }
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error finding interpretation in database:', error);
+    return null;
+  }
 }
 
 // 監聽來自 content script 的消息
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   console.log('Background: Received message:', msg);
 
+  // Handle async operations properly
   if (msg.type === 'GET_CASE_LINK') {
+    handleCaseLinkRequest(msg, sendResponse);
+    return true; // Keep message channel open for async response
+  }
+
+  if (msg.type === 'SEARCH_DATABASE') {
+    handleDatabaseSearch(msg, sendResponse);
+    return true; // Keep message channel open for async response
+  }
+
+  if (msg.type === 'GET_STATS') {
+    handleGetStats(msg, sendResponse);
+    return true; // Keep message channel open for async response
+  }
+
+  // Handle other message types synchronously
+  handleOtherMessages(msg, sendResponse);
+  return true; // Keep message channel open for async response
+});
+
+// Async handler for GET_CASE_LINK
+async function handleCaseLinkRequest(msg, sendResponse) {
     const caseStr = msg.caseStr;
     console.log(`Background: Processing case string: ${caseStr}`);
 
@@ -143,23 +183,31 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         });
       }
 
-      // 2. 大法官解釋: e.g. "釋字第748號" - Enhanced with local database
+      // 2. 大法官解釋: e.g. "釋字第748號" - Enhanced with MySQL database
       const interpMatch = caseStr.match(/釋字第(\d+)號/);
       if (interpMatch) {
         const interpNum = interpMatch[1];
 
-        // Check local database first
-        const localResult = findInterpretationInDB(interpNum);
-        if (localResult) {
-          console.log(`Background: Found interpretation ${interpNum} in local database`);
-          return sendResponse({
-            success: true,
-            url: `https://aomp.judicial.gov.tw/juds/FilePage.aspx?id=${localResult.fileSetId}`,
-            downloadUrl: `https://aomp.judicial.gov.tw/juds/Download.ashx?id=${localResult.fileSetId}`,
-            type: 'interpretation',
-            metadata: localResult,
-            source: 'local_database'
-          });
+        try {
+          // Check database via API
+          const dbResult = await findInterpretationInDB(interpNum);
+          if (dbResult) {
+            console.log(`Background: Found interpretation ${interpNum} in database`);
+            
+            // Construct URL from database result
+            const url = dbResult.data?.url || dbResult.source_url || 
+                       `https://cons.judicial.gov.tw/jcc/zh-tw/jep03/show?expno=${interpNum}`;
+            
+            return sendResponse({
+              success: true,
+              url: url,
+              type: 'interpretation',
+              metadata: dbResult,
+              source: 'mysql_database'
+            });
+          }
+        } catch (error) {
+          console.error('Error querying database for interpretation:', error);
         }
 
         // Fallback to constitutional court URL
@@ -211,63 +259,83 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         error: error.message
       });
     }
-  }
+}
 
-  // New message type for database queries
-  if (msg.type === 'SEARCH_DATABASE') {
-    const { query, type } = msg;
+// Async handler for database search
+async function handleDatabaseSearch(msg, sendResponse) {
+  const { query, type } = msg;
 
-    try {
-      let results = [];
+  try {
+    let results = [];
 
-      if (type === 'interpretations' && judicialDatabases.interpretations) {
-        const interpretations = judicialDatabases.interpretations.interpretations;
-
-        if (!query || query.trim() === '') {
-          results = interpretations.slice(0, 20);
-        } else {
-          const searchTerm = query.toLowerCase().trim();
-          results = interpretations.filter(item =>
-            item.title.toLowerCase().includes(searchTerm) ||
-            item.number.toString().includes(searchTerm)
-          );
+    if (type === 'interpretations' && databaseStatus.connected) {
+      if (!query || query.trim() === '') {
+        // Get recent interpretations
+        const response = await fetchWithRetry(`${API_BASE_URL}/api/case/recent?limit=20`);
+        if (response.ok) {
+          const data = await response.json();
+          results = data.results || [];
+        }
+      } else {
+        // Search interpretations by query
+        const searchQuery = encodeURIComponent(query.trim());
+        const response = await fetchWithRetry(
+          `${API_BASE_URL}/api/case/search?q=${searchQuery}&type=interpretation`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          results = data.results || [];
         }
       }
-
-      return sendResponse({
-        success: true,
-        results: results,
-        total: results.length
-      });
-    } catch (error) {
-      console.error('Background: Database search error:', error);
-      return sendResponse({
-        success: false,
-        error: error.message
-      });
     }
-  }
 
-  // Get database statistics
-  if (msg.type === 'GET_STATS') {
-    const stats = {
-      interpretations: {
-        total: judicialDatabases.interpretations?.interpretations?.length || 0,
-        failed: judicialDatabases.interpretations?.failedDownloads?.length || 0,
-        successRate: judicialDatabases.interpretations?.metadata?.downloadSummary?.successRate || 'N/A'
-      },
-      courtCases: {
-        periods: judicialDatabases.courtCases?.periods?.length || 0,
-        coverage: judicialDatabases.courtCases?.metadata?.coveragePeriod || null
-      }
+    return sendResponse({
+      success: true,
+      results: results,
+      total: results.length
+    });
+  } catch (error) {
+    console.error('Background: Database search error:', error);
+    return sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Async handler for getting stats
+async function handleGetStats(msg, sendResponse) {
+  try {
+    if (!databaseStatus.connected) {
+      await checkDatabaseConnection();
+    }
+    
+    const stats = databaseStatus.stats || {
+      interpretations: { total: 0, available: 0 },
+      database: { connected: databaseStatus.connected },
+      lastChecked: databaseStatus.lastChecked
     };
 
     return sendResponse({
       success: true,
       stats: stats
     });
+  } catch (error) {
+    console.error('Error getting database stats:', error);
+    return sendResponse({
+      success: false,
+      error: error.message,
+      stats: {
+        interpretations: { total: 0 },
+        database: { connected: false },
+        error: 'Failed to connect to database'
+      }
+    });
   }
+}
 
+// Handler for other message types
+function handleOtherMessages(msg, sendResponse) {
   // Listen for global toggle requests from popup
   if (msg && msg.action === 'GLOBAL_TOGGLE_ENABLE_STATE') {
     console.log('🔄 Global toggle requested:', msg.enabled);
@@ -279,7 +347,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   return true; // Keep message channel open for async responses
-});
+}
 
 function broadcastEnableState(enabled) {
   console.log('📡 Broadcasting enabled state to all tabs:', enabled);

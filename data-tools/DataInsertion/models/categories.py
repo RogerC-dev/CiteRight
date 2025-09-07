@@ -52,4 +52,4 @@ class ResourceFiles(sqlmodel.SQLModel, table=True):
     )
 
     def get_download_url(self) -> str:
-        return API.JUDICIAL_CATEGORYS_FILE_API.format(file_set_id=self.file_set_id)
+        return API.JUDICIAL_CATEGORYS_FILE_API.format(fileSetId=self.file_set_id)

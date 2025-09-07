@@ -115,4 +115,165 @@ router.get('/', asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Unsupported case type. Currently supports: 釋字');
 }));
 
+/**
+ * @swagger
+ * /api/case/search:
+ *   get:
+ *     summary: Search constitutional interpretations
+ *     description: Search for constitutional interpretations by query
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           default: interpretation
+ *         description: Search type
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Maximum number of results
+ *     responses:
+ *       200:
+ *         description: Search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 results:
+ *                   type: array
+ *                 total:
+ *                   type: integer
+ */
+router.get('/search', asyncHandler(async (req, res) => {
+    const { q, type = 'interpretation', limit = 20 } = req.query;
+    
+    console.log(`🔍 Search request: q=${q}, type=${type}, limit=${limit}`);
+    
+    if (!database.isConnected()) {
+        throw new ApiError(503, 'Database not connected');
+    }
+    
+    if (!q || q.trim() === '') {
+        throw new ApiError(400, 'Missing search query parameter');
+    }
+    
+    const searchTerm = `%${q.trim()}%`;
+    const limitNum = parseInt(limit) || 20;
+    
+    // Search interpretations
+    if (type === 'interpretation') {
+        const [rows] = await database.query(
+            `SELECT i.interpretation_number, i.interpretation_date, i.source_url,
+                    iz.number_title, iz.issue, iz.description
+             FROM interpretations i
+             LEFT JOIN interpretations_zh iz ON i.interpretation_number = iz.interpretation_number  
+             WHERE i.interpretation_number LIKE ? 
+                OR iz.number_title LIKE ?
+                OR iz.issue LIKE ?
+                OR iz.description LIKE ?
+             ORDER BY i.interpretation_number DESC
+             LIMIT ?`,
+            [searchTerm, searchTerm, searchTerm, searchTerm, limitNum]
+        );
+        
+        const results = rows.map(row => ({
+            number: row.interpretation_number,
+            title: row.number_title,
+            date: row.interpretation_date,
+            url: row.source_url,
+            issue: row.issue,
+            description: row.description ? row.description.substring(0, 200) + '...' : null
+        }));
+        
+        console.log(`✅ Found ${results.length} search results`);
+        
+        return res.json({
+            success: true,
+            results: results,
+            total: results.length,
+            query: q
+        });
+    }
+    
+    throw new ApiError(400, 'Unsupported search type');
+}));
+
+/**
+ * @swagger
+ * /api/case/recent:
+ *   get:
+ *     summary: Get recent constitutional interpretations
+ *     description: Get the most recent constitutional interpretations
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Maximum number of results
+ *     responses:
+ *       200:
+ *         description: Recent interpretations
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 results:
+ *                   type: array
+ *                 total:
+ *                   type: integer
+ */
+router.get('/recent', asyncHandler(async (req, res) => {
+    const { limit = 20 } = req.query;
+    
+    console.log(`🔍 Recent cases request: limit=${limit}`);
+    
+    if (!database.isConnected()) {
+        throw new ApiError(503, 'Database not connected');
+    }
+    
+    const limitNum = parseInt(limit) || 20;
+    
+    const [rows] = await database.query(
+        `SELECT i.interpretation_number, i.interpretation_date, i.source_url,
+                iz.number_title, iz.issue, iz.description
+         FROM interpretations i
+         LEFT JOIN interpretations_zh iz ON i.interpretation_number = iz.interpretation_number  
+         ORDER BY i.interpretation_number DESC
+         LIMIT ?`,
+        [limitNum]
+    );
+    
+    const results = rows.map(row => ({
+        number: row.interpretation_number,
+        title: row.number_title,
+        date: row.interpretation_date,
+        url: row.source_url,
+        issue: row.issue,
+        description: row.description ? row.description.substring(0, 200) + '...' : null
+    }));
+    
+    console.log(`✅ Found ${results.length} recent cases`);
+    
+    return res.json({
+        success: true,
+        results: results,
+        total: results.length
+    });
+}));
+
 module.exports = router;
