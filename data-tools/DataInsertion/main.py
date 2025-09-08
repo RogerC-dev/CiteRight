@@ -1,6 +1,7 @@
 import asyncio
 import os
 import logging
+import json
 
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from sqlmodel import SQLModel, Session, create_engine
 import API
 
 from models import Categories, Resources, ResourceFiles
+from models.law import Law, LawAttachment, LawArticle, LawCaption
 
 # Configure logging
 logging.basicConfig(
@@ -223,6 +225,77 @@ def download_files():
             os.makedirs(category_dir, exist_ok=True)
             asyncio.run(download_file(file))
     logger.info("File download completed.")
+
+@cli.command()
+@click.option('--reset-database', default=False, is_flag=True, help='Drop and recreate all tables before inserting')
+@click.argument("law_data_file", type=click.Path(exists=True))
+def insert_law_data(reset_database, law_data_file):
+    """Insert law data into the database."""
+    if reset_database:
+        recreate_tables()
+    logger.info("Starting law data insertion...")
+    with Session(engine) as session, open(law_data_file, 'r', encoding='utf-8-sig') as f:
+        law_data = json.load(f)
+        for law in law_data.get("Laws", []):
+            law_has_eng_version = law.get("LawHasEngVersion", False)
+            if isinstance(law_has_eng_version, str):
+                law_has_eng_version = law_has_eng_version.upper() == 'Y'
+            
+            law_modified_date = law.get("LawModifiedDate")
+            law_effective_date = law.get("LawEffectiveDate")
+            law_model = Law(
+                law_level=law.get("LawLevel"),
+                law_name=law.get("LawName"),
+                law_url=law.get("LawURL"),
+                law_category=law.get("LawCategory"),
+                law_modified_date=law_modified_date if law_modified_date else None,
+                law_effective_date=law_effective_date if law_effective_date else None,
+                law_effective_note=law.get("LawEffectiveNote"),
+                law_abandon_note=law.get("LawAbandonNote"),
+                law_histories=law.get("LawHistories"),
+                law_has_eng_version=law_has_eng_version,
+                eng_law_name=law.get("EngLawName"),
+                law_foreword=law.get("LawForeword")
+            )
+            session.add(law_model)
+            logger.info(f"Inserted law: {law_model.law_level} - {law_model.law_name}")
+            session.flush()
+            for attachment in law.get("LawAttachements", []):
+                attachment_model = LawAttachment(
+                    law_level=law_model.law_level,
+                    law_name=law_model.law_name,
+                    title=attachment.get("Title"),
+                    file_url=attachment.get("FileURL")
+                )
+                session.add(attachment_model)
+            
+            last_caption: LawCaption = None
+            for article in law.get("LawArticles", []):
+                if article.get("ArticleType") == "C":
+                    last_caption = LawCaption(
+                        law_level=law_model.law_level,
+                        law_name=law_model.law_name,
+                        caption_title=article.get("ArticleContent")
+                    )
+                    session.add(last_caption)
+                else:
+                    if last_caption:
+                        article_model = LawArticle(
+                            caption_id=last_caption.id,
+                            law_level=law_model.law_level,
+                            law_name=law_model.law_name,
+                            article_no=article.get("ArticleNo"),
+                            article_content=article.get("ArticleContent")
+                        )
+                    else:
+                        article_model = LawArticle(
+                            law_level=law_model.law_level,
+                            law_name=law_model.law_name,
+                            article_no=article.get("ArticleNo"),
+                            article_content=article.get("ArticleContent")
+                        )
+                    session.add(article_model)
+        session.commit()
 
 if __name__ == "__main__":
     cli()
