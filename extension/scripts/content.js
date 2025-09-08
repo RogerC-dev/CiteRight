@@ -1,6 +1,142 @@
 // content.js - 台灣法源探測器 (CiteRight)
 // 整合台灣法律資料庫，支援法條、釋字、判決自動識別
 
+// 內嵌必要的函數以避免ES6模組問題
+
+/**
+ * 動態產生法條搜尋的正規表示式
+ */
+function generateLegalArticleRegex(legalNames, options = {}) {
+    const {
+        caseSensitive = false,        // 是否區分大小寫
+        matchWholeWord = true,        // 是否匹配完整詞彙
+        captureGroups = true,         // 是否使用捕獲群組
+        allowSpaces = true,           // 是否允許空格
+        supportSubsections = true     // 是否支援項、款、目等細分
+    } = options;
+
+    // 對法律名稱進行轉義，避免特殊字符影響正規表示式
+    const escapedNames = legalNames.map(name =>
+        name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    );
+
+    // 建立法律名稱的選擇群組
+    const legalNamesPattern = escapedNames.join('|');
+
+    // 建立條文號碼模式 (支援中文數字和阿拉伯數字，以及條之X的模式)
+    const articleNumberPattern = '[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\\s*條之\\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?';
+    
+    // 建立項、款、目模式（可選）- 整個項款目作為一個捕獲群組
+    const subsectionPattern = supportSubsections ? 
+        '(?:第\\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\\s*項第\\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)*)\\s*[項款目])?' : '';
+
+    // 建立基本模式
+    let pattern;
+
+    if (captureGroups) {
+        // 使用捕獲群組，方便提取法律名稱和條文號碼
+        if (allowSpaces) {
+            pattern = `(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])(${legalNamesPattern})第\\s*(${articleNumberPattern})\\s*條${subsectionPattern}`;
+        } else {
+            pattern = `(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])(${legalNamesPattern})第(${articleNumberPattern})條${subsectionPattern}`;
+        }
+    } else {
+        // 不使用捕獲群組，只做匹配
+        if (allowSpaces) {
+            pattern = `(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])(?:${legalNamesPattern})第\\s*${articleNumberPattern}\\s*條${subsectionPattern}`;
+        } else {
+            pattern = `(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])(?:${legalNamesPattern})第${articleNumberPattern}條${subsectionPattern}`;
+        }
+    }
+
+    // 如果需要匹配完整詞彙，添加詞邊界
+    if (matchWholeWord) {
+        pattern = `\\b${pattern}\\b`;
+    }
+
+    // 建立正規表示式選項
+    const flags = caseSensitive ? 'g' : 'gi';
+
+    return new RegExp(pattern, flags);
+}
+
+/**
+ * 從JSON資料載入法律名稱
+ */
+function loadLegalNamesFromJson(jsonData) {
+    let data;
+
+    if (typeof jsonData === 'string') {
+        data = JSON.parse(jsonData);
+    } else {
+        data = jsonData;
+    }
+
+    if (Array.isArray(data)) {
+        if (typeof data[0] === 'string') {
+            return data;
+        } else if (typeof data[0] === 'object' && data[0].name) {
+            return data.map(item => item.name);
+        }
+    } else if (data.laws && Array.isArray(data.laws)) {
+        return data.laws;
+    } else if (data.legalNames && Array.isArray(data.legalNames)) {
+        return data.legalNames;
+    }
+
+    throw new Error('無法解析JSON結構，請確認格式正確');
+}
+
+// 從Law.json載入法律名稱並產生動態正規表示式
+let legalNames, dynamicLegalArticleRegex;
+
+// 使用fetch異步載入Law.json
+(async function initializeLegalData() {
+    try {
+        const response = await fetch('./scripts/Law.json');
+        const legalNamesData = await response.json();
+        legalNames = loadLegalNamesFromJson(legalNamesData);
+        dynamicLegalArticleRegex = generateLegalArticleRegex(legalNames, {
+            caseSensitive: false,
+            matchWholeWord: false,
+            captureGroups: true,
+            allowSpaces: true,
+            supportSubsections: true
+        });
+        console.log('✅ 法律資料載入完成，共', legalNames.length, '個法律名稱');
+        
+        // 法律資料載入完成後，重新執行 highlighting
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => highlightCitations(), 100);
+            });
+        } else {
+            setTimeout(() => highlightCitations(), 100);
+        }
+    } catch (error) {
+        console.error('❌ 載入法律資料失敗:', error);
+        // 使用fallback資料
+        legalNames = ['民法', '刑法', '憲法', '行政程序法', '民事訴訟法', '刑事訴訟法'];
+        dynamicLegalArticleRegex = generateLegalArticleRegex(legalNames, {
+            caseSensitive: false,
+            matchWholeWord: false,
+            captureGroups: true,
+            allowSpaces: true,
+            supportSubsections: true
+        });
+        console.log('⚠️ 使用預設法律資料');
+        
+        // 預設資料載入完成後，重新執行 highlighting
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => highlightCitations(), 100);
+            });
+        } else {
+            setTimeout(() => highlightCitations(), 100);
+        }
+    }
+})();
+
 const TAIWAN_LEGAL_PATTERNS = {
     test: /憲法第[0-9]+條|集會遊行法第[0-9]+條第[0-9]+項/g,
     // 法院判決: 110年度上字第1234號
@@ -9,8 +145,9 @@ const TAIWAN_LEGAL_PATTERNS = {
     constitutional: /([0-9０-９]{2,3})\s*年\s*憲判字\s*第\s*([0-9０-９]+)\s*號/g,
     // 司法院大法官解釋: 釋字第748號
     interpretation: /釋字第\s*([0-9０-９]+)\s*號/g,
-    // 法條引用: 民法第184條、刑法第271條第1項、民法第一八四條、刑法第三百二十條第一項第二項
-    law_article: /(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])([\u4e00-\u9fa5]{2,8}法)第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*條之\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*項第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)*)\s*[項款目])?/g,
+    // 法條引用: 使用動態生成的正規表示式，支援從Law.json載入的所有法律名稱
+    // 注意: 這個會在initializeLegalData()完成後由getDynamicLegalArticleRegex()提供
+    law_article: null,
     // Mixed law references: 第964條、第965條 (when previous law name should be inferred)
     mixed_law_article: /(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*條之\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*項第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)*)\s*[項款目])?/g
 };
@@ -175,9 +312,22 @@ function highlightCitations() {
         let newHTML = chineseToArabic(original);
         let changed = false;
         for (const [key, pattern] of Object.entries(TAIWAN_LEGAL_PATTERNS)) {
-            // fresh pattern each pass
-            const fresh = new RegExp(pattern.source, pattern.flags);
-            newHTML = newHTML.replace(fresh, (m, ...groups) => {
+            let actualPattern;
+            
+            if (key === 'law_article') {
+                // 使用動態生成的法條正規表示式
+                if (!dynamicLegalArticleRegex) {
+                    continue; // 如果還沒初始化，跳過
+                }
+                actualPattern = dynamicLegalArticleRegex;
+            } else if (pattern === null) {
+                continue; // 跳過null模式
+            } else {
+                // fresh pattern each pass for other patterns
+                actualPattern = new RegExp(pattern.source, pattern.flags);
+            }
+            
+            newHTML = newHTML.replace(actualPattern, (m, ...groups) => {
                 changed = true;
                 return makeSpan(m, key, groups);
             });
@@ -248,8 +398,22 @@ function highlightCitationsInElement(element) {
         let newHTML = original;
         let changed = false;
         for (const [key, pattern] of Object.entries(TAIWAN_LEGAL_PATTERNS)) {
-            const fresh = new RegExp(pattern.source, pattern.flags);
-            newHTML = newHTML.replace(fresh, (m, ...groups) => {
+            let actualPattern;
+            
+            if (key === 'law_article') {
+                // 使用動態生成的法條正規表示式
+                if (!dynamicLegalArticleRegex) {
+                    continue; // 如果還沒初始化，跳過
+                }
+                actualPattern = dynamicLegalArticleRegex;
+            } else if (pattern === null) {
+                continue; // 跳過null模式
+            } else {
+                // fresh pattern each pass for other patterns
+                actualPattern = new RegExp(pattern.source, pattern.flags);
+            }
+            
+            newHTML = newHTML.replace(actualPattern, (m, ...groups) => {
                 changed = true;
                 return makeSpan(m, key, groups);
             });
@@ -583,29 +747,72 @@ function addToBookmarks() {
     console.log('📚 已加入書籤:', currentLawData.title);
 }
 
-// Create main sidebar with tabs
+// Create main sidebar with fixed background + floating tool panel
 function createMainSidebar() {
     // Remove any existing sidebar
-    const existingSidebar = document.getElementById('citeright-main-sidebar');
+    const existingSidebar = document.getElementById('citeright-sidebar-background');
     if (existingSidebar) {
         existingSidebar.remove();
     }
+    
+    const existingToolPanel = document.getElementById('citeright-tool-panel');
+    if (existingToolPanel) {
+        existingToolPanel.remove();
+    }
 
-    // Create web content overlay to adjust main content
-    createWebContentOverlay();
+    // 1. Create FIXED sidebar background (only show when needed)
+    const sidebarBackground = document.createElement('div');
+    sidebarBackground.id = 'citeright-sidebar-background';
+    sidebarBackground.style.cssText = `
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 33vw;
+        height: 100vh;
+        background: rgba(24, 144, 255, 0.03);
+        z-index: 2147483645;
+        border-left: 1px solid rgba(24, 144, 255, 0.1);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+    document.body.appendChild(sidebarBackground);
+    
+    // 2. Create DRAGGABLE blue tool panel (floats inside sidebar)
+    const savedPanelWidth = localStorage.getItem('citeright-panel-width');
+    const sidebarWidth = Math.floor(window.innerWidth / 3);
+    const defaultPanelWidth = sidebarWidth - 10; // Slightly smaller than sidebar
+    const panelWidth = savedPanelWidth ? parseInt(savedPanelWidth) : defaultPanelWidth;
+    
+    const toolPanel = document.createElement('div');
+    toolPanel.id = 'citeright-tool-panel';
+    toolPanel.style.cssText = `
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: ${panelWidth}px;
+        height: 100vh;
+        background: white;
+        border-left: 3px solid #1890ff;
+        z-index: 2147483647;
+        font-family: "Microsoft JhengHei", Arial, sans-serif;
+        font-size: 14px;
+        box-shadow: -6px 0 18px rgba(0,0,0,0.15);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    `;
 
-    const mainSidebar = document.createElement('div');
-    mainSidebar.id = 'citeright-main-sidebar';
-    mainSidebar.className = 'citeright-sidebar';
-
-    mainSidebar.innerHTML = `
-        <div id="resize-handle" style="position: absolute; left: -3px; top: 0; bottom: 0; width: 6px; background: #1890ff; cursor: ew-resize; z-index: 1; opacity: 0.7; transition: opacity 0.2s;"></div>
+    toolPanel.innerHTML = `
+        <div id="resize-handle" style="position: absolute; left: -6px; top: 0; bottom: 0; width: 12px; background: linear-gradient(90deg, rgba(24,144,255,0.5), #1890ff); cursor: ew-resize; z-index: 10; opacity: 0.8; transition: all 0.2s; border-radius: 4px 0 0 4px; box-shadow: -2px 0 8px rgba(24,144,255,0.3);"></div>
         
         <!-- Tab Navigation -->
         <div style="background: linear-gradient(135deg, #1890ff, #096dd9); color: white; padding: 16px; flex-shrink: 0;">
-            <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h2 style="margin: 0; font-size: 18px; font-weight: 600;">CiteRight 工具面板</h2>
-                <button id="close-main-sidebar" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 8px; cursor: pointer; font-size: 18px; width: 36px; height: 36px;">&times;</button>
+                <button id="close-tool-panel" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 8px; cursor: pointer; font-size: 18px; width: 36px; height: 36px;">&times;</button>
             </div>
             
             <div class="tab-navigation" style="display: flex; gap: 8px;">
@@ -643,91 +850,55 @@ function createMainSidebar() {
         </div>
     `;
 
-    document.body.appendChild(mainSidebar);
+    document.body.appendChild(toolPanel);
 
-    // Show sidebar with animation
+    // Adjust web content for fixed sidebar background (only once)
+    adjustWebContentForSidebar(Math.floor(window.innerWidth / 3));
+
+    // Show tool panel with animation
     setTimeout(() => {
-        mainSidebar.style.transform = 'translateX(0)';
-        adjustWebContentForSidebar(450);
+        toolPanel.style.transform = 'translateX(0)';
     }, 10);
 
-    setupSidebarEventListeners(mainSidebar);
+    setupToolPanelEventListeners(toolPanel);
     loadBookmarksContent();
     
-    return mainSidebar;
+    return toolPanel;
 }
 
-// Create web content overlay to resize main content
+// Simple overlay for reference (not used in new layout)
 function createWebContentOverlay() {
-    const existing = document.getElementById('citeright-web-overlay');
-    if (existing) return;
-
-    const overlay = document.createElement('div');
-    overlay.id = 'citeright-web-overlay';
-    overlay.style.cssText = `
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-        z-index: 2147483640; pointer-events: none; 
-        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        background: rgba(0, 0, 0, 0.02);
-    `;
-    document.body.appendChild(overlay);
+    // No longer needed - using simple body width adjustment
+    console.log('🗑️ Overlay not needed for simple split layout');
 }
 
-// Adjust web content when sidebar opens
+// Simple 2-page split layout 
 function adjustWebContentForSidebar(sidebarWidth) {
-    console.log('🔧 Adjusting web content for sidebar width:', sidebarWidth);
+    console.log('🔧 Simple 2-page split layout, sidebar width:', sidebarWidth);
     
-    // Remove overlay approach, directly modify body and html
-    const overlay = document.getElementById('citeright-web-overlay');
-    if (overlay) {
-        overlay.remove();
-    }
-    
-    // Set CSS custom property for reference
-    document.documentElement.style.setProperty('--citeright-sidebar-width', sidebarWidth + 'px');
-    
-    // Apply direct body and html adjustments for maximum compatibility
     if (sidebarWidth > 0) {
-        // Make the entire viewport narrower
-        document.documentElement.style.width = `calc(100vw - ${sidebarWidth}px)`;
-        document.documentElement.style.overflow = 'hidden';
-        document.documentElement.style.transition = 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        // Simple approach: just make body narrower
+        document.body.style.width = `calc(100vw - ${sidebarWidth}px)`;
+        document.body.style.maxWidth = `calc(100vw - ${sidebarWidth}px)`;
+        document.body.style.transition = 'width 0.3s ease';
+        document.body.style.overflow = 'auto';
         
-        // Adjust body
-        document.body.style.width = '100%';
-        document.body.style.maxWidth = '100%';
-        document.body.style.overflow = 'hidden';
-        document.body.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-        
-        console.log('✅ Web content made narrower to accommodate sidebar');
+        console.log('✅ Page split: Left content, right sidebar');
     } else {
         // Restore full width
-        document.documentElement.style.width = '100vw';
-        document.documentElement.style.overflow = 'auto';
         document.body.style.width = '';
         document.body.style.maxWidth = '';
-        document.body.style.overflow = '';
+        document.body.style.transition = '';
         
-        // Clean up transitions after animation
-        setTimeout(() => {
-            document.documentElement.style.transition = '';
-            document.body.style.transition = '';
-        }, 300);
-        
-        console.log('✅ Web content restored to full width');
+        console.log('✅ Restored full page');
     }
-    
-    // Dispatch event for third-party compatibility
-    window.dispatchEvent(new CustomEvent('citeright-sidebar-resize', {
-        detail: { sidebarWidth: sidebarWidth }
-    }));
 }
 
-// Setup event listeners for sidebar
-function setupSidebarEventListeners(sidebar) {
+// Setup event listeners for tool panel
+function setupToolPanelEventListeners(toolPanel) {
     // Tab switching
-    const tabButtons = sidebar.querySelectorAll('.tab-btn');
-    const tabContents = sidebar.querySelectorAll('.tab-content');
+    const tabButtons = toolPanel.querySelectorAll('.tab-btn');
+    const tabContents = toolPanel.querySelectorAll('.tab-content');
     
     tabButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -759,28 +930,135 @@ function setupSidebarEventListeners(sidebar) {
     });
 
     // Close button
-    sidebar.querySelector('#close-main-sidebar').addEventListener('click', () => {
-        closeSidebar();
+    toolPanel.querySelector('#close-tool-panel').addEventListener('click', () => {
+        closeToolPanel();
     });
 
     // Resize functionality
-    setupSidebarResize(sidebar);
+    setupToolPanelResize(toolPanel);
 }
 
-// Setup sidebar resize functionality
-function setupSidebarResize(sidebar) {
-    const resizeHandle = sidebar.querySelector('#resize-handle');
+// Setup tool panel resize functionality (ONLY resize width, panel stays on right)
+function setupToolPanelResize(toolPanel) {
+    const resizeHandle = toolPanel.querySelector('#resize-handle');
     let isResizing = false;
     let startX = 0;
-    let startWidth = 450;
+    let startWidth = 0;
+    const sidebarBoundary = Math.floor(window.innerWidth / 3);
 
     resizeHandle.addEventListener('mouseenter', () => {
         resizeHandle.style.opacity = '1';
+        resizeHandle.style.background = 'linear-gradient(90deg, rgba(24,144,255,0.8), #1890ff)';
     });
 
     resizeHandle.addEventListener('mouseleave', () => {
         if (!isResizing) {
-            resizeHandle.style.opacity = '0.7';
+            resizeHandle.style.opacity = '0.8';
+            resizeHandle.style.background = 'linear-gradient(90deg, rgba(24,144,255,0.5), #1890ff)';
+        }
+    });
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = parseInt(window.getComputedStyle(toolPanel).width, 10);
+        
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
+        
+        console.log('🔧 Started resizing panel width');
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const deltaX = startX - e.clientX; // Reverse for expanding leftward
+        let newWidth = startWidth + deltaX;
+
+        // Apply constraints - minimum matches sidebar width exactly, maximum is 80% of screen
+        const minWidth = Math.floor(sidebarBoundary); // Can be as small as sidebar space
+        const maxWidth = window.innerWidth * 0.8;
+        newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+
+        toolPanel.style.width = newWidth + 'px';
+        
+        // Get sidebar background element
+        const sidebarBackground = document.getElementById('citeright-sidebar-background');
+        
+        // If panel width exceeds sidebar area, make it float over content and show background
+        if (newWidth > sidebarBoundary) {
+            toolPanel.style.zIndex = '2147483648'; // Float over content
+            toolPanel.style.boxShadow = '-8px 0 24px rgba(0,0,0,0.25)';
+            if (sidebarBackground) sidebarBackground.style.opacity = '1'; // Show background
+            console.log('🌊 Panel floating over content');
+        } else {
+            toolPanel.style.zIndex = '2147483647'; // Stay in sidebar area
+            toolPanel.style.boxShadow = '-6px 0 18px rgba(0,0,0,0.15)';
+            if (sidebarBackground) sidebarBackground.style.opacity = '0'; // Hide background
+            console.log('📍 Panel within sidebar area');
+        }
+        
+        console.log('🔄 Resizing panel width:', newWidth + 'px');
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            
+            const finalWidth = parseInt(toolPanel.style.width);
+            
+            // Save width to localStorage
+            localStorage.setItem('citeright-panel-width', finalWidth);
+            console.log('💾 Saved panel width to localStorage:', finalWidth + 'px');
+            
+            // Reset handle visual state
+            resizeHandle.style.opacity = '0.8';
+            resizeHandle.style.background = 'linear-gradient(90deg, rgba(24,144,255,0.5), #1890ff)';
+            
+            console.log('✅ Finished resizing panel');
+        }
+    });
+}
+
+// Close tool panel (keeps sidebar background)
+function closeToolPanel() {
+    const toolPanel = document.getElementById('citeright-tool-panel');
+    if (toolPanel) {
+        toolPanel.style.transform = 'translateX(100%)';
+        setTimeout(() => toolPanel.remove(), 300);
+    }
+    
+    // Remove sidebar background too
+    const sidebarBackground = document.getElementById('citeright-sidebar-background');
+    if (sidebarBackground) {
+        sidebarBackground.remove();
+    }
+    
+    // Restore web content
+    adjustWebContentForSidebar(0);
+    
+    console.log('✅ Tool panel closed');
+}
+
+// Setup sidebar resize functionality with floating behavior (OLD - keeping for reference)
+function setupSidebarResize(sidebar) {
+    const resizeHandle = sidebar.querySelector('#resize-handle');
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 300;
+    let isFloating = false;
+
+    resizeHandle.addEventListener('mouseenter', () => {
+        resizeHandle.style.opacity = '1';
+        resizeHandle.style.background = 'linear-gradient(90deg, rgba(24,144,255,0.8), #1890ff)';
+    });
+
+    resizeHandle.addEventListener('mouseleave', () => {
+        if (!isResizing) {
+            resizeHandle.style.opacity = '0.8';
+            resizeHandle.style.background = 'linear-gradient(90deg, rgba(24,144,255,0.5), #1890ff)';
         }
     });
 
@@ -790,6 +1068,20 @@ function setupSidebarResize(sidebar) {
         startWidth = parseInt(window.getComputedStyle(sidebar).width, 10);
         document.body.style.cursor = 'ew-resize';
         document.body.style.userSelect = 'none';
+        
+        console.log('🔧 Starting resize - switching to floating mode');
+        
+        // Switch to floating mode when dragging starts
+        isFloating = true;
+        sidebar.style.zIndex = '2147483648'; // Higher z-index when floating
+        sidebar.style.boxShadow = '-8px 0 32px rgba(0,0,0,0.25)'; // Stronger shadow
+        
+        // Restore web content to full width immediately
+        document.body.style.width = '100vw';
+        document.body.style.maxWidth = '100vw';
+        document.body.style.transition = 'width 0.2s ease';
+        
+        console.log('✅ Switched to floating mode - web content restored to full width');
     });
 
     document.addEventListener('mousemove', (e) => {
@@ -799,10 +1091,12 @@ function setupSidebarResize(sidebar) {
         let newWidth = startWidth + deltaX;
 
         // Apply constraints
-        newWidth = Math.max(350, Math.min(newWidth, window.innerWidth * 0.8));
+        newWidth = Math.max(250, Math.min(newWidth, window.innerWidth * 0.7));
 
         sidebar.style.width = newWidth + 'px';
-        adjustWebContentForSidebar(newWidth);
+        
+        // Don't adjust web content while dragging - sidebar floats over content
+        console.log('🔄 Resizing in floating mode:', newWidth + 'px');
     });
 
     document.addEventListener('mouseup', () => {
@@ -810,7 +1104,26 @@ function setupSidebarResize(sidebar) {
             isResizing = false;
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
-            resizeHandle.style.opacity = '0.7';
+            resizeHandle.style.opacity = '0.8';
+            resizeHandle.style.background = 'linear-gradient(90deg, rgba(24,144,255,0.5), #1890ff)';
+            
+            const finalWidth = parseInt(sidebar.style.width);
+            
+            // Save the width to localStorage
+            localStorage.setItem('citeright-sidebar-width', finalWidth);
+            console.log('💾 Saved sidebar width to localStorage:', finalWidth + 'px');
+            
+            // After dragging ends, switch back to 2-page layout
+            setTimeout(() => {
+                isFloating = false;
+                sidebar.style.zIndex = '2147483647'; // Normal z-index
+                sidebar.style.boxShadow = '-6px 0 18px rgba(0,0,0,0.12)'; // Normal shadow
+                
+                // Re-apply 2-page layout with new width
+                adjustWebContentForSidebar(finalWidth);
+                
+                console.log('✅ Switched back to 2-page layout with new width:', finalWidth + 'px');
+            }, 100);
         }
     });
 }
@@ -941,12 +1254,11 @@ function loadBookmarkInToolTab(bookmark) {
                 ${cleanContent}
             </div>
             
-            <div style="margin-top: 24px; padding: 16px; background: #fafafa; border-radius: 8px;">
-                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #1890ff;">📋 相關功能</h4>
+            <div style="margin-top: 20px; padding: 12px; background: #fafafa; border-radius: 6px;">
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button id="add-to-bookmarks" style="padding: 8px 12px; border: 1px solid #52c41a; background: #f6ffed; color: #52c41a; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s;">📚 重新加入書籤</button>
-                    ${bookmark.officialUrl ? `<button id="official-link" style="padding: 8px 12px; border: 1px solid #1890ff; background: #f0f9ff; color: #1890ff; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s;">🔗 官方頁面</button>` : ''}
-                    <button id="remove-from-bookmarks" style="padding: 8px 12px; border: 1px solid #ff4d4f; background: #fff2f0; color: #ff4d4f; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s;">🗑️ 移除書籤</button>
+                    <button id="add-to-bookmarks" style="padding: 6px 10px; border: 1px solid #52c41a; background: #f6ffed; color: #52c41a; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;">📚 加入書籤</button>
+                    <button id="remove-from-bookmarks" style="padding: 6px 10px; border: 1px solid #ff4d4f; background: #fff2f0; color: #ff4d4f; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;">🗑️ 移除書籤</button>
+                    ${bookmark.officialUrl ? `<button id="official-link" style="padding: 6px 10px; border: 1px solid #1890ff; background: #f0f9ff; color: #1890ff; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;">🔗 官方頁面</button>` : ''}
                 </div>
             </div>
         `;
@@ -954,28 +1266,40 @@ function loadBookmarkInToolTab(bookmark) {
         console.log('✅ Content loaded successfully in tool tab');
         
         // Setup action buttons
-        const officialLink = toolContentDiv.querySelector('#official-link');
-        if (officialLink && bookmark.officialUrl) {
-            officialLink.addEventListener('click', () => {
-                window.open(bookmark.officialUrl, '_blank');
+        const addBtn = toolContentDiv.querySelector('#add-to-bookmarks');
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                if (currentLawData) {
+                    addToBookmarks();
+                    console.log('✅ Added to bookmarks via sidebar');
+                }
             });
         }
-        
+
         const removeBtn = toolContentDiv.querySelector('#remove-from-bookmarks');
         if (removeBtn) {
             removeBtn.addEventListener('click', () => {
+                // Remove from bookmarks
                 bookmarkedLaws = bookmarkedLaws.filter(b => b.id !== bookmark.id);
                 localStorage.setItem('citeright_bookmarks', JSON.stringify(bookmarkedLaws));
                 loadBookmarksContent(); // Refresh bookmark list
                 
-                // Clear tool content
+                // Show placeholder in tool content
                 toolContentDiv.innerHTML = `
                     <div style="text-align: center; color: #999; padding: 40px 20px;">
-                        <div style="font-size: 48px; margin-bottom: 16px;">🔧</div>
+                        <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
                         <div>書籤已移除</div>
                         <div style="font-size: 12px; margin-top: 8px;">請點擊法律條文來查看詳細資訊</div>
                     </div>
                 `;
+                console.log('✅ Removed from bookmarks via sidebar');
+            });
+        }
+
+        const officialLink = toolContentDiv.querySelector('#official-link');
+        if (officialLink && bookmark.officialUrl) {
+            officialLink.addEventListener('click', () => {
+                window.open(bookmark.officialUrl, '_blank');
             });
         }
         
@@ -1993,7 +2317,18 @@ function initializeExtension() {
             // Provide sample test output
             const testText = '在110年度台上字第3214號判決中，以及釋字第748號與109年憲判字第13號';
             Object.entries(TAIWAN_LEGAL_PATTERNS).forEach(([k,p]) => {
-                const m = testText.match(new RegExp(p.source, p.flags));
+                let actualPattern;
+                
+                if (k === 'law_article') {
+                    if (!dynamicLegalArticleRegex) return;
+                    actualPattern = dynamicLegalArticleRegex;
+                } else if (p === null) {
+                    return;
+                } else {
+                    actualPattern = new RegExp(p.source, p.flags);
+                }
+                
+                const m = testText.match(actualPattern);
                 console.log('Pattern test', k, m);
             });
         }

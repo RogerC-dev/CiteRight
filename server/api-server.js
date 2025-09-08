@@ -9,7 +9,7 @@ const database = require('./config/database');
 const { errorHandler } = require('./middleware/errorHandler');
 const ProcessManager = require('./utils/processManager');
 
-// Import routes
+// Import routesimport {generateLegalArticleRegex, loadLegalNamesFromJson} from './regex'
 const healthRoutes = require('./routes/health');
 const caseRoutes = require('./routes/cases');
 const lawRoutes = require('./routes/laws');
