@@ -1,18 +1,18 @@
-// content.js - 台灣法源探測器 (CiteRight) 
+// content.js - 台灣法源探測器 (CiteRight)
 // 整合台灣法律資料庫，支援法條、釋字、判決自動識別
 
 const TAIWAN_LEGAL_PATTERNS = {
+    test: /憲法第[0-9]+條|集會遊行法第[0-9]+條第[0-9]+項/g,
     // 法院判決: 110年度上字第1234號
     court_case: /([0-9０-９]{2,3})\s*年度?\s*([\u4e00-\u9fa5]{1,6}?)\s*字\s*第\s*([0-9０-９]+)\s*號/g,
-    // 憲法法庭: 111年憲判字第13號  
+    // 憲法法庭: 111年憲判字第13號
     constitutional: /([0-9０-９]{2,3})\s*年\s*憲判字\s*第\s*([0-9０-９]+)\s*號/g,
-    // 司法院大法官解釋: 釋字第748號, 釋字第五八五號
-    interpretation: /釋字第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)\s*號/g,
+    // 司法院大法官解釋: 釋字第748號
+    interpretation: /釋字第\s*([0-9０-９]+)\s*號/g,
     // 法條引用: 民法第184條、刑法第271條第1項、民法第一八四條、刑法第三百二十條第一項第二項
-    // Exclude unwanted prefixes: 根據, 依, 按, 與, 宣告, 主管機關基於, 甲因酒駕違反, 以及, 及, 不符
-    law_article: /(?<!根據|依(?!法)|按|與|宣告|主管機關基於|甲因酒駕違反|以及|及(?!法)|不符)([\u4e00-\u9fa5]{2,8}法)第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:之[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+)\s*[項款目](?:第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+\s*[項款目])*)?/g,
+    law_article: /(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])([\u4e00-\u9fa5]{2,8}法)第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*條之\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*項第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)*)\s*[項款目])?/g,
     // Mixed law references: 第964條、第965條 (when previous law name should be inferred)
-    mixed_law_article: /(?<!根據|依(?!法)|按|與|宣告|主管機關基於|甲因酒駕違反|以及|及(?!法)|不符)(?<!^|\s)第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:之[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+)\s*[項款目](?:第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬IVXLCDM]+\s*[項款目])*)?/g
+    mixed_law_article: /(?<![根據依按與宣告，以及及不符主管機關基於甲因酒駕違反])第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*條之\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)?)\s*條(?:第\s*([0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+(?:\s*項第\s*[0-9０-９一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟萬]+)*)\s*[項款目])?/g
 };
 
 function toHalfWidthDigits(str) {
@@ -37,54 +37,51 @@ function chineseToArabic(str) {
         '千': 1000, '仟': 1000,
         '萬': 10000
     };
-    
-    let result = str.toString();
-    
-    // Handle Roman numerals first: I, II, III, IV, V, VI, VII, VIII, IX, X, XI, XII
-    const romanMap = {
-        'XII': '12', 'XI': '11', 'IX': '9', 'VIII': '8', 'VII': '7', 'VI': '6', 'IV': '4', 'III': '3', 'II': '2', 'X': '10', 'V': '5', 'I': '1'
-    };
-    
-    for (const [roman, arabic] of Object.entries(romanMap)) {
-        result = result.replace(new RegExp(roman, 'g'), arabic);
-    }
-    
-    // Handle complex Chinese numbers: 九百六十四 -> 964, 二百七十一 -> 271, etc.
-    result = result.replace(/([\u4e00-\u4e5d\u58f1-\u7396])?([\u767e\u4f70])?([\u4e00-\u4e5d\u58f1-\u7396])?([\u5341\u62fe])?([\u4e00-\u4e5d\u58f1-\u7396])?/g, (match) => {
-        if (match.length === 0 || !/[\u767e\u4f70\u5341\u62fe]/.test(match)) return match;
-        
+
+    let result = str;
+
+    // Handle complex Chinese numbers first (e.g., 九百六十四 -> 964)
+    // Match patterns like 九百六十四, 三百二十, etc.
+    result = result.replace(/(一|二|三|四|五|六|七|八|九|壹|貳|參|肆|伍|陸|柒|捌|玖)?(百|佰)?(一|二|三|四|五|六|七|八|九|壹|貳|參|肆|伍|陸|柒|捌|玖)?(十|拾)?(一|二|三|四|五|六|七|八|九|壹|貳|參|肆|伍|陸|柒|捌|玖)?/g, (match) => {
+        if (match.length === 0) return match;
+
         let total = 0;
-        let temp = 0;
-        
-        for (let i = 0; i < match.length; i++) {
+        let current = 0;
+        let i = 0;
+
+        while (i < match.length) {
             const char = match[i];
-            const val = chineseNums[char];
-            
-            if (val === undefined) continue;
-            
-            if (val >= 100) {
-                if (temp === 0) temp = 1; // 百 -> 100, not 0*100
-                total += temp * val;
-                temp = 0;
-            } else if (val === 10) {
-                if (temp === 0) temp = 1; // 十 -> 10, not 0*10
-                temp *= 10;
-            } else if (val < 10) {
-                temp = val;
+            const num = chineseNums[char];
+
+            if (num !== undefined) {
+                if (num >= 100) {
+                    if (current === 0) current = 1;
+                    total += current * num;
+                    current = 0;
+                } else if (num === 10) {
+                    if (current === 0) current = 1;
+                    current *= 10;
+                } else {
+                    current = num;
+                }
             }
+            i++;
         }
-        
-        total += temp;
+
+        total += current;
         return total > 0 ? total.toString() : match;
     });
-    
-    // Handle simple digit replacements: 一八四 -> 184, 一 -> 1, etc.
+
+    // Handle simple digit-by-digit replacements (e.g., 一八四 -> 184)
     for (const [chinese, arabic] of Object.entries(chineseNums)) {
-        if (arabic <= 9) {
+        if (arabic < 10) {
             result = result.replace(new RegExp(chinese, 'g'), arabic.toString());
         }
     }
-    
+
+    // Clean up any remaining non-numeric Chinese characters
+    result = result.replace(/[十百千萬拾佰仟]/g, '');
+
     return result;
 }
 
@@ -93,7 +90,7 @@ let lastLawName = '';
 
 function makeSpan(match, key, groups) {
     let year = '', caseType = '', number = '', lawName = '', article = '', paragraph = '';
-    
+
     if (key === 'court_case') {
         year = toHalfWidthDigits(groups[0]);
         caseType = groups[1];
@@ -117,7 +114,7 @@ function makeSpan(match, key, groups) {
         paragraph = groups[1] ? formatParagraphForDB(chineseToArabic(toHalfWidthDigits(groups[1]))) : ''; // 第1項 -> -1
         caseType = '法條';
     }
-    
+
     return `<span class="citeright-link" 
                 data-year="${year}" 
                 data-case-type="${caseType}" 
@@ -132,16 +129,13 @@ function makeSpan(match, key, groups) {
 // Format paragraph numbers for database lookup (第1項 -> -1, 第1項第2款 -> -1-2)
 function formatParagraphForDB(paragraphStr) {
     if (!paragraphStr) return '';
-    
-    // Handle Roman numerals and Chinese numerals in paragraphs
-    let processed = chineseToArabic(paragraphStr);
-    
+
     // Handle multiple items like "1項第2款" -> "1-2"
-    const parts = processed.split(/項第?|款第?|目第?/).filter(part => part.trim());
-    
+    const parts = paragraphStr.split(/項第?|款第?|目第?/).filter(part => part.trim());
+
     if (parts.length === 0) return '';
     if (parts.length === 1) return '-' + parts[0];
-    
+
     return '-' + parts.join('-');
 }
 
@@ -157,18 +151,18 @@ function highlightCitations() {
         const parentTag = node.parentNode.tagName;
         if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA' || parentTag === 'INPUT') return;
         if (node.parentNode.closest && node.parentNode.closest('.citeright-link')) return;
-        
+
         // Skip bookmark panel content completely, but allow side panel content with legal highlighting
         if (node.parentNode.closest && node.parentNode.closest('#citeright-bookmarks-panel')) return;
-        
+
         // Skip side panel headers (blue title column) but allow content area
         const sidePanelHeader = node.parentNode.closest && node.parentNode.closest('#citeright-sidepanel > div:first-child');
         if (sidePanelHeader) return;
-        
+
         // Skip any elements with blue background (title columns)
         const hasBlueBackground = node.parentNode.closest && node.parentNode.closest('[style*="background: linear-gradient(135deg, #1890ff"]');
         if (hasBlueBackground) return;
-        
+
         // Allow highlighting in legal content areas of side panel
         const isInLegalContentArea = node.parentNode.closest && node.parentNode.closest('.legal-content-area');
         const isInSidepanelContent = node.parentNode.closest && node.parentNode.closest('#sidepanel-content');
@@ -178,7 +172,7 @@ function highlightCitations() {
         const original = node.textContent;
         if (!original || !original.trim()) return;
 
-        let newHTML = original;
+        let newHTML = chineseToArabic(original);
         let changed = false;
         for (const [key, pattern] of Object.entries(TAIWAN_LEGAL_PATTERNS)) {
             // fresh pattern each pass
@@ -235,19 +229,19 @@ function highlightCitationsInElement(element) {
     function processTextNode(node) {
         if (seenNodes.has(node)) return;
         if (!node.parentNode) return;
-        
+
         // Skip inside our own spans or script/style/inputs
         const parentTag = node.parentNode.tagName;
         if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA' || parentTag === 'INPUT') return;
         if (node.parentNode.closest && node.parentNode.closest('.citeright-link')) return;
-        
+
         // Skip bookmark panel content
         if (node.parentNode.closest && node.parentNode.closest('#citeright-bookmarks-panel')) return;
-        
+
         // Skip elements with blue background (title columns)
         const hasBlueBackground = node.parentNode.closest && node.parentNode.closest('[style*="background: linear-gradient(135deg, #1890ff"]');
         if (hasBlueBackground) return;
-        
+
         const original = node.textContent;
         if (!original || !original.trim()) return;
 
@@ -369,7 +363,29 @@ function createPopoverElement() {
     // Expand button event - creates side panel
     popover.querySelector('.citeright-expand').addEventListener('click', e => {
         e.stopPropagation();
+        console.log('🔧 Expand button clicked, currentLawData:', currentLawData);
+        
+        if (!currentLawData) {
+            console.log('❌ No currentLawData, attempting to load from popup');
+            // Try to extract data from popup if currentLawData is missing
+            const title = popover.querySelector('#citeright-title').textContent;
+            const content = popover.querySelector('.citeright-content').innerHTML;
+            if (title && content) {
+                currentLawData = {
+                    id: 'popup_' + Date.now(),
+                    title: title,
+                    type: '法律資訊',
+                    content: content,
+                    fullContent: content
+                };
+                console.log('✅ Created currentLawData from popup content');
+            }
+        }
+        
         openSidePanel();
+        
+        // Hide the popup after opening sidebar
+        popover.style.display = 'none';
     });
 
     // Drag improvements
@@ -442,20 +458,20 @@ function getLawIdentifier(target) {
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && !isCtrlPressed) {
         isCtrlPressed = true;
-        
+
         // Check if extension is globally enabled first
         if (!isExtensionEnabled) {
             showActivationNotification('擴充功能已停用', '請在工具列圖示中啟用擴充功能', '#d73527');
             return;
         }
-        
+
         // Ctrl toggles hover mode
         isActivated = !isActivated;
-        
+
         if (isActivated) {
             console.log('⚖️ 滑鼠懸停模式已啟用');
             showActivationNotification('滑鼠懸停模式已啟用', '移動滑鼠至法條引用查看詳情');
-            
+
             // Set auto-deactivation timer (3 minutes)
             clearTimeout(activationTimeout);
             activationTimeout = setTimeout(() => {
@@ -470,7 +486,7 @@ document.addEventListener('keydown', (e) => {
             clearTimeout(activationTimeout);
             showActivationNotification('滑鼠懸停模式已停用', '再按 Ctrl 重新啟用', '#d73527');
         }
-        
+
         updateActivationStatus();
     }
 });
@@ -500,7 +516,7 @@ function showActivationNotification(title, subtitle, bgColor = '#389e0d') {
             ${subtitle}
         </div>
     `;
-    
+
     if (!document.getElementById('slideIn-style')) {
         const style = document.createElement('style');
         style.id = 'slideIn-style';
@@ -512,9 +528,9 @@ function showActivationNotification(title, subtitle, bgColor = '#389e0d') {
         `;
         document.head.appendChild(style);
     }
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.remove();
     }, 2500);
@@ -534,18 +550,18 @@ function addToBookmarks() {
         console.log('❌ 無法加入書籤：沒有目前的法律資料');
         return;
     }
-    
+
     // Check if already bookmarked
-    const exists = bookmarkedLaws.find(item => 
-        item.id === currentLawData.id || 
+    const exists = bookmarkedLaws.find(item =>
+        item.id === currentLawData.id ||
         (item.type === currentLawData.type && item.number === currentLawData.number)
     );
-    
+
     if (exists) {
         showActivationNotification('已存在書籤', '此法條已經在您的書籤中', '#e67e22');
         return;
     }
-    
+
     // Add to bookmarks with full content
     bookmarkedLaws.push({
         id: currentLawData.id || `${currentLawData.type}_${currentLawData.number}`,
@@ -559,175 +575,236 @@ function addToBookmarks() {
         articleData: currentLawData.articleData,
         dateAdded: new Date().toISOString()
     });
-    
+
     // Save to localStorage
     localStorage.setItem('citeright_bookmarks', JSON.stringify(bookmarkedLaws));
-    
+
     showActivationNotification('已加入書籤', `${currentLawData.title}`, '#52c41a');
     console.log('📚 已加入書籤:', currentLawData.title);
 }
 
-// Side panel functionality
-function openSidePanel() {
-    if (!currentLawData) {
-        console.log('❌ 無法展開側邊面板：沒有目前的法律資料');
-        return;
+// Create main sidebar with tabs
+function createMainSidebar() {
+    // Remove any existing sidebar
+    const existingSidebar = document.getElementById('citeright-main-sidebar');
+    if (existingSidebar) {
+        existingSidebar.remove();
     }
-    
-    // Check if side panel already exists
-    const existingPanel = document.getElementById('citeright-sidepanel');
-    if (existingPanel) {
-        existingPanel.remove();
-    }
-    
-    const sidePanel = document.createElement('div');
-    sidePanel.id = 'citeright-sidepanel';
-    sidePanel.style.cssText = `
-        position: fixed; top: 0; right: 0; width: 450px; height: 100vh; 
-        background: white; border-left: 3px solid #1890ff; z-index: 2147483647;
-        font-family: "Microsoft JhengHei", Arial, sans-serif; font-size: 14px;
-        box-shadow: -8px 0 24px rgba(0,0,0,0.15); transform: translateX(100%);
-        transition: transform 0.3s ease-out; overflow: hidden; display: flex; flex-direction: column;
-        min-width: 350px; max-width: 80vw;
-    `;
-    
-    sidePanel.innerHTML = `
+
+    // Create web content overlay to adjust main content
+    createWebContentOverlay();
+
+    const mainSidebar = document.createElement('div');
+    mainSidebar.id = 'citeright-main-sidebar';
+    mainSidebar.className = 'citeright-sidebar';
+
+    mainSidebar.innerHTML = `
         <div id="resize-handle" style="position: absolute; left: -3px; top: 0; bottom: 0; width: 6px; background: #1890ff; cursor: ew-resize; z-index: 1; opacity: 0.7; transition: opacity 0.2s;"></div>
-        <div style="background: linear-gradient(135deg, #1890ff, #096dd9); color: white; padding: 20px; flex-shrink: 0;">
-            <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 12px;">
-                <h2 style="margin: 0; font-size: 18px; font-weight: 600;">${currentLawData.title}</h2>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <button id="view-bookmarks-top" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; font-family: inherit; transition: all 0.2s;">📖 查看我的書籤</button>
-                    <button id="close-sidepanel" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 8px; cursor: pointer; font-size: 18px; width: 36px; height: 36px;">&times;</button>
-                </div>
-            </div>
-            <div style="font-size: 13px; opacity: 0.9;">
-                ${currentLawData.type} · ${currentLawData.number ? `第${currentLawData.number}${currentLawData.type === '釋字' ? '號' : currentLawData.type === '法條' ? '條' : '號'}` : ''}
-            </div>
-        </div>
         
-        <div style="flex: 1; overflow-y: auto; padding: 20px;">
-            <div id="sidepanel-content" class="legal-content-area">
-                ${currentLawData.fullContent || currentLawData.content || '載入完整內容中...'}
+        <!-- Tab Navigation -->
+        <div style="background: linear-gradient(135deg, #1890ff, #096dd9); color: white; padding: 16px; flex-shrink: 0;">
+            <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 16px;">
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600;">CiteRight 工具面板</h2>
+                <button id="close-main-sidebar" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 8px; cursor: pointer; font-size: 18px; width: 36px; height: 36px;">&times;</button>
             </div>
             
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e8e8e8;">
-                <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #1890ff;">相關功能</h3>
-                <div style="display: grid; gap: 10px;">
-                    <button id="bookmark-from-panel" style="padding: 10px; border: 1px solid #d9d9d9; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                        📚 加入書籤
-                    </button>
-                    <button id="view-bookmarks" style="padding: 10px; border: 1px solid #d9d9d9; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                        📖 查看我的書籤
-                    </button>
-                    <button id="official-link" style="padding: 10px; border: 1px solid #d9d9d9; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                        🔗 前往官方頁面
-                    </button>
+            <div class="tab-navigation" style="display: flex; gap: 8px;">
+                <button id="tab-tool" class="tab-btn active" data-tab="tool">
+                    🔧 法律工具
+                </button>
+                <button id="tab-bookmarks" class="tab-btn" data-tab="bookmarks">
+                    📚 我的書籤
+                </button>
+            </div>
+        </div>
+        
+        <!-- Tab Content Areas -->
+        <div id="tab-content-tool" class="tab-content active">
+            <div class="tab-content-inner">
+                <div id="tool-content">
+                    <div style="text-align: center; color: #999; padding: 40px 20px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🔧</div>
+                        <div>請點擊法律條文來查看詳細資訊</div>
+                        <div style="font-size: 12px; margin-top: 8px;">按 Ctrl 啟動懸停模式</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="tab-content-bookmarks" class="tab-content">
+            <div class="tab-content-inner">
+                <div id="bookmarks-content">
+                    <div style="text-align: center; color: #999; padding: 40px 20px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
+                        <div>正在載入書籤...</div>
+                    </div>
                 </div>
             </div>
         </div>
     `;
-    
-    document.body.appendChild(sidePanel);
-    
-    // Show panel with animation
+
+    document.body.appendChild(mainSidebar);
+
+    // Show sidebar with animation
     setTimeout(() => {
-        sidePanel.style.transform = 'translateX(0)';
+        mainSidebar.style.transform = 'translateX(0)';
+        adjustWebContentForSidebar(450);
     }, 10);
+
+    setupSidebarEventListeners(mainSidebar);
+    loadBookmarksContent();
     
-    // Event listeners for side panel
-    sidePanel.querySelector('#close-sidepanel').addEventListener('click', () => {
-        sidePanel.style.transform = 'translateX(100%)';
-        setTimeout(() => sidePanel.remove(), 300);
-        
-        // Also close bookmark panel if it's open
-        const bookmarkPanel = document.querySelector('#citeright-bookmarks-panel');
-        if (bookmarkPanel) {
-            bookmarkPanel.style.transform = 'translateX(100%)';
-            setTimeout(() => bookmarkPanel.remove(), 300);
-        }
-    });
+    return mainSidebar;
+}
+
+// Create web content overlay to resize main content
+function createWebContentOverlay() {
+    const existing = document.getElementById('citeright-web-overlay');
+    if (existing) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'citeright-web-overlay';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+        z-index: 2147483640; pointer-events: none; 
+        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: rgba(0, 0, 0, 0.02);
+    `;
+    document.body.appendChild(overlay);
+}
+
+// Adjust web content when sidebar opens
+function adjustWebContentForSidebar(sidebarWidth) {
+    console.log('🔧 Adjusting web content for sidebar width:', sidebarWidth);
     
-    sidePanel.querySelector('#bookmark-from-panel').addEventListener('click', () => {
-        addToBookmarks();
-    });
-    
-    sidePanel.querySelector('#view-bookmarks').addEventListener('click', () => {
-        showBookmarksPanel();
-    });
-    
-    sidePanel.querySelector('#view-bookmarks-top').addEventListener('click', () => {
-        showBookmarksPanel();
-    });
-    
-    sidePanel.querySelector('#official-link').addEventListener('click', () => {
-        if (currentLawData.officialUrl) {
-            window.open(currentLawData.officialUrl, '_blank');
-        }
-    });
-    
-    // Load full content and apply highlighting
-    if (currentLawData.loadFullContent) {
-        currentLawData.loadFullContent().then(content => {
-            const contentDiv = sidePanel.querySelector('#sidepanel-content');
-            if (contentDiv && content) {
-                contentDiv.innerHTML = content;
-                // Apply highlighting to the new content
-                setTimeout(() => highlightCitationsInElement(contentDiv), 100);
-            }
-        });
-    } else {
-        // Apply highlighting to existing content
-        setTimeout(() => {
-            const contentDiv = sidePanel.querySelector('#sidepanel-content');
-            if (contentDiv) {
-                highlightCitationsInElement(contentDiv);
-            }
-        }, 100);
+    // Remove overlay approach, directly modify body and html
+    const overlay = document.getElementById('citeright-web-overlay');
+    if (overlay) {
+        overlay.remove();
     }
     
-    // Add resize functionality
-    const resizeHandle = sidePanel.querySelector('#resize-handle');
+    // Set CSS custom property for reference
+    document.documentElement.style.setProperty('--citeright-sidebar-width', sidebarWidth + 'px');
+    
+    // Apply direct body and html adjustments for maximum compatibility
+    if (sidebarWidth > 0) {
+        // Make the entire viewport narrower
+        document.documentElement.style.width = `calc(100vw - ${sidebarWidth}px)`;
+        document.documentElement.style.overflow = 'hidden';
+        document.documentElement.style.transition = 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        // Adjust body
+        document.body.style.width = '100%';
+        document.body.style.maxWidth = '100%';
+        document.body.style.overflow = 'hidden';
+        document.body.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        console.log('✅ Web content made narrower to accommodate sidebar');
+    } else {
+        // Restore full width
+        document.documentElement.style.width = '100vw';
+        document.documentElement.style.overflow = 'auto';
+        document.body.style.width = '';
+        document.body.style.maxWidth = '';
+        document.body.style.overflow = '';
+        
+        // Clean up transitions after animation
+        setTimeout(() => {
+            document.documentElement.style.transition = '';
+            document.body.style.transition = '';
+        }, 300);
+        
+        console.log('✅ Web content restored to full width');
+    }
+    
+    // Dispatch event for third-party compatibility
+    window.dispatchEvent(new CustomEvent('citeright-sidebar-resize', {
+        detail: { sidebarWidth: sidebarWidth }
+    }));
+}
+
+// Setup event listeners for sidebar
+function setupSidebarEventListeners(sidebar) {
+    // Tab switching
+    const tabButtons = sidebar.querySelectorAll('.tab-btn');
+    const tabContents = sidebar.querySelectorAll('.tab-content');
+    
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.dataset.tab;
+            
+            // Update button states
+            tabButtons.forEach(b => {
+                if (b.dataset.tab === targetTab) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
+            });
+            
+            // Update content visibility
+            tabContents.forEach(content => {
+                if (content.id === `tab-content-${targetTab}`) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+            
+            // Load content if switching to bookmarks
+            if (targetTab === 'bookmarks') {
+                loadBookmarksContent();
+            }
+        });
+    });
+
+    // Close button
+    sidebar.querySelector('#close-main-sidebar').addEventListener('click', () => {
+        closeSidebar();
+    });
+
+    // Resize functionality
+    setupSidebarResize(sidebar);
+}
+
+// Setup sidebar resize functionality
+function setupSidebarResize(sidebar) {
+    const resizeHandle = sidebar.querySelector('#resize-handle');
     let isResizing = false;
     let startX = 0;
     let startWidth = 450;
-    
+
     resizeHandle.addEventListener('mouseenter', () => {
         resizeHandle.style.opacity = '1';
     });
-    
+
     resizeHandle.addEventListener('mouseleave', () => {
         if (!isResizing) {
             resizeHandle.style.opacity = '0.7';
         }
     });
-    
+
     resizeHandle.addEventListener('mousedown', (e) => {
         isResizing = true;
         startX = e.clientX;
-        startWidth = parseInt(window.getComputedStyle(sidePanel).width, 10);
+        startWidth = parseInt(window.getComputedStyle(sidebar).width, 10);
         document.body.style.cursor = 'ew-resize';
         document.body.style.userSelect = 'none';
     });
-    
+
     document.addEventListener('mousemove', (e) => {
         if (!isResizing) return;
-        
+
         const deltaX = startX - e.clientX; // Reverse for right-side panel
         let newWidth = startWidth + deltaX;
-        
+
         // Apply constraints
         newWidth = Math.max(350, Math.min(newWidth, window.innerWidth * 0.8));
-        
-        sidePanel.style.width = newWidth + 'px';
-        
-        // Update bookmark panel position if it exists
-        const bookmarkPanel = document.querySelector('#citeright-bookmarks-panel');
-        if (bookmarkPanel) {
-            bookmarkPanel.style.right = newWidth + 'px';
-        }
+
+        sidebar.style.width = newWidth + 'px';
+        adjustWebContentForSidebar(newWidth);
     });
-    
+
     document.addEventListener('mouseup', () => {
         if (isResizing) {
             isResizing = false;
@@ -738,6 +815,214 @@ function openSidePanel() {
     });
 }
 
+// Close sidebar and restore web content
+function closeSidebar() {
+    const sidebar = document.getElementById('citeright-main-sidebar');
+    if (sidebar) {
+        sidebar.style.transform = 'translateX(100%)';
+        setTimeout(() => sidebar.remove(), 300);
+        adjustWebContentForSidebar(0);
+    }
+    
+    const overlay = document.getElementById('citeright-web-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+// Load bookmarks content
+function loadBookmarksContent() {
+    const savedBookmarks = localStorage.getItem('citeright_bookmarks');
+    if (savedBookmarks) {
+        bookmarkedLaws = JSON.parse(savedBookmarks);
+    }
+
+    const bookmarksContent = document.getElementById('bookmarks-content');
+    if (!bookmarksContent) return;
+
+    if (bookmarkedLaws.length === 0) {
+        bookmarksContent.innerHTML = `
+            <div style="text-align: center; color: #999; padding: 40px 20px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
+                <div>尚未儲存任何書籤</div>
+                <div style="font-size: 12px; margin-top: 8px;">在法條詳情中點擊「加入書籤」來儲存</div>
+            </div>
+        `;
+        return;
+    }
+
+    bookmarksContent.innerHTML = `
+        <div style="margin-bottom: 16px;">
+            <h3 style="margin: 0; font-size: 16px; color: #1890ff;">我的法律書籤 (${bookmarkedLaws.length})</h3>
+        </div>
+        ${bookmarkedLaws.map((bookmark, index) => `
+            <div class="bookmark-item" data-bookmark-id="${bookmark.id}" style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; border: 1px solid #e8e8e8; cursor: pointer; transition: all 0.2s;">
+                <div style="font-weight: 600; color: #1890ff; margin-bottom: 8px;">${bookmark.title}</div>
+                <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                    ${bookmark.type} · 儲存於 ${new Date(bookmark.dateAdded).toLocaleDateString('zh-TW')}
+                </div>
+                <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                    ${bookmark.content ? bookmark.content.substring(0, 100) + (bookmark.content.length > 100 ? '...' : '') : '無內容摘要'}
+                </div>
+                <div style="margin-top: 12px; display: flex; gap: 8px;">
+                    <button class="view-bookmark" style="padding: 4px 8px; font-size: 11px; background: #f0f9ff; color: #1890ff; border: 1px solid #91d5ff; border-radius: 4px; cursor: pointer;">查看</button>
+                    <button class="delete-bookmark" style="padding: 4px 8px; font-size: 11px; background: #fff2f0; color: #ff4d4f; border: 1px solid #ffccc7; border-radius: 4px; cursor: pointer;">刪除</button>
+                </div>
+            </div>
+        `).join('')}
+    `;
+
+    // Setup bookmark interactions
+    bookmarksContent.querySelectorAll('.view-bookmark').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const bookmarkId = e.target.closest('.bookmark-item').dataset.bookmarkId;
+            const bookmark = bookmarkedLaws.find(b => b.id === bookmarkId);
+            if (bookmark) {
+                loadBookmarkInToolTab(bookmark);
+            }
+        });
+    });
+
+    bookmarksContent.querySelectorAll('.delete-bookmark').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const bookmarkId = e.target.closest('.bookmark-item').dataset.bookmarkId;
+            bookmarkedLaws = bookmarkedLaws.filter(b => b.id !== bookmarkId);
+            localStorage.setItem('citeright_bookmarks', JSON.stringify(bookmarkedLaws));
+            loadBookmarksContent(); // Refresh the list
+        });
+    });
+}
+
+// Load bookmark content in tool tab
+function loadBookmarkInToolTab(bookmark) {
+    // Switch to tool tab
+    const toolTabBtn = document.getElementById('tab-tool');
+    const bookmarkTabBtn = document.getElementById('tab-bookmarks');
+    const toolContent = document.getElementById('tab-content-tool');
+    const bookmarkContent = document.getElementById('tab-content-bookmarks');
+    
+    if (toolTabBtn && bookmarkTabBtn && toolContent && bookmarkContent) {
+        // Update tab buttons
+        toolTabBtn.classList.add('active');
+        bookmarkTabBtn.classList.remove('active');
+        
+        // Update content visibility
+        toolContent.classList.add('active');
+        bookmarkContent.classList.remove('active');
+    }
+    
+    // Load content into tool tab
+    const toolContentDiv = document.getElementById('tool-content');
+    if (toolContentDiv && bookmark) {
+        console.log('📝 Loading content for bookmark:', bookmark.title);
+        
+        // Update currentLawData
+        currentLawData = {
+            ...bookmark,
+            content: bookmark.fullContent || bookmark.content,
+            fullContent: bookmark.fullContent || bookmark.content
+        };
+        
+        // Clean and prepare content
+        const displayContent = bookmark.fullContent || bookmark.content || '無內容可顯示';
+        const cleanContent = displayContent.replace(/<script[^>]*>.*?<\/script>/gi, '');
+        
+        toolContentDiv.innerHTML = `
+            <div style="margin-bottom: 16px; padding: 16px; background: linear-gradient(135deg, #f0f9ff, #e6f7ff); border-radius: 8px; border-left: 4px solid #1890ff;">
+                <h3 style="margin: 0 0 8px 0; color: #1890ff; font-size: 18px;">${bookmark.title}</h3>
+                <div style="font-size: 13px; color: #666; margin-bottom: 4px;">
+                    📝 ${bookmark.type} ${bookmark.number ? `· 第${bookmark.number}${bookmark.type === '釋字' ? '號' : '條'}` : ''} · ${bookmark.dateAdded ? new Date(bookmark.dateAdded).toLocaleDateString('zh-TW') : '未知日期'}
+                </div>
+            </div>
+            
+            <div id="tool-main-content" class="legal-content-area" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e8e8e8; color: #333; line-height: 1.8; font-size: 15px; min-height: 200px;">
+                ${cleanContent}
+            </div>
+            
+            <div style="margin-top: 24px; padding: 16px; background: #fafafa; border-radius: 8px;">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #1890ff;">📋 相關功能</h4>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button id="add-to-bookmarks" style="padding: 8px 12px; border: 1px solid #52c41a; background: #f6ffed; color: #52c41a; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s;">📚 重新加入書籤</button>
+                    ${bookmark.officialUrl ? `<button id="official-link" style="padding: 8px 12px; border: 1px solid #1890ff; background: #f0f9ff; color: #1890ff; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s;">🔗 官方頁面</button>` : ''}
+                    <button id="remove-from-bookmarks" style="padding: 8px 12px; border: 1px solid #ff4d4f; background: #fff2f0; color: #ff4d4f; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s;">🗑️ 移除書籤</button>
+                </div>
+            </div>
+        `;
+        
+        console.log('✅ Content loaded successfully in tool tab');
+        
+        // Setup action buttons
+        const officialLink = toolContentDiv.querySelector('#official-link');
+        if (officialLink && bookmark.officialUrl) {
+            officialLink.addEventListener('click', () => {
+                window.open(bookmark.officialUrl, '_blank');
+            });
+        }
+        
+        const removeBtn = toolContentDiv.querySelector('#remove-from-bookmarks');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                bookmarkedLaws = bookmarkedLaws.filter(b => b.id !== bookmark.id);
+                localStorage.setItem('citeright_bookmarks', JSON.stringify(bookmarkedLaws));
+                loadBookmarksContent(); // Refresh bookmark list
+                
+                // Clear tool content
+                toolContentDiv.innerHTML = `
+                    <div style="text-align: center; color: #999; padding: 40px 20px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🔧</div>
+                        <div>書籤已移除</div>
+                        <div style="font-size: 12px; margin-top: 8px;">請點擊法律條文來查看詳細資訊</div>
+                    </div>
+                `;
+            });
+        }
+        
+        // Apply highlighting to the new content
+        setTimeout(() => {
+            const contentDiv = toolContentDiv.querySelector('#tool-main-content');
+            if (contentDiv) {
+                highlightCitationsInElement(contentDiv);
+            }
+        }, 100);
+    }
+}
+
+// Side panel functionality (modified to use main sidebar)
+function openSidePanel() {
+    console.log('🔧 Opening side panel with data:', currentLawData);
+    
+    if (!currentLawData) {
+        console.log('❌ 無法展開側邊面板：沒有目前的法律資料');
+        alert('❌ 無法展開側邊面板：沒有目前的法律資料。請先點擊法律條文。');
+        return;
+    }
+
+    // Remove any existing sidebar first
+    const existingSidebar = document.getElementById('citeright-main-sidebar');
+    if (existingSidebar) {
+        existingSidebar.remove();
+    }
+
+    // Create fresh sidebar
+    const sidebar = createMainSidebar();
+    console.log('✅ Sidebar created');
+    
+    // Ensure the sidebar is shown with animation
+    setTimeout(() => {
+        sidebar.classList.add('open');
+        sidebar.style.transform = 'translateX(0)';
+        console.log('✅ Sidebar animation triggered');
+    }, 50);
+    
+    // Switch to tool tab and load content after a short delay
+    setTimeout(() => {
+        loadBookmarkInToolTab(currentLawData);
+        console.log('✅ Content loaded in tool tab');
+    }, 200);
+}
+
 // Show bookmarks panel
 function showBookmarksPanel() {
     // Load bookmarks from localStorage
@@ -745,11 +1030,11 @@ function showBookmarksPanel() {
     if (savedBookmarks) {
         bookmarkedLaws = JSON.parse(savedBookmarks);
     }
-    
+
     // Calculate side panel width for proper positioning
     const sidePanel = document.querySelector('#citeright-sidepanel');
     const sidePanelWidth = sidePanel ? parseInt(window.getComputedStyle(sidePanel).width, 10) : 450;
-    
+
     const bookmarksPanel = document.createElement('div');
     bookmarksPanel.id = 'citeright-bookmarks-panel';
     bookmarksPanel.style.cssText = `
@@ -758,7 +1043,7 @@ function showBookmarksPanel() {
         font-family: "Microsoft JhengHei"; overflow-y: auto; transform: translateX(100%);
         transition: transform 0.3s ease-out;
     `;
-    
+
     bookmarksPanel.innerHTML = `
         <div style="background: #1890ff; color: white; padding: 20px; position: sticky; top: 0;">
             <div style="display: flex; justify-content: between; align-items: center;">
@@ -794,20 +1079,20 @@ function showBookmarksPanel() {
             `).join('')}
         </div>
     `;
-    
+
     document.body.appendChild(bookmarksPanel);
-    
+
     // Show with animation
     setTimeout(() => {
         bookmarksPanel.style.transform = 'translateX(0)';
     }, 10);
-    
+
     // Event listeners
     bookmarksPanel.querySelector('#close-bookmarks').addEventListener('click', () => {
         bookmarksPanel.style.transform = 'translateX(100%)';
         setTimeout(() => bookmarksPanel.remove(), 300);
     });
-    
+
     // Bookmark item interactions
     bookmarksPanel.querySelectorAll('.view-bookmark').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -825,7 +1110,7 @@ function showBookmarksPanel() {
             }
         });
     });
-    
+
     bookmarksPanel.querySelectorAll('.delete-bookmark').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -833,7 +1118,7 @@ function showBookmarksPanel() {
             bookmarkedLaws = bookmarkedLaws.filter(b => b.id !== bookmarkId);
             localStorage.setItem('citeright_bookmarks', JSON.stringify(bookmarkedLaws));
             e.target.closest('.bookmark-item').remove();
-            
+
             // Update counter
             const counter = bookmarksPanel.querySelector('div[style*="opacity: 0.9"]');
             if (counter) {
@@ -849,41 +1134,41 @@ document.addEventListener('mouseover', async (e) => {
     if (e.target.closest('#citeright-popover') || e.target.id === 'citeright-popover') {
         return;
     }
-    
+
     if (e.target.classList.contains('citeright-link')) {
         // Check if extension is globally enabled
         if (!isExtensionEnabled) {
             return;
         }
-        
+
         // Also check activation state
         if (!isActivated) {
             return;
         }
-        
+
         // Clear any existing hide timeout when hovering a new law
         clearTimeout(hideTimeout);
 
         // Improved duplicate prevention - only prevent if popup is currently open
         const lawId = getLawIdentifier(e.target);
-        
+
         // Track hover count for this law
         const hoverCount = sessionLawCount.get(lawId) || 0;
         sessionLawCount.set(lawId, hoverCount + 1);
-        
+
         // Only prevent if same law popup is currently displayed
         if (activePopupLaw === lawId && popover.style.display === 'block') {
             console.log(`⛔ Same law popup already open (hover #${hoverCount}):`, lawId);
             return;
         }
-        
+
         // This check is now handled above, remove duplicate
-        
+
         // Don't show popup if in cooldown period for any law
         if (popupCooldown) {
             return;
         }
-        
+
         // If different law is showing, hide current popup first
         if (activePopupLaw && activePopupLaw !== lawId && popover.style.display === 'block') {
             popover.style.display = 'none';
@@ -896,139 +1181,139 @@ document.addEventListener('mouseover', async (e) => {
             }, 100);
             return;
         }
-        
-        showNewPopup();
-        
-        function showNewPopup() {
-        
-        currentHoveredLaw = lawId;
 
-        // Clear any existing timeouts
-        clearTimeout(showTimeout);
-        clearTimeout(hideTimeout);
+        showNewPopup();
+
+        function showNewPopup() {
+
+            currentHoveredLaw = lawId;
+
+            // Clear any existing timeouts
+            clearTimeout(showTimeout);
+            clearTimeout(hideTimeout);
 
             // Set cooldown and update tracking
             popupCooldown = true;
             setTimeout(() => { popupCooldown = false; }, 400); // 400ms cooldown
-            
+
             currentHoveredLaw = lawId;
             activePopupLaw = lawId;
-            
+
             console.log(`✨ Showing law popup (hover #${hoverCount}):`, lawId);
-            
+
             // Small delay before showing popover for better UX
             showTimeout = setTimeout(async () => {
-            console.log('⚖️ 法律引用偵測:', e.target.textContent);
+                console.log('⚖️ 法律引用偵測:', e.target.textContent);
 
-            const target = e.target;
-            const rect = target.getBoundingClientRect();
+                const target = e.target;
+                const rect = target.getBoundingClientRect();
 
-        // Smart positioning close to underline
-        let left = rect.left + window.scrollX;
-        let top = rect.bottom + window.scrollY + 8; // Close to underline
+                // Smart positioning close to underline
+                let left = rect.left + window.scrollX;
+                let top = rect.bottom + window.scrollY + 8; // Close to underline
 
-        // Keep within screen bounds - improved boundary detection
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const scrollTop = window.scrollY;
-        const scrollLeft = window.scrollX;
+                // Keep within screen bounds - improved boundary detection
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                const scrollTop = window.scrollY;
+                const scrollLeft = window.scrollX;
 
-        // Horizontal bounds check
-        if (left + 480 > scrollLeft + viewportWidth) {
-            left = Math.max(scrollLeft + 10, scrollLeft + viewportWidth - 490);
-        }
-        if (left < scrollLeft + 10) {
-            left = scrollLeft + 10;
-        }
+                // Horizontal bounds check
+                if (left + 480 > scrollLeft + viewportWidth) {
+                    left = Math.max(scrollLeft + 10, scrollLeft + viewportWidth - 490);
+                }
+                if (left < scrollLeft + 10) {
+                    left = scrollLeft + 10;
+                }
 
-        // Vertical bounds check 
-        if (top + 350 > scrollTop + viewportHeight) {
-            top = rect.top + scrollTop - 360; // Show above if no space below
-        }
-        if (top < scrollTop + 10) {
-            top = scrollTop + 10; // Don't go above viewport
-        }
+                // Vertical bounds check
+                if (top + 350 > scrollTop + viewportHeight) {
+                    top = rect.top + scrollTop - 360; // Show above if no space below
+                }
+                if (top < scrollTop + 10) {
+                    top = scrollTop + 10; // Don't go above viewport
+                }
 
-        popover.style.display = 'block';
-        popover.style.left = Math.max(10, left) + 'px';
-        popover.style.top = Math.max(10, top) + 'px';
+                popover.style.display = 'block';
+                popover.style.left = Math.max(10, left) + 'px';
+                popover.style.top = Math.max(10, top) + 'px';
 
-        // Update header based on legal type
-        const icon = popover.querySelector('#citeright-icon');
-        const title = popover.querySelector('#citeright-title');
-        const { legalType, caseType, lawName } = target.dataset;
-        
-        if (legalType === 'law_article') {
-            icon.textContent = '📖';
-            title.textContent = '台灣法條查詢';
-        } else if (caseType === '釋字') {
-            icon.textContent = '⚖️';
-            title.textContent = '司法院大法官解釋';
-        } else {
-            icon.textContent = '📋';
-            title.textContent = '法院判決查詢';
-        }
+                // Update header based on legal type
+                const icon = popover.querySelector('#citeright-icon');
+                const title = popover.querySelector('#citeright-title');
+                const { legalType, caseType, lawName } = target.dataset;
 
-        // Show loader
-        const loader = popover.querySelector('.citeright-loader');
-        const content = popover.querySelector('.citeright-content');
-        loader.style.display = 'block';
-        content.style.display = 'none';
+                if (legalType === 'law_article') {
+                    icon.textContent = '📖';
+                    title.textContent = '台灣法條查詢';
+                } else if (caseType === '釋字') {
+                    icon.textContent = '⚖️';
+                    title.textContent = '司法院大法官解釋';
+                } else {
+                    icon.textContent = '📋';
+                    title.textContent = '法院判決查詢';
+                }
 
-        const { year, number, article, paragraph } = target.dataset;
-        
-        try {
-            let apiUrl = '';
-            let response, data;
+                // Show loader
+                const loader = popover.querySelector('.citeright-loader');
+                const content = popover.querySelector('.citeright-content');
+                loader.style.display = 'block';
+                content.style.display = 'none';
 
-            if (legalType === 'law_article') {
-                // Query law articles from database
-                apiUrl = `http://localhost:3000/api/laws/search?q=${encodeURIComponent(lawName)}`;
-                response = await fetch(apiUrl);
-                data = await response.json();
-                
-                loader.style.display = 'none';
-                content.style.display = 'block';
+                const { year, number, article, paragraph } = target.dataset;
 
-                if (data.success && data.results.length > 0) {
-                    const law = data.results[0];
-                    // Get specific article details
-                    const articleUrl = `http://localhost:3000/api/laws/${law.id}`;
-                    const articleResponse = await fetch(articleUrl);
-                    const articleData = await articleResponse.json();
-                    
-                    // Find matching article (handle different DB formats)
-                    let matchingArticle = articleData.articles.find(art => {
-                        const artNum = art.article_number;
-                        // Try different matching patterns
-                        return artNum.includes(article) || 
-                               artNum.includes(`第 ${article} 條`) ||
-                               artNum.includes(`${article}-`) || // For paragraph format like "188-1"
-                               (paragraph && artNum.includes(`${article}${paragraph}`)); // For "188-1" format
-                    });
-                    
-                    // If paragraph specified but no exact match, try base article
-                    if (!matchingArticle && paragraph) {
-                        matchingArticle = articleData.articles.find(art => {
-                            const artNum = art.article_number;
-                            return artNum.includes(article) || artNum.includes(`第 ${article} 條`);
-                        });
-                    }
-                    
-                    // Store current law data for bookmarking
-                    currentLawData = {
-                        id: law.id,
-                        type: '法條',
-                        title: `${law.law_name}第${article}條`,
-                        number: article,
-                        content: matchingArticle ? matchingArticle.article_content.substring(0, 500) : '無條文內容',
-                        fullContent: matchingArticle ? matchingArticle.article_content : null,
-                        officialUrl: law.law_url,
-                        lawData: law,
-                        articleData: matchingArticle
-                    };
-                    
-                    content.innerHTML = `
+                try {
+                    let apiUrl = '';
+                    let response, data;
+
+                    if (legalType === 'law_article') {
+                        // Query law articles from database
+                        apiUrl = `http://localhost:3000/api/laws/search?q=${encodeURIComponent(lawName)}`;
+                        response = await fetch(apiUrl);
+                        data = await response.json();
+
+                        loader.style.display = 'none';
+                        content.style.display = 'block';
+
+                        if (data.success && data.results.length > 0) {
+                            const law = data.results[0];
+                            // Get specific article details
+                            const articleUrl = `http://localhost:3000/api/laws/${law.id}`;
+                            const articleResponse = await fetch(articleUrl);
+                            const articleData = await articleResponse.json();
+
+                            // Find matching article (handle different DB formats)
+                            let matchingArticle = articleData.articles.find(art => {
+                                const artNum = art.article_number;
+                                // Try different matching patterns
+                                return artNum.includes(article) ||
+                                    artNum.includes(`第 ${article} 條`) ||
+                                    artNum.includes(`${article}-`) || // For paragraph format like "188-1"
+                                    (paragraph && artNum.includes(`${article}${paragraph}`)); // For "188-1" format
+                            });
+
+                            // If paragraph specified but no exact match, try base article
+                            if (!matchingArticle && paragraph) {
+                                matchingArticle = articleData.articles.find(art => {
+                                    const artNum = art.article_number;
+                                    return artNum.includes(article) || artNum.includes(`第 ${article} 條`);
+                                });
+                            }
+
+                            // Store current law data for bookmarking
+                            currentLawData = {
+                                id: law.id,
+                                type: '法條',
+                                title: `${law.law_name}第${article}條`,
+                                number: article,
+                                content: matchingArticle ? matchingArticle.article_content.substring(0, 500) : '無條文內容',
+                                fullContent: matchingArticle ? matchingArticle.article_content : null,
+                                officialUrl: law.law_url,
+                                lawData: law,
+                                articleData: matchingArticle
+                            };
+
+                            content.innerHTML = `
                         <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e8e8e8;">
                             <strong style="color: #1890ff; font-size: 16px;">${law.law_name}</strong>
                             ${law.english_law_name ? `<div style="font-size: 12px; color: #666; margin-top: 2px;">${law.english_law_name}</div>` : ''}
@@ -1062,46 +1347,46 @@ document.addEventListener('mouseover', async (e) => {
                             </div>
                         `}
                     `;
-                } else {
-                    content.innerHTML = `
+                        } else {
+                            content.innerHTML = `
                         <div style="color: #999; text-align: center; padding: 20px;">
                             <div style="font-size: 24px;">🔍</div>
                             <div style="margin-top: 8px;">找不到相關法條</div>
                             <div style="font-size: 12px; margin-top: 4px;">法條名稱：${lawName}</div>
                         </div>
                     `;
-                }
+                        }
 
-            } else if (caseType === '釋字') {
-                // Query constitutional interpretations
-                apiUrl = `http://localhost:3000/api/case?caseType=${encodeURIComponent(caseType)}&number=${number}`;
-                response = await fetch(apiUrl);
-                data = await response.json();
-                
-                loader.style.display = 'none';
-                content.style.display = 'block';
+                    } else if (caseType === '釋字') {
+                        // Query constitutional interpretations
+                        apiUrl = `http://localhost:3000/api/case?caseType=${encodeURIComponent(caseType)}&number=${number}`;
+                        response = await fetch(apiUrl);
+                        data = await response.json();
 
-                if (data.success && data.data) {
-                    const interp = data.data;
-                    
-                    // Store current law data for bookmarking
-                    currentLawData = {
-                        id: `interpretation_${number}`,
-                        type: '釋字',
-                        title: `司法院釋字第${number}號解釋`,
-                        number: number,
-                        content: interp.chinese.description ? interp.chinese.description.substring(0, 500) : '無解釋文',
-                        fullContent: `
+                        loader.style.display = 'none';
+                        content.style.display = 'block';
+
+                        if (data.success && data.data) {
+                            const interp = data.data;
+
+                            // Store current law data for bookmarking
+                            currentLawData = {
+                                id: `interpretation_${number}`,
+                                type: '釋字',
+                                title: `司法院釋字第${number}號解釋`,
+                                number: number,
+                                content: interp.chinese.description ? interp.chinese.description.substring(0, 500) : '無解釋文',
+                                fullContent: `
                             ${interp.chinese.issue ? `<h3>解釋爭點</h3><p>${interp.chinese.issue}</p>` : ''}
                             ${interp.chinese.description ? `<h3>解釋文</h3><p>${interp.chinese.description}</p>` : ''}
                             ${interp.chinese.reasoning ? `<h3>解釋理由書</h3><p>${interp.chinese.reasoning}</p>` : ''}
                             ${interp.chinese.fact ? `<h3>事實</h3><p>${interp.chinese.fact}</p>` : ''}
                         `,
-                        officialUrl: `https://cons.judicial.gov.tw/jcc/zh-tw/jep03/show?expno=${number}`,
-                        interpretationData: interp
-                    };
-                    
-                    content.innerHTML = `
+                                officialUrl: `https://cons.judicial.gov.tw/jcc/zh-tw/jep03/show?expno=${number}`,
+                                interpretationData: interp
+                            };
+
+                            content.innerHTML = `
                         <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e8e8e8;">
                             <strong style="color: #1890ff; font-size: 16px;">司法院釋字第${number}號解釋</strong>
                             ${interp.date ? `<div style="font-size: 12px; color: #666; margin-top: 2px;">解釋日期：${new Date(interp.date).toLocaleDateString('zh-TW')}</div>` : ''}
@@ -1126,41 +1411,41 @@ document.addEventListener('mouseover', async (e) => {
                             </div>
                         ` : ''}
                     `;
-                } else {
-                    content.innerHTML = `
+                        } else {
+                            content.innerHTML = `
                         <div style="color: #999; text-align: center; padding: 20px;">
                             <div style="font-size: 24px;">📋</div>
                             <div style="margin-top: 8px;">找不到此號解釋</div>
                             <div style="font-size: 12px; margin-top: 4px;">釋字第${number}號</div>
                         </div>
                     `;
-                }
+                        }
 
-            } else {
-                // Court cases - placeholder for future implementation
-                loader.style.display = 'none';
-                content.style.display = 'block';
-                content.innerHTML = `
+                    } else {
+                        // Court cases - placeholder for future implementation
+                        loader.style.display = 'none';
+                        content.style.display = 'block';
+                        content.innerHTML = `
                     <div style="color: #999; text-align: center; padding: 20px;">
                         <div style="font-size: 24px;">🏛️</div>
                         <div style="margin-top: 8px;">法院判決查詢功能開發中</div>
                         <div style="font-size: 12px; margin-top: 4px;">${year}年度${caseType}字第${number}號</div>
                     </div>
                 `;
-            }
+                    }
 
-        } catch (error) {
-            console.error('API查詢錯誤:', error);
-            loader.style.display = 'none';
-            content.style.display = 'block';
-            content.innerHTML = `
+                } catch (error) {
+                    console.error('API查詢錯誤:', error);
+                    loader.style.display = 'none';
+                    content.style.display = 'block';
+                    content.innerHTML = `
                 <div style="color: #ff4d4f; text-align: center; padding: 20px;">
                     <div style="font-size: 24px;">⚠️</div>
                     <div style="margin-top: 8px;">無法連線至法律資料庫</div>
                     <div style="font-size: 12px; margin-top: 4px; color: #666;">請確認後端服務是否正常運行</div>
                 </div>
             `;
-        }
+                }
             }, 150); // 150ms delay for better UX
         }
     }
@@ -1172,18 +1457,18 @@ document.addEventListener('mouseout', (e) => {
     if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#citeright-popover')) {
         return;
     }
-    
+
     if (e.target.classList.contains('citeright-link')) {
         // Clear timeout if mouse leaves before delay completes
         clearTimeout(showTimeout);
-        
+
         const lawId = getLawIdentifier(e.target);
-        
+
         // Only clear if we're leaving the currently tracked law
         if (currentHoveredLaw === lawId) {
             currentHoveredLaw = null;
         }
-        
+
         // Hide popup after short delay if not hovering popover
         hideTimeout = setTimeout(() => {
             if (!isPopoverHovered()) {
@@ -1204,9 +1489,9 @@ document.addEventListener('click', (e) => {
             activePopupLaw = null;
             return;
         }
-        
+
         // Close if clicking blank area (not on popover, legal links, or buttons)
-        if (!e.target.closest('#citeright-popover') && 
+        if (!e.target.closest('#citeright-popover') &&
             !e.target.classList.contains('citeright-link') &&
             !e.target.closest('.citeright-link')) {
             popover.style.display = 'none';
@@ -1222,24 +1507,24 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', async (e) => {
     if (e.target.classList.contains('citeright-link')) {
         e.preventDefault();
-        
+
         // Check if extension is globally enabled
         if (!isExtensionEnabled) {
             showActivationNotification('擴充功能已停用', '請在工具列圖示中啟用擴充功能', '#d73527');
             return;
         }
-        
+
         const lawId = getLawIdentifier(e.target);
-        
+
         // Only prevent if same law popup is currently open
         if (activePopupLaw === lawId && popover.style.display === 'block') {
             console.log('⛔ Click ignored - same law popup already open:', lawId);
             return;
         }
-        
+
         // Set as active and display popup
         activePopupLaw = lawId;
-        
+
         // Show popover with full database data
         await showPopoverForTargetWithData(e.target);
     }
@@ -1248,18 +1533,18 @@ document.addEventListener('click', async (e) => {
 // Enhanced helper function to show popover with full database data
 async function showPopoverForTargetWithData(target) {
     console.log('🎣 Loading full database data for:', target.textContent);
-    
+
     const lawId = getLawIdentifier(target);
     activePopupLaw = lawId;
-    
+
     const rect = target.getBoundingClientRect();
     positionPopover(rect);
-    
+
     popover.style.display = 'block';
     showPopoverLoader();
-    
+
     const { legalType, caseType, lawName, article, paragraph, year, number } = target.dataset;
-    
+
     try {
         if (legalType === 'law_article') {
             await loadLawArticleData(lawName, article, paragraph);
@@ -1276,30 +1561,48 @@ async function showPopoverForTargetWithData(target) {
 
 // Helper function to position popover
 function positionPopover(rect) {
-    let left = rect.left + window.scrollX;
-    let top = rect.bottom + window.scrollY + 8;
+    const sidebar = document.getElementById('citeright-main-sidebar');
+    const sidebarWidth = sidebar && sidebar.style.transform === 'translateX(0px)' ? sidebar.offsetWidth : 0;
+    const effectiveViewportWidth = window.innerWidth - sidebarWidth;
     
-    const viewportWidth = window.innerWidth;
+    let left = rect.left + window.scrollX;
+    let top = rect.top + window.scrollY - 12; // Position above the text by default
+    
+    const popoverWidth = 420;
+    const popoverHeight = 350;
     const viewportHeight = window.innerHeight;
     const scrollTop = window.scrollY;
     const scrollLeft = window.scrollX;
     
-    if (left + 480 > scrollLeft + viewportWidth) {
-        left = Math.max(scrollLeft + 10, scrollLeft + viewportWidth - 490);
+    // Adjust horizontal position to avoid sidebar and screen edges
+    if (left + popoverWidth > scrollLeft + effectiveViewportWidth - 20) {
+        left = Math.max(scrollLeft + 10, scrollLeft + effectiveViewportWidth - popoverWidth - 20);
     }
     if (left < scrollLeft + 10) {
         left = scrollLeft + 10;
     }
     
-    if (top + 350 > scrollTop + viewportHeight) {
-        top = rect.top + scrollTop - 360;
+    // Check if there's enough space above for the popover
+    if (top - scrollTop < popoverHeight + 20) {
+        // Not enough space above, position below the text
+        top = rect.bottom + window.scrollY + 8;
     }
+    
+    // Make sure it doesn't go below viewport
+    if (top + popoverHeight > scrollTop + viewportHeight - 20) {
+        top = Math.max(scrollTop + 10, scrollTop + viewportHeight - popoverHeight - 20);
+    }
+    
+    // Ensure minimum distance from top
     if (top < scrollTop + 10) {
         top = scrollTop + 10;
     }
     
-    popover.style.left = Math.max(10, left) + 'px';
-    popover.style.top = Math.max(10, top) + 'px';
+    // Use fixed positioning for better control and higher z-index
+    popover.style.position = 'fixed';
+    popover.style.left = Math.max(10, left - scrollLeft) + 'px';
+    popover.style.top = Math.max(10, top - scrollTop) + 'px';
+    popover.style.zIndex = '2147483647';
 }
 
 // Helper function to show popover loader
@@ -1330,25 +1633,25 @@ async function loadLawArticleData(lawName, article, paragraph) {
     const apiUrl = `http://localhost:3000/api/laws/search?q=${encodeURIComponent(lawName)}`;
     const response = await fetch(apiUrl);
     const data = await response.json();
-    
+
     const loader = popover.querySelector('.citeright-loader');
     const content = popover.querySelector('.citeright-content');
-    
+
     if (data.success && data.results.length > 0) {
         const law = data.results[0];
         const articleUrl = `http://localhost:3000/api/laws/${law.id}`;
         const articleResponse = await fetch(articleUrl);
         const articleData = await articleResponse.json();
-        
+
         let matchingArticle = articleData.articles.find(art => {
             const artNum = art.article_number;
             // Try different matching patterns
-            return artNum.includes(article) || 
-                   artNum.includes(`第 ${article} 條`) ||
-                   artNum.includes(`${article}-`) || // For paragraph format like "188-1"
-                   (paragraph && artNum.includes(`${article}${paragraph}`)); // For "188-1" format
+            return artNum.includes(article) ||
+                artNum.includes(`第 ${article} 條`) ||
+                artNum.includes(`${article}-`) || // For paragraph format like "188-1"
+                (paragraph && artNum.includes(`${article}${paragraph}`)); // For "188-1" format
         });
-        
+
         // If paragraph specified but no exact match, try base article
         if (!matchingArticle && paragraph) {
             matchingArticle = articleData.articles.find(art => {
@@ -1356,7 +1659,7 @@ async function loadLawArticleData(lawName, article, paragraph) {
                 return artNum.includes(article) || artNum.includes(`第 ${article} 條`);
             });
         }
-        
+
         currentLawData = {
             id: law.id,
             type: '法條',
@@ -1368,7 +1671,7 @@ async function loadLawArticleData(lawName, article, paragraph) {
             lawData: law,
             articleData: matchingArticle
         };
-        
+
         loader.style.display = 'none';
         content.style.display = 'block';
         content.innerHTML = generateLawArticleHTML(law, matchingArticle, lawName, article, paragraph);
@@ -1384,13 +1687,13 @@ async function loadInterpretationData(number) {
     const apiUrl = `http://localhost:3000/api/case?caseType=釋字&number=${number}`;
     const response = await fetch(apiUrl);
     const data = await response.json();
-    
+
     const loader = popover.querySelector('.citeright-loader');
     const content = popover.querySelector('.citeright-content');
-    
+
     if (data.success && data.data) {
         const interp = data.data;
-        
+
         currentLawData = {
             id: `interpretation_${number}`,
             type: '釋字',
@@ -1406,7 +1709,7 @@ async function loadInterpretationData(number) {
             officialUrl: `https://cons.judicial.gov.tw/jcc/zh-tw/jep03/show?expno=${number}`,
             interpretationData: interp
         };
-        
+
         loader.style.display = 'none';
         content.style.display = 'block';
         content.innerHTML = generateInterpretationHTML(interp, number);
@@ -1421,7 +1724,7 @@ async function loadInterpretationData(number) {
 async function loadCourtCaseData(year, caseType, number) {
     const loader = popover.querySelector('.citeright-loader');
     const content = popover.querySelector('.citeright-content');
-    
+
     loader.style.display = 'none';
     content.style.display = 'block';
     content.innerHTML = `
@@ -1700,60 +2003,60 @@ function initializeExtension() {
 // Listen for messages from background script and popup
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "activateCiteRight") {
-        isActivated = true;
-        console.log('⚖️ 透過右鍵選單啟用台灣法源探測器');
-        showActivationNotification();
-        updateActivationStatus();
-        
-        // If there's selected text, try to highlight it immediately
-        if (message.selectedText) {
-            console.log('📝 選取文字:', message.selectedText);
-            highlightCitations();
-        }
-        
-        // Set auto-deactivation timer
-        clearTimeout(activationTimeout);
-        activationTimeout = setTimeout(() => {
-            isActivated = false;
-            popover.style.display = 'none';
-            console.log('⏰ 法源探測器已自動停用 (5分鐘無操作)');
+        if (message.action === "activateCiteRight") {
+            isActivated = true;
+            console.log('⚖️ 透過右鍵選單啟用台灣法源探測器');
+            showActivationNotification();
             updateActivationStatus();
-        }, 300000);
-        
-        sendResponse({ success: true });
-    } else if (message.action === "deactivateCiteRight") {
-        isActivated = false;
-        popover.style.display = 'none';
-        clearTimeout(activationTimeout);
-        console.log('❌ 透過右鍵選單停用台灣法源探測器');
-        updateActivationStatus();
-        sendResponse({ success: true });
-    } else if (message.action === "toggleExtension") {
-        isExtensionEnabled = message.enabled;
-        
-        if (isExtensionEnabled) {
-            console.log('🟢 CiteRight 擴充功能已透過彈出視窗啟用');
-            showActivationNotification('擴充功能已啟用', '按 Ctrl 啟動懸停模式', '#52c41a');
-        } else {
-            console.log('🔴 CiteRight 擴充功能已透過彈出視窗停用');
+
+            // If there's selected text, try to highlight it immediately
+            if (message.selectedText) {
+                console.log('📝 選取文字:', message.selectedText);
+                highlightCitations();
+            }
+
+            // Set auto-deactivation timer
+            clearTimeout(activationTimeout);
+            activationTimeout = setTimeout(() => {
+                isActivated = false;
+                popover.style.display = 'none';
+                console.log('⏰ 法源探測器已自動停用 (5分鐘無操作)');
+                updateActivationStatus();
+            }, 300000);
+
+            sendResponse({ success: true });
+        } else if (message.action === "deactivateCiteRight") {
             isActivated = false;
             popover.style.display = 'none';
             clearTimeout(activationTimeout);
-            showActivationNotification('擴充功能已停用', '所有功能已關閉', '#d73527');
+            console.log('❌ 透過右鍵選單停用台灣法源探測器');
+            updateActivationStatus();
+            sendResponse({ success: true });
+        } else if (message.action === "toggleExtension") {
+            isExtensionEnabled = message.enabled;
+
+            if (isExtensionEnabled) {
+                console.log('🟢 CiteRight 擴充功能已透過彈出視窗啟用');
+                showActivationNotification('擴充功能已啟用', '按 Ctrl 啟動懸停模式', '#52c41a');
+            } else {
+                console.log('🔴 CiteRight 擴充功能已透過彈出視窗停用');
+                isActivated = false;
+                popover.style.display = 'none';
+                clearTimeout(activationTimeout);
+                showActivationNotification('擴充功能已停用', '所有功能已關閉', '#d73527');
+            }
+            updateActivationStatus();
+            sendResponse({ success: true });
+        } else if (message.action === "openBookmarks") {
+            console.log('📚 透過彈出視窗開啟書籤面板');
+            showBookmarksPanel();
+            sendResponse({ success: true });
+        } else if (message.action === "getStatus") {
+            sendResponse({
+                activated: isActivated,
+                bookmarkCount: bookmarkedLaws.length
+            });
         }
-        updateActivationStatus();
-        sendResponse({ success: true });
-    } else if (message.action === "openBookmarks") {
-        console.log('📚 透過彈出視窗開啟書籤面板');
-        showBookmarksPanel();
-        sendResponse({ success: true });
-    } else if (message.action === "getStatus") {
-        sendResponse({
-            activated: isActivated,
-            bookmarkCount: bookmarkedLaws.length
-        });
-    }
     });
 }
 

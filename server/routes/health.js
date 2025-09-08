@@ -40,17 +40,28 @@ router.get('/', asyncHandler(async (req, res) => {
         throw new ApiError(503, 'Database not connected');
     }
     
-    const [lawsResult] = await database.query('SELECT COUNT(*) as count FROM laws');
-    const [articlesResult] = await database.query('SELECT COUNT(*) as count FROM articles');
-    const [interpretationsResult] = await database.query('SELECT COUNT(*) as count FROM interpretations');
-    
+    const [lawsResult] = await database.query('SELECT COUNT(*) as count FROM Law');
+    const [articlesResult] = await database.query('SELECT COUNT(*) as count FROM LawArticle');
+    const [captionsResult] = await database.query('SELECT COUNT(*) as count FROM LawCaption');
+
+    // Check if JudicialCase table exists for interpretations/cases
+    let casesCount = 0;
+    try {
+        const [casesResult] = await database.query('SELECT COUNT(*) as count FROM JudicialCase');
+        casesCount = casesResult[0].count;
+    } catch (error) {
+        // JudicialCase table might not exist yet, which is okay
+        console.log('JudicialCase table not found, setting cases count to 0');
+    }
+
     res.json({
         status: 'ok',
         database: 'connected',
         data: {
             laws: lawsResult[0].count,
             articles: articlesResult[0].count,
-            interpretations: interpretationsResult[0].count
+            captions: captionsResult[0].count,
+            cases: casesCount
         }
     });
 }));

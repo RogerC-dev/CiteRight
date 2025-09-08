@@ -1,4 +1,6 @@
 const mysql = require('mysql2/promise');
+const fs = require('fs').promises;
+const path = require('path');
 
 class Database {
     constructor() {
@@ -17,15 +19,21 @@ class Database {
             queueLimit: 0,
             acquireTimeout: 60000,
             timeout: 60000,
-            reconnect: true
+            reconnect: true,
+            multipleStatements: true
         };
 
         try {
             console.log('🚀 Connecting to MariaDB database...');
             this.pool = mysql.createPool(config);
             
-            // Test connection and get counts
+            // Test basic connection first
             const connection = await this.pool.getConnection();
+
+            // Check if tables exist, if not create them
+            await this.ensureTablesExist(connection);
+
+            // Test connection and get counts
             const [lawsResult] = await connection.execute('SELECT COUNT(*) as count FROM Law');
             const [articlesResult] = await connection.execute('SELECT COUNT(*) as count FROM LawArticle');
             const [captionsResult] = await connection.execute('SELECT COUNT(*) as count FROM LawCaption');
@@ -41,6 +49,41 @@ class Database {
         } catch (error) {
             console.error('❌ Database connection failed:', error.message);
             return false;
+        }
+    }
+
+    async ensureTablesExist(connection) {
+        try {
+            // Check if Law table exists
+            const [tables] = await connection.execute(`
+                SELECT COUNT(*) as count 
+                FROM information_schema.tables 
+                WHERE table_schema = ? AND table_name = 'Law'
+            `, [process.env.DB_DATABASE]);
+
+            if (tables[0].count === 0) {
+                console.log('📋 Tables not found, creating database schema...');
+
+                // Read and execute schema file
+                const schemaPath = path.join(__dirname, 'schema.sql');
+                const schema = await fs.readFile(schemaPath, 'utf8');
+
+                // Split schema into individual statements and execute them
+                const statements = schema.split(';').filter(stmt => stmt.trim().length > 0);
+
+                for (const statement of statements) {
+                    if (statement.trim()) {
+                        await connection.execute(statement.trim());
+                    }
+                }
+
+                console.log('✅ Database schema created successfully');
+            } else {
+                console.log('✅ Database tables already exist');
+            }
+        } catch (error) {
+            console.error('❌ Error ensuring tables exist:', error.message);
+            throw error;
         }
     }
 

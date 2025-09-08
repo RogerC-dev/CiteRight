@@ -40,14 +40,119 @@
 
 /* Popover main container */
 #citeright-popover {
-    position: absolute !important;
-    z-index: 10000 !important;
+    position: fixed !important;
+    z-index: 2147483647 !important;
     background: white !important;
     border: 1px solid #d9d9d9 !important;
     border-radius: 6px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-    max-width: 400px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
+    max-width: 420px !important;
+    min-width: 320px !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
     font-size: 14px !important;
     line-height: 1.5 !important;
+    pointer-events: auto !important;
+    transform: translateY(-8px) !important;
+}
+
+/* Enhanced sidebar styles */
+#citeright-main-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    width: 450px !important;
+    height: 100vh !important;
+    background: white !important;
+    border-left: 3px solid #1890ff !important;
+    z-index: 2147483646 !important;
+    font-family: "Microsoft JhengHei", Arial, sans-serif !important;
+    font-size: 14px !important;
+    box-shadow: -8px 0 24px rgba(0,0,0,0.15) !important;
+    transform: translateX(100%) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 350px !important;
+    max-width: 80vw !important;
+}
+
+#citeright-main-sidebar.open {
+    transform: translateX(0) !important;
+}
+
+/* Web content overlay for resizing */
+#citeright-web-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 2147483640 !important;
+    pointer-events: none !important;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    background: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Sidebar resize handle */
+#resize-handle {
+    position: absolute !important;
+    left: -3px !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 6px !important;
+    background: #1890ff !important;
+    cursor: ew-resize !important;
+    z-index: 1 !important;
+    opacity: 0.7 !important;
+    transition: opacity 0.2s ease !important;
+}
+
+#resize-handle:hover {
+    opacity: 1 !important;
+    background: #096dd9 !important;
+}
+
+/* Tab button styling */
+.tab-btn {
+    flex: 1 !important;
+    padding: 10px 16px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+    background: rgba(255,255,255,0.2) !important;
+    color: rgba(255,255,255,0.8) !important;
+}
+
+.tab-btn.active {
+    background: rgba(255,255,255,0.95) !important;
+    color: #1890ff !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+.tab-btn:hover:not(.active) {
+    background: rgba(255,255,255,0.3) !important;
+    color: white !important;
+}
+
+/* Tab content areas */
+.tab-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    display: none !important;
+    background: white !important;
+}
+
+.tab-content.active {
+    display: block !important;
+}
+
+/* Tab content inner areas */
+.tab-content-inner {
+    height: 100% !important;
+    overflow-y: auto !important;
+    padding: 20px !important;
 }

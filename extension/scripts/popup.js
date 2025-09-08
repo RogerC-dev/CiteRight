@@ -119,7 +119,7 @@ function openSettings() {
         try {
             // Open index.html in new tab (extension context)
             chrome.tabs.create({ 
-                url: chrome.runtime.getURL('index.html') 
+                url: chrome.runtime.getURL('pages/index.html') 
             });
             console.log('Opening settings via chrome.tabs.create');
             

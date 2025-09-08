@@ -37,26 +37,46 @@ router.get('/', asyncHandler(async (req, res) => {
         throw new ApiError(503, 'Database not connected');
     }
     
-    // Get comprehensive database statistics
-    const [interpretationCount] = await database.query('SELECT COUNT(*) as total FROM interpretations');
-    const [interpretationZhCount] = await database.query('SELECT COUNT(*) as total FROM interpretations_zh');
-    const [interpretationEnCount] = await database.query('SELECT COUNT(*) as total FROM interpretations_en');
-    const [additionsCount] = await database.query('SELECT COUNT(*) as total FROM interpretation_additions');
-    const [sampleLaws] = await database.query('SELECT id, law_name FROM laws LIMIT 5');
-    const [sampleInterpretations] = await database.query('SELECT interpretation_number FROM interpretations ORDER BY interpretation_number DESC LIMIT 5');
-    
+    // Get comprehensive database statistics using correct table names
+    const [lawCount] = await database.query('SELECT COUNT(*) as total FROM Law');
+    const [articleCount] = await database.query('SELECT COUNT(*) as total FROM LawArticle');
+    const [captionCount] = await database.query('SELECT COUNT(*) as total FROM LawCaption');
+
+    // Get sample data
+    const [sampleLaws] = await database.query('SELECT id, law_name, law_level FROM Law LIMIT 5');
+    const [sampleArticles] = await database.query('SELECT article_number, article_content FROM LawArticle LIMIT 3');
+
+    // Check if JudicialCase table exists
+    let casesCount = 0;
+    let sampleCases = [];
+    try {
+        const [caseCountResult] = await database.query('SELECT COUNT(*) as total FROM JudicialCase');
+        casesCount = caseCountResult[0].total;
+        if (casesCount > 0) {
+            const [sampleCasesResult] = await database.query('SELECT case_number, case_type, court_name FROM JudicialCase LIMIT 3');
+            sampleCases = sampleCasesResult;
+        }
+    } catch (error) {
+        console.log('JudicialCase table not found');
+    }
+
     res.json({
         status: 'connected',
         database: { connected: true },
-        interpretations: {
-            total: interpretationCount[0].total,
-            available: interpretationCount[0].total,
-            chinese_content: interpretationZhCount[0].total,
-            english_content: interpretationEnCount[0].total,
-            additions: additionsCount[0].total
+        statistics: {
+            laws: lawCount[0].total,
+            articles: articleCount[0].total,
+            captions: captionCount[0].total,
+            cases: casesCount
         },
-        sampleLaws: sampleLaws,
-        sampleInterpretations: sampleInterpretations.map(row => row.interpretation_number),
+        sampleData: {
+            laws: sampleLaws,
+            articles: sampleArticles.map(row => ({
+                number: row.article_number,
+                content: row.article_content.substring(0, 100) + '...'
+            })),
+            cases: sampleCases
+        },
         lastChecked: new Date().toISOString()
     });
 }));
