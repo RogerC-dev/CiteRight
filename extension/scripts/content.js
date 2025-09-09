@@ -366,6 +366,10 @@ const TAIWAN_LEGAL_PATTERNS = {
     universal_legal_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(條)(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(項))?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(款))?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(目))?|第\\s*(${CHINESE_NUMBER_PATTERN})\\s*([項款目])`, 'g'),
 };
 
+// 調試：檢查模式創建
+console.log('🔍 CHINESE_NUMBER_PATTERN:', CHINESE_NUMBER_PATTERN);
+console.log('🔍 universal_legal_pattern:', TAIWAN_LEGAL_PATTERNS.universal_legal_pattern);
+
 function toHalfWidthDigits(str) {
     return str.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFF10 + 0x30));
 }
@@ -614,7 +618,7 @@ function makeSpan(match, key, groups) {
         caseType = '法條';
     }
 
-    return `<span class="citeright-link" 
+    const result = `<span class="citeright-link" 
                 data-year="${year}" 
                 data-case-type="${caseType}" 
                 data-number="${number}"
@@ -622,7 +626,10 @@ function makeSpan(match, key, groups) {
                 data-article="${article}"
                 data-paragraph="${paragraph}"
                 data-legal-type="${key}"
+                style="background-color: #e6f7ff !important; border: 1px solid #1890ff !important; padding: 2px 4px !important; color: #1890ff !important; font-weight: 500 !important;"
                 title="按住 Ctrl 並移動滑鼠查看詳情">${match}</span>`;
+    console.log('🎨 生成的高亮HTML:', result);
+    return result;
 }
 
 // Format paragraph numbers for database lookup (第1項 -> -1, 第1項第2款 -> -1-2)
@@ -640,6 +647,15 @@ function formatParagraphForDB(paragraphStr) {
 
 function highlightCitations() {
     console.log('🔍 Starting highlightCitations (TreeWalker)...');
+    
+    // 調試：檢查頁面文本中的法條
+    const pageText = document.body.textContent || document.body.innerText || '';
+    const legalRefs = pageText.match(/第[一二三四五六七八九十\d]+條/g);
+    if (legalRefs) {
+        console.log('🔍 頁面中發現的法條引用:', legalRefs.slice(0, 10)); // 只顯示前10個
+    } else {
+        console.log('🔍 頁面中沒有發現法條引用');
+    }
     const seenNodes = new WeakSet();
     let created = 0;
 
@@ -810,6 +826,12 @@ function highlightCitations() {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
             if (!node.textContent || !/[字號釋憲判第度年]/.test(node.textContent)) return NodeFilter.FILTER_REJECT;
+            
+            // 調試：記錄包含"第四條"的節點
+            if (node.textContent.includes('第四條')) {
+                console.log('🔍 找到包含"第四條"的文本節點:', node.textContent.substring(0, 100) + '...');
+            }
+            
             return NodeFilter.FILTER_ACCEPT;
         }
     });
