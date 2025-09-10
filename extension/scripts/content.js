@@ -116,6 +116,14 @@ const LAW_ALIASES = {
     '建築法': ['建築法'],
     '環保法': ['環境保護法'],
     
+    // 大法官相關法律 (新增)
+    '大法官審理案件法': ['司法院大法官審理案件法'],
+    '司法院大法官審理案件法施行細則': ['司法院大法官審理案件法施行細則'],
+
+    // 國安相關法律 (新增)
+    '國家安全法': ['國家安全法'],
+    '社會秩序維護法': ['社會秩序維護法'],
+
     // 其他常見別名
     '著作權法': ['著作權法'],
     '專利法': ['專利法'],
@@ -486,11 +494,18 @@ function removeOverlappingMatches(matches) {
     
     // 定義優先級：完整法條 > 釋字 > 複雜法條 > 條款組合 > 單獨條文 > 單獨項款目
     const priorityOrder = {
-        'dynamic_law_articles': 1,
-        'simple_law_articles': 2,
-        'interpretation': 3, 
-        'law_name_only': 4,
-        'universal_legal_pattern': 5
+        'law_article': 1,                    // 完整法條 (e.g., 民法第184條)
+        'dynamic_law_articles': 2,
+        'simple_law_articles': 3,
+        'interpretation': 4,                 // 釋字
+        'constitutional_amendment': 5,       // 憲法增修條文
+        'constitutional': 6,                 // 憲法法庭
+        'court_case': 7,                     // 法院判決
+        'complex_article_combo': 8,          // 複雜條文組合 (第11條第1項第2款及第3款)
+        'universal_legal_pattern': 9,        // 通用法條模式 (第4條、第1款等)
+        'standalone_article': 10,            // 單獨條文 (第4條) - fallback
+        'standalone_subsection': 11,         // 單獨項款目 (第1款) - fallback
+        'law_name_only': 12
     };
     
     // Sort by start position, then by priority (lower number = higher priority), then by length (longer first)
@@ -505,22 +520,50 @@ function removeOverlappingMatches(matches) {
     });
     
     const result = [];
+    const removed = [];
     
     for (const match of matches) {
         let hasOverlap = false;
+        let overlappingWith = null;
         
         // Check if this match overlaps with any already selected match
         for (const selected of result) {
             if (match.start < selected.end && match.end > selected.start) {
+                // Special logic: Allow shorter matches that are completely contained within longer ones
+                // if the shorter one is a "第X條" pattern and the longer one contains law name
+                const isShortArticle = match.text.match(/^第.+條$/) && !match.text.includes('法');
+                const isLongArticle = selected.text.includes('法') && selected.text.includes('第') && selected.text.includes('條');
+                
+                // If shorter match is completely within longer match, allow both
+                const isCompletelyContained = match.start >= selected.start && match.end <= selected.end;
+                
+                if (isShortArticle && isLongArticle && isCompletelyContained) {
+                    console.log(`✅ 保留包含的短條文: "${match.text}" 在 "${selected.text}" 內部`);
+                    continue; // Don't mark as overlap, allow both
+                }
+                
+                // For other overlaps, apply normal priority logic
                 hasOverlap = true;
+                overlappingWith = selected;
                 break;
             }
         }
         
-        // Only add if no overlap
         if (!hasOverlap) {
             result.push(match);
+        } else {
+            removed.push({
+                removed: match,
+                overlappedWith: overlappingWith
+            });
+            console.log(`🚫 移除重疊匹配: "${match.text}" (${match.key}, ${match.start}-${match.end}) - 與 "${overlappingWith.text}" (${overlappingWith.key}, ${overlappingWith.start}-${overlappingWith.end}) 重疊`);
         }
+    }
+    
+    // 特別檢查是否移除了任何"第X條"類型的匹配
+    const removedArticles = removed.filter(r => r.removed.text.match(/第.+條/));
+    if (removedArticles.length > 0) {
+        console.log('⚠️ 警告：移除了以下條文匹配:', removedArticles.map(r => `"${r.removed.text}" 因與 "${r.overlappedWith.text}" 重疊`));
     }
     
     return result;
@@ -626,7 +669,7 @@ function makeSpan(match, key, groups) {
                 data-article="${article}"
                 data-paragraph="${paragraph}"
                 data-legal-type="${key}"
-                style="background-color: #e6f7ff !important; border: 1px solid #1890ff !important; padding: 2px 4px !important; color: #1890ff !important; font-weight: 500 !important;"
+                style="background-color: rgba(24, 144, 255, 0.08) !important; border-bottom: 1px solid rgba(24, 144, 255, 0.3) !important; padding: 1px 2px !important; border-radius: 2px !important; cursor: pointer !important;"
                 title="按住 Ctrl 並移動滑鼠查看詳情">${match}</span>`;
     console.log('🎨 生成的高亮HTML:', result);
     return result;
@@ -723,8 +766,18 @@ function highlightCitations() {
                 }
             }
 
+            // Debug: log all matches before filtering
+            if (allMatches.length > 0) {
+                console.log('🔍 Found matches before filtering:', allMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
+            }
+            
             // Remove overlapping matches, keeping longer/more specific ones
             const filteredMatches = removeOverlappingMatches(allMatches);
+            
+            // Debug: log filtered matches
+            if (filteredMatches.length > 0 && filteredMatches.length !== allMatches.length) {
+                console.log('⚠️ After filtering:', filteredMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
+            }
 
             if (filteredMatches.length === 0) return;
 
@@ -939,8 +992,18 @@ function highlightCitationsInElement(element) {
                 }
             }
 
+            // Debug: log all matches before filtering
+            if (allMatches.length > 0) {
+                console.log('🔍 Found matches before filtering:', allMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
+            }
+            
             // Remove overlapping matches, keeping longer/more specific ones
             const filteredMatches = removeOverlappingMatches(allMatches);
+            
+            // Debug: log filtered matches
+            if (filteredMatches.length > 0 && filteredMatches.length !== allMatches.length) {
+                console.log('⚠️ After filtering:', filteredMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
+            }
 
             if (filteredMatches.length === 0) return;
 
