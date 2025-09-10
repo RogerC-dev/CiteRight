@@ -291,7 +291,7 @@ function generateDynamicPatterns(legalNamesArray) {
     
 }
 
-// 暴露給全域以便調試
+// 暴露給全域以便調试
 if (typeof window !== 'undefined') {
     window.debugLawAliases = function() {
         console.log('🔍 法律別名字典:', LAW_ALIASES);
@@ -329,8 +329,23 @@ if (typeof window !== 'undefined') {
         }
     } catch (error) {
         console.error('❌ 載入法律資料失敗:', error);
-        // 使用fallback資料
-        legalNames = ['中華民國憲法', '憲法增修條文', '民法', '中華民國刑法', '行政程序法', '民事訴訟法', '刑事訴訟法', '集會遊行法', '公司法', '勞動基準法', '消費者保護法', '個人資料保護法'];
+        // 使用fallback資料 - 添加基本法律名稱
+        legalNames = [
+            // 基本憲法
+            '中華民國憲法', '憲法', '憲法增修條文',
+            // 基本民刑法
+            '民法', '中華民國刑法', '刑法',
+            // 程序法
+            '行政程序法', '民事訴訟法', '刑事訴訟法', '行政訴訟法',
+            // 常見特別法
+            '集會遊行法', '公司法', '勞動基準法', '勞基法',
+            '消費者保護法', '消保法', '個人資料保護法', '個資法',
+            '所得稅法', '營業稅法', '土地法', '建築法',
+            '著作權法', '專利法', '商標法', '公平交易法',
+            // 行政相關
+            '國家安全法', '社會秩序維護法', '警察法',
+            '都市計畫法', '環境保護法', '文化資產保存法'
+        ];
         dynamicLegalArticleRegex = generateLegalArticleRegex(legalNames, {
             caseSensitive: false,
             matchWholeWord: false,
@@ -357,8 +372,8 @@ if (typeof window !== 'undefined') {
 // 統一的中文數字字符集 - 擴展以支援更複雜的數字組合
 const CHINESE_NUMBERS = '[0-9０-９一二三四五六七八九十百千萬億兆零壹貳參肆伍陸柒捌玖拾佰仟萬憶]';
 
-// 更精確的中文數字模式，支援十以上的數字
-const CHINESE_NUMBER_PATTERN = '(?:[0-9０-９]+|[一二三四五六七八九十拾壹貳參肆伍陸柒捌玖拾百佰千仟萬]+)';
+// 更精確的中文數字模式，支援十以上的數字 - FIXED VERSION
+const CHINESE_NUMBER_PATTERN = '(?:[0-9０-９]+|[一二三四五六七八九十拾壹貳參肆伍陸柒捌玖拾百佰千仟萬億兆零]+|二十[一二三四五六七八九]?|三十[一二三四五六七八九]?|[一二三四五六七八九]?十[一二三四五六七八九]?)';
 
 const TAIWAN_LEGAL_PATTERNS = {
     // 司法院大法官解釋: 釋字第748號
@@ -370,8 +385,11 @@ const TAIWAN_LEGAL_PATTERNS = {
     // 法條引用: 使用動態生成的正規表示式，支援從Law.json載入的所有法律名稱
     law_article: null,
 
-    // 統一法條組合模式: 匹配所有可能的 第X條/項/款/目 組合 (無語境限制)
-    universal_legal_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(條)(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(項))?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(款))?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(目))?|第\\s*(${CHINESE_NUMBER_PATTERN})\\s*([項款目])`, 'g'),
+    // 統一法條組合模式: 匹配所有可能的 第X條/項/款/目 組合 (無語境限制) - SIMPLIFIED AND FIXED
+    universal_legal_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?|第\\s*(${CHINESE_NUMBER_PATTERN})\\s*([項款目])`, 'g'),
+
+    // Add a simpler backup pattern for basic articles
+    simple_article_only: /第\s*([一二三四五六七八九十百千萬0-9０-９]+)\s*條/g,
 };
 
 // 調試：檢查模式創建
@@ -452,6 +470,97 @@ function chineseToArabic(str) {
 // Context tracking for mixed law references
 let lastLawName = '';
 
+function makeSpan(match, key, groups) {
+    let year = '', caseType = '', number = '', lawName = '', article = '', paragraph = '';
+
+    if (key === 'interpretation') {
+        caseType = '釋字';
+        number = toHalfWidthDigits(groups[0]);
+    } else if (key === 'law_name_only') {
+        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
+        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
+        lastLawName = lawName; // Store for mixed references
+        caseType = '法律名稱';
+        article = ''; // No article for law name only
+        paragraph = '';
+    } else if (key === 'dynamic_law_articles') {
+        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
+        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
+        lastLawName = lawName; // Store for mixed references
+        article = chineseToArabic(toHalfWidthDigits(groups[1])); // 184、271條之1、一八四、三百二十
+        // Build paragraph from multiple groups
+        let paragraphParts = [];
+        if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2]))); // 項
+        if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 款
+        if (groups[4]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[4]))); // 目
+        paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
+        caseType = '法條';
+    } else if (key === 'simple_law_articles') {
+        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
+        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
+        lastLawName = lawName; // Store for mixed references
+        // For simple_article_only pattern: /第\s*([一二三四五六七八九十百千萬0-9０-９]+)\s*條/g
+        // groups[0] is the article number, not the law name
+        lawName = lastLawName || ''; // Use the last seen law name or empty
+        article = chineseToArabic(toHalfWidthDigits(groups[0])); // 條號 - groups[0] is the article number
+        paragraph = ''; // 沒有項款目
+        caseType = '法條';
+    } else if (key === 'universal_legal_pattern') {
+        lawName = lastLawName || ''; // Use the last seen law name or empty
+
+        // 判斷是條文組合還是單獨項款目
+        if (groups[1] && groups[2] === '條') {
+            // 這是條文組合: 第X條[第X項][第X款][第X目]
+            article = chineseToArabic(toHalfWidthDigits(groups[1])); // 條號
+            let paragraphParts = [];
+            if (groups[3] && groups[4] === '項') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 項
+            if (groups[5] && groups[6] === '款') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[5]))); // 款
+            if (groups[7] && groups[8] === '目') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[7]))); // 目
+            paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
+        } else if (groups[9] && groups[10]) {
+            // 這是單獨項款目: 第X項/款/目
+            article = ''; // No article number for standalone subsections
+            const subsectionNum = chineseToArabic(toHalfWidthDigits(groups[9]));
+            const subsectionType = groups[10]; // 項/款/目
+            paragraph = `-${subsectionNum}`;
+        }
+        caseType = '法條';
+    }
+
+    // Escape HTML attributes to prevent corruption
+    const escapeHtml = (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
+    // Escape the match text for safe insertion
+    const escapeMatch = (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    };
+
+    const result = `<span class="citeright-link" 
+                data-year="${escapeHtml(year)}" 
+                data-case-type="${escapeHtml(caseType)}" 
+                data-number="${escapeHtml(number)}"
+                data-law-name="${escapeHtml(lawName)}"
+                data-article="${escapeHtml(article)}"
+                data-paragraph="${escapeHtml(paragraph)}"
+                data-legal-type="${escapeHtml(key)}"
+                style="background-color: rgba(24, 144, 255, 0.08) !important; border-bottom: 1px solid rgba(24, 144, 255, 0.3) !important; padding: 1px 2px !important; border-radius: 2px !important; cursor: pointer !important;"
+                title="按住 Ctrl 並移動滑鼠查看詳情">${escapeMatch(match)}</span>`;
+    console.log('🎨 生成的高亮HTML:', result);
+    return result;
+}
+
 // Helper function to check if text is already part of a highlighted element
 function isAlreadyHighlighted(node, matchText) {
     // Get all existing highlighted elements in the document
@@ -492,200 +601,37 @@ function isTextInProximity(textNode, highlightElement) {
 function removeOverlappingMatches(matches) {
     if (matches.length === 0) return matches;
     
-    // 定義優先級：完整法條 > 釋字 > 複雜法條 > 條款組合 > 單獨條文 > 單獨項款目
-    const priorityOrder = {
-        'law_article': 1,                    // 完整法條 (e.g., 民法第184條)
-        'dynamic_law_articles': 2,
-        'simple_law_articles': 3,
-        'interpretation': 4,                 // 釋字
-        'constitutional_amendment': 5,       // 憲法增修條文
-        'constitutional': 6,                 // 憲法法庭
-        'court_case': 7,                     // 法院判決
-        'complex_article_combo': 8,          // 複雜條文組合 (第11條第1項第2款及第3款)
-        'universal_legal_pattern': 9,        // 通用法條模式 (第4條、第1款等)
-        'standalone_article': 10,            // 單獨條文 (第4條) - fallback
-        'standalone_subsection': 11,         // 單獨項款目 (第1款) - fallback
-        'law_name_only': 12
-    };
-    
-    // Sort by start position, then by priority (lower number = higher priority), then by length (longer first)
+    console.log(`🔍 Processing ${matches.length} matches for overlap removal`);
+
+    // Sort by start position, then by length (longest first for same position)
     matches.sort((a, b) => {
         if (a.start !== b.start) return a.start - b.start;
-        
-        const priorityA = priorityOrder[a.key] || 999;
-        const priorityB = priorityOrder[b.key] || 999;
-        if (priorityA !== priorityB) return priorityA - priorityB;
-        
         return b.text.length - a.text.length;
     });
     
     const result = [];
-    const removed = [];
     
     for (const match of matches) {
         let hasOverlap = false;
-        let overlappingWith = null;
-        
-        // Check if this match overlaps with any already selected match
-        for (const selected of result) {
-            if (match.start < selected.end && match.end > selected.start) {
-                // Special logic: Allow shorter matches that are completely contained within longer ones
-                // if the shorter one is a "第X條" pattern and the longer one contains law name
-                const isShortArticle = match.text.match(/^第.+條$/) && !match.text.includes('法');
-                const isLongArticle = selected.text.includes('法') && selected.text.includes('第') && selected.text.includes('條');
-                
-                // If shorter match is completely within longer match, allow both
-                const isCompletelyContained = match.start >= selected.start && match.end <= selected.end;
-                
-                if (isShortArticle && isLongArticle && isCompletelyContained) {
-                    console.log(`✅ 保留包含的短條文: "${match.text}" 在 "${selected.text}" 內部`);
-                    continue; // Don't mark as overlap, allow both
-                }
-                
-                // For other overlaps, apply normal priority logic
+
+        // Check against all previously accepted matches
+        for (const accepted of result) {
+            // Check for any overlap
+            if (match.start < accepted.end && match.end > accepted.start) {
+                console.log(`🚫 Rejecting overlapping match: "${match.text}" (${match.start}-${match.end}) overlaps with "${accepted.text}" (${accepted.start}-${accepted.end})`);
                 hasOverlap = true;
-                overlappingWith = selected;
                 break;
             }
         }
         
         if (!hasOverlap) {
             result.push(match);
-        } else {
-            removed.push({
-                removed: match,
-                overlappedWith: overlappingWith
-            });
-            console.log(`🚫 移除重疊匹配: "${match.text}" (${match.key}, ${match.start}-${match.end}) - 與 "${overlappingWith.text}" (${overlappingWith.key}, ${overlappingWith.start}-${overlappingWith.end}) 重疊`);
+            console.log(`✅ Accepted match: "${match.text}" (${match.key}, ${match.start}-${match.end})`);
         }
     }
-    
-    // 特別檢查是否移除了任何"第X條"類型的匹配
-    const removedArticles = removed.filter(r => r.removed.text.match(/第.+條/));
-    if (removedArticles.length > 0) {
-        console.log('⚠️ 警告：移除了以下條文匹配:', removedArticles.map(r => `"${r.removed.text}" 因與 "${r.overlappedWith.text}" 重疊`));
-    }
-    
+
+    console.log(`📊 Final result: ${matches.length} → ${result.length} matches after overlap removal`);
     return result;
-}
-
-function makeSpan(match, key, groups) {
-    let year = '', caseType = '', number = '', lawName = '', article = '', paragraph = '';
-
-    if (key === 'interpretation') {
-        caseType = '釋字';
-        number = toHalfWidthDigits(groups[0]);
-    } else if (key === 'law_name_only') {
-        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
-        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
-        lastLawName = lawName; // Store for mixed references
-        caseType = '法律名稱';
-        article = ''; // No article for law name only
-        paragraph = '';
-    } else if (key === 'dynamic_law_articles') {
-        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
-        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
-        lastLawName = lawName; // Store for mixed references
-        article = chineseToArabic(toHalfWidthDigits(groups[1])); // 184、271條之1、一八四、三百二十
-        // Build paragraph from multiple groups
-        let paragraphParts = [];
-        if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2]))); // 項
-        if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 款
-        if (groups[4]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[4]))); // 目
-        paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
-        caseType = '法條';
-    } else if (key === 'simple_law_articles') {
-        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
-        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
-        lastLawName = lawName; // Store for mixed references
-        article = chineseToArabic(toHalfWidthDigits(groups[1])); // 條號
-        paragraph = ''; // 沒有項款目
-        caseType = '法條';
-    } else if (key === 'universal_legal_pattern') {
-        lawName = lastLawName || ''; // Use the last seen law name or empty
-        
-        // 判斷是條文組合還是單獨項款目
-        if (groups[1] && groups[2] === '條') {
-            // 這是條文組合: 第X條[第X項][第X款][第X目]
-            article = chineseToArabic(toHalfWidthDigits(groups[1])); // 條號
-            let paragraphParts = [];
-            if (groups[3] && groups[4] === '項') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 項
-            if (groups[5] && groups[6] === '款') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[5]))); // 款  
-            if (groups[7] && groups[8] === '目') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[7]))); // 目
-            paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
-        } else if (groups[9] && groups[10]) {
-            // 這是單獨項款目: 第X項/款/目
-            article = ''; // No article number for standalone subsections
-            const subsectionNum = chineseToArabic(toHalfWidthDigits(groups[9]));
-            const subsectionType = groups[10]; // 項/款/目
-            paragraph = `-${subsectionNum}`;
-        }
-        caseType = '法條';
-    } else if (key === 'complex_article') {
-        lawName = lastLawName || ''; // Use the last seen law name or empty
-        article = chineseToArabic(toHalfWidthDigits(groups[0])); // 條號
-        // Build paragraph from multiple groups
-        let paragraphParts = [];
-        paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[1]))); // 項 (必須存在)
-        if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2]))); // 款  
-        if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 目
-        paragraph = '-' + paragraphParts.join('-');
-        caseType = '法條';
-    } else if (key === 'article_section') {
-        lawName = lastLawName || ''; // Use the last seen law name or empty
-        article = chineseToArabic(toHalfWidthDigits(groups[0])); // 條號
-        const sectionNum = chineseToArabic(toHalfWidthDigits(groups[1])); // 款/目號
-        const sectionType = groups[2]; // 款/目
-        if (sectionType === '款') {
-            paragraph = `-0-${sectionNum}`; // 沒有項，但有款：-0-2
-        } else {
-            paragraph = `-0-0-${sectionNum}`; // 沒有項款，但有目：-0-0-3
-        }
-        caseType = '法條';
-    } else if (key === 'standalone_article') {
-        lawName = lastLawName || ''; // Use the last seen law name or empty
-        article = chineseToArabic(toHalfWidthDigits(groups[0])); // 條號
-        // Build paragraph from multiple groups
-        let paragraphParts = [];
-        if (groups[1]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[1]))); // 項
-        if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2]))); // 款
-        if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 目
-        paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
-        caseType = '法條';
-    } else if (key === 'standalone_subsection') {
-        lawName = lastLawName || ''; // Use the last seen law name or empty
-        article = ''; // No article number for standalone subsections
-        const subsectionNum = chineseToArabic(toHalfWidthDigits(groups[0]));
-        const subsectionType = groups[1]; // 項/款/目
-        paragraph = `-${subsectionNum}`;
-        caseType = '法條';
-    }
-
-    const result = `<span class="citeright-link" 
-                data-year="${year}" 
-                data-case-type="${caseType}" 
-                data-number="${number}"
-                data-law-name="${lawName}"
-                data-article="${article}"
-                data-paragraph="${paragraph}"
-                data-legal-type="${key}"
-                style="background-color: rgba(24, 144, 255, 0.08) !important; border-bottom: 1px solid rgba(24, 144, 255, 0.3) !important; padding: 1px 2px !important; border-radius: 2px !important; cursor: pointer !important;"
-                title="按住 Ctrl 並移動滑鼠查看詳情">${match}</span>`;
-    console.log('🎨 生成的高亮HTML:', result);
-    return result;
-}
-
-// Format paragraph numbers for database lookup (第1項 -> -1, 第1項第2款 -> -1-2)
-function formatParagraphForDB(paragraphStr) {
-    if (!paragraphStr) return '';
-
-    // Handle multiple items like "1項第2款" -> "1-2"
-    const parts = paragraphStr.split(/項第?|款第?|目第?/).filter(part => part.trim());
-
-    if (parts.length === 0) return '';
-    if (parts.length === 1) return '-' + parts[0];
-
-    return '-' + parts.join('-');
 }
 
 function highlightCitations() {
@@ -730,149 +676,108 @@ function highlightCitations() {
         const original = node.textContent;
         if (!original || !original.trim()) return;
 
-        // Split text into segments, separating citations connected by "及"
-        const textSegments = splitConnectedCitations(original);
+        const normalizedText = original;
 
-        // If no splits were made, process normally
-        if (textSegments.length === 1 && !textSegments[0].isSplit) {
-            const normalizedText = original;
+        // Find all potential matches first
+        const allMatches = [];
 
-            // Find all potential matches first
-            const allMatches = [];
+        // IMPROVED processing order - standalone articles should be processed last to avoid conflicts
+        const processingOrder = [
+            'interpretation',          // 釋字第748號 - most specific, process first
+            'dynamic_law_articles',    // 民法第184條第1項 - specific law + article + subsections
+            'simple_law_articles',     // 民法第184條 - specific law + article only
+            'law_name_only',          // 民法 - just law names
+            'universal_legal_pattern', // 第184條, 第四條 - generic articles with complex structure
+            'simple_article_only'      // 第四條 - simple standalone articles (fallback)
+        ];
 
-            // 確保處理順序：優先處理動態法條，然後按複雜度排序
-            const processingOrder = ['dynamic_law_articles', 'simple_law_articles', 'interpretation', 'law_name_only', 'universal_legal_pattern'];
+        // Debug: log which patterns are available
+        console.log('🔍 Available patterns:', Object.keys(TAIWAN_LEGAL_PATTERNS).filter(k => TAIWAN_LEGAL_PATTERNS[k]));
 
-            for (const key of processingOrder) {
-                const pattern = TAIWAN_LEGAL_PATTERNS[key];
-                if (!pattern) continue;
-
-                let actualPattern;
-
-                // fresh pattern each pass for other patterns
-                actualPattern = new RegExp(pattern.source, pattern.flags);
-
-                let match;
-                while ((match = actualPattern.exec(normalizedText)) !== null) {
-                    allMatches.push({
-                        text: match[0],
-                        start: match.index,
-                        end: match.index + match[0].length,
-                        key: key,
-                        groups: Array.from(match).slice(1)
-                    });
-                    // Prevent infinite loop on global regex
-                    if (!actualPattern.global) break;
-                }
+        for (const key of processingOrder) {
+            const pattern = TAIWAN_LEGAL_PATTERNS[key];
+            if (!pattern) {
+                console.log(`⚠️ Pattern ${key} not available`);
+                continue;
             }
 
-            // Debug: log all matches before filtering
-            if (allMatches.length > 0) {
-                console.log('🔍 Found matches before filtering:', allMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
-            }
-            
-            // Remove overlapping matches, keeping longer/more specific ones
-            const filteredMatches = removeOverlappingMatches(allMatches);
-            
-            // Debug: log filtered matches
-            if (filteredMatches.length > 0 && filteredMatches.length !== allMatches.length) {
-                console.log('⚠️ After filtering:', filteredMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
-            }
+            let actualPattern = new RegExp(pattern.source, pattern.flags);
 
-            if (filteredMatches.length === 0) return;
+            let match;
+            while ((match = actualPattern.exec(normalizedText)) !== null) {
+                const matchText = match[0];
 
-            // Apply highlights in reverse order to maintain correct indices
-            let newHTML = normalizedText;
-            let changed = false;
+                // Debug: log each match found
+                console.log(`🎯 Found ${key} match: "${matchText}" at position ${match.index}-${match.index + matchText.length}`);
 
-            filteredMatches.sort((a, b) => b.start - a.start).forEach(match => {
-                // Check if this match is already part of a highlighted element
-                if (isAlreadyHighlighted(node, match.text)) {
-                    return; // Skip this match
-                }
-
-                const before = newHTML.substring(0, match.start);
-                const after = newHTML.substring(match.end);
-                const highlighted = makeSpan(match.text, match.key, match.groups);
-
-                newHTML = before + highlighted + after;
-                changed = true;
-            });
-            if (changed) {
-                const wrapper = document.createElement('span');
-                wrapper.innerHTML = newHTML;
-                while (wrapper.firstChild) {
-                    node.parentNode.insertBefore(wrapper.firstChild, node);
-                }
-                node.parentNode.removeChild(node);
-                created++;
-            }
-        } else {
-            // Process each segment separately to handle split citations
-            let newHTML = '';
-            let hasHighlights = false;
-
-            for (const segment of textSegments) {
-                if (segment.isSplit) {
-                    // This is a split citation part - check for matches
-                    const allMatches = [];
-                    const processingOrder = ['dynamic_law_articles', 'simple_law_articles', 'interpretation', 'law_name_only', 'universal_legal_pattern'];
-
-                    for (const key of processingOrder) {
-                        const pattern = TAIWAN_LEGAL_PATTERNS[key];
-                        if (!pattern) continue;
-
-                        let actualPattern = new RegExp(pattern.source, pattern.flags);
-
-                        let match;
-                        while ((match = actualPattern.exec(segment.text)) !== null) {
-                            allMatches.push({
-                                text: match[0],
-                                start: match.index,
-                                end: match.index + match[0].length,
-                                key: key,
-                                groups: Array.from(match).slice(1)
-                            });
-                            if (!actualPattern.global) break;
-                        }
-                    }
-
-                    const filteredMatches = removeOverlappingMatches(allMatches);
-
-                    if (filteredMatches.length > 0) {
-                        let segmentHTML = segment.text;
-
-                        filteredMatches.sort((a, b) => b.start - a.start).forEach(match => {
-                            if (!isAlreadyHighlighted(node, match.text)) {
-                                const before = segmentHTML.substring(0, match.start);
-                                const after = segmentHTML.substring(match.end);
-                                const highlighted = makeSpan(match.text, match.key, match.groups);
-
-                                segmentHTML = before + highlighted + after;
-                                hasHighlights = true;
-                            }
-                        });
-
-                        newHTML += segmentHTML;
-                    } else {
-                        newHTML += segment.text;
-                    }
-                } else {
-                    // Regular text segment - just append
-                    newHTML += segment.text;
-                }
-            }
-
-            if (hasHighlights) {
-                const wrapper = document.createElement('span');
-                wrapper.innerHTML = newHTML;
-                while (wrapper.firstChild) {
-                    node.parentNode.insertBefore(wrapper.firstChild, node);
-                }
-                node.parentNode.removeChild(node);
-                created++;
+                allMatches.push({
+                    text: matchText,
+                    start: match.index,
+                    end: match.index + matchText.length,
+                    key: key,
+                    groups: Array.from(match).slice(1)
+                });
+                // Prevent infinite loop on global regex
+                if (!actualPattern.global) break;
             }
         }
+
+        // Debug: log all matches before filtering
+        if (allMatches.length > 0) {
+            console.log('🔍 Found matches before filtering:', allMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
+        }
+
+        // Remove overlapping matches - simple version
+        const filteredMatches = removeOverlappingMatches(allMatches);
+
+        // Debug: log filtered matches
+        if (filteredMatches.length > 0 && filteredMatches.length !== allMatches.length) {
+            console.log('⚠️ After filtering:', filteredMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
+        }
+
+        if (filteredMatches.length === 0) return;
+
+        // Build HTML in a single pass to avoid corruption
+        let newHTML = '';
+        let lastIndex = 0;
+        let changed = false;
+
+        // Sort matches by start position (forward order)
+        filteredMatches.sort((a, b) => a.start - b.start);
+
+        for (const match of filteredMatches) {
+            // Check if this match is already part of a highlighted element
+            if (isAlreadyHighlighted(node, match.text)) {
+                continue; // Skip this match
+            }
+
+            // Add text before this match
+            newHTML += normalizedText.substring(lastIndex, match.start);
+
+            // Add the highlighted span
+            const highlighted = makeSpan(match.text, match.key, match.groups);
+            newHTML += highlighted;
+
+            // Update position
+            lastIndex = match.end;
+            changed = true;
+        }
+
+        // Add remaining text after last match
+        if (changed) {
+            newHTML += normalizedText.substring(lastIndex);
+        }
+
+        if (changed) {
+            const wrapper = document.createElement('span');
+            wrapper.innerHTML = newHTML;
+            while (wrapper.firstChild) {
+                node.parentNode.insertBefore(wrapper.firstChild, node);
+            }
+            node.parentNode.removeChild(node);
+            created++;
+        }
+
         seenNodes.add(node);
     }
 
@@ -956,149 +861,108 @@ function highlightCitationsInElement(element) {
         const original = node.textContent;
         if (!original || !original.trim()) return;
 
-        // Split text into segments, separating citations connected by "及"
-        const textSegments = splitConnectedCitations(original);
+        const normalizedText = original;
 
-        // If no splits were made, process normally
-        if (textSegments.length === 1 && !textSegments[0].isSplit) {
-            const normalizedText = original;
+        // Find all potential matches first
+        const allMatches = [];
 
-            // Find all potential matches first
-            const allMatches = [];
+        // IMPROVED processing order - standalone articles should be processed last to avoid conflicts
+        const processingOrder = [
+            'interpretation',          // 釋字第748號 - most specific, process first
+            'dynamic_law_articles',    // 民法第184條第1項 - specific law + article + subsections
+            'simple_law_articles',     // 民法第184條 - specific law + article only
+            'law_name_only',          // 民法 - just law names
+            'universal_legal_pattern', // 第184條, 第四條 - generic articles with complex structure
+            'simple_article_only'      // 第四條 - simple standalone articles (fallback)
+        ];
 
-            // 確保處理順序：優先處理動態法條，然後按複雜度排序
-            const processingOrder = ['dynamic_law_articles', 'simple_law_articles', 'interpretation', 'law_name_only', 'universal_legal_pattern'];
+        // Debug: log which patterns are available
+        console.log('🔍 Available patterns:', Object.keys(TAIWAN_LEGAL_PATTERNS).filter(k => TAIWAN_LEGAL_PATTERNS[k]));
 
-            for (const key of processingOrder) {
-                const pattern = TAIWAN_LEGAL_PATTERNS[key];
-                if (!pattern) continue;
-
-                let actualPattern;
-
-                // fresh pattern each pass for other patterns
-                actualPattern = new RegExp(pattern.source, pattern.flags);
-
-                let match;
-                while ((match = actualPattern.exec(normalizedText)) !== null) {
-                    allMatches.push({
-                        text: match[0],
-                        start: match.index,
-                        end: match.index + match[0].length,
-                        key: key,
-                        groups: Array.from(match).slice(1)
-                    });
-                    // Prevent infinite loop on global regex
-                    if (!actualPattern.global) break;
-                }
+        for (const key of processingOrder) {
+            const pattern = TAIWAN_LEGAL_PATTERNS[key];
+            if (!pattern) {
+                console.log(`⚠️ Pattern ${key} not available`);
+                continue;
             }
 
-            // Debug: log all matches before filtering
-            if (allMatches.length > 0) {
-                console.log('🔍 Found matches before filtering:', allMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
-            }
-            
-            // Remove overlapping matches, keeping longer/more specific ones
-            const filteredMatches = removeOverlappingMatches(allMatches);
-            
-            // Debug: log filtered matches
-            if (filteredMatches.length > 0 && filteredMatches.length !== allMatches.length) {
-                console.log('⚠️ After filtering:', filteredMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
-            }
+            let actualPattern = new RegExp(pattern.source, pattern.flags);
 
-            if (filteredMatches.length === 0) return;
+            let match;
+            while ((match = actualPattern.exec(normalizedText)) !== null) {
+                const matchText = match[0];
 
-            // Apply highlights in reverse order to maintain correct indices
-            let newHTML = normalizedText;
-            let changed = false;
+                // Debug: log each match found
+                console.log(`🎯 Found ${key} match: "${matchText}" at position ${match.index}-${match.index + matchText.length}`);
 
-            filteredMatches.sort((a, b) => b.start - a.start).forEach(match => {
-                // Check if this match is already part of a highlighted element
-                if (isAlreadyHighlighted(node, match.text)) {
-                    return; // Skip this match
-                }
-
-                const before = newHTML.substring(0, match.start);
-                const after = newHTML.substring(match.end);
-                const highlighted = makeSpan(match.text, match.key, match.groups);
-
-                newHTML = before + highlighted + after;
-                changed = true;
-            });
-            if (changed) {
-                const wrapper = document.createElement('span');
-                wrapper.innerHTML = newHTML;
-                while (wrapper.firstChild) {
-                    node.parentNode.insertBefore(wrapper.firstChild, node);
-                }
-                node.parentNode.removeChild(node);
-                created++;
-            }
-        } else {
-            // Process each segment separately to handle split citations
-            let newHTML = '';
-            let hasHighlights = false;
-
-            for (const segment of textSegments) {
-                if (segment.isSplit) {
-                    // This is a split citation part - check for matches
-                    const allMatches = [];
-                    const processingOrder = ['dynamic_law_articles', 'simple_law_articles', 'interpretation', 'law_name_only', 'universal_legal_pattern'];
-
-                    for (const key of processingOrder) {
-                        const pattern = TAIWAN_LEGAL_PATTERNS[key];
-                        if (!pattern) continue;
-
-                        let actualPattern = new RegExp(pattern.source, pattern.flags);
-
-                        let match;
-                        while ((match = actualPattern.exec(segment.text)) !== null) {
-                            allMatches.push({
-                                text: match[0],
-                                start: match.index,
-                                end: match.index + match[0].length,
-                                key: key,
-                                groups: Array.from(match).slice(1)
-                            });
-                            if (!actualPattern.global) break;
-                        }
-                    }
-
-                    const filteredMatches = removeOverlappingMatches(allMatches);
-
-                    if (filteredMatches.length > 0) {
-                        let segmentHTML = segment.text;
-
-                        filteredMatches.sort((a, b) => b.start - a.start).forEach(match => {
-                            if (!isAlreadyHighlighted(node, match.text)) {
-                                const before = segmentHTML.substring(0, match.start);
-                                const after = segmentHTML.substring(match.end);
-                                const highlighted = makeSpan(match.text, match.key, match.groups);
-
-                                segmentHTML = before + highlighted + after;
-                                hasHighlights = true;
-                            }
-                        });
-
-                        newHTML += segmentHTML;
-                    } else {
-                        newHTML += segment.text;
-                    }
-                } else {
-                    // Regular text segment - just append
-                    newHTML += segment.text;
-                }
-            }
-
-            if (hasHighlights) {
-                const wrapper = document.createElement('span');
-                wrapper.innerHTML = newHTML;
-                while (wrapper.firstChild) {
-                    node.parentNode.insertBefore(wrapper.firstChild, node);
-                }
-                node.parentNode.removeChild(node);
-                created++;
+                allMatches.push({
+                    text: matchText,
+                    start: match.index,
+                    end: match.index + matchText.length,
+                    key: key,
+                    groups: Array.from(match).slice(1)
+                });
+                // Prevent infinite loop on global regex
+                if (!actualPattern.global) break;
             }
         }
+
+        // Debug: log all matches before filtering
+        if (allMatches.length > 0) {
+            console.log('🔍 Found matches before filtering:', allMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
+        }
+
+        // Remove overlapping matches - simple version
+        const filteredMatches = removeOverlappingMatches(allMatches);
+
+        // Debug: log filtered matches
+        if (filteredMatches.length > 0 && filteredMatches.length !== allMatches.length) {
+            console.log('⚠️ After filtering:', filteredMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
+        }
+
+        if (filteredMatches.length === 0) return;
+
+        // Build HTML in a single pass to avoid corruption
+        let newHTML = '';
+        let lastIndex = 0;
+        let changed = false;
+
+        // Sort matches by start position (forward order)
+        filteredMatches.sort((a, b) => a.start - b.start);
+
+        for (const match of filteredMatches) {
+            // Check if this match is already part of a highlighted element
+            if (isAlreadyHighlighted(node, match.text)) {
+                continue; // Skip this match
+            }
+
+            // Add text before this match
+            newHTML += normalizedText.substring(lastIndex, match.start);
+
+            // Add the highlighted span
+            const highlighted = makeSpan(match.text, match.key, match.groups);
+            newHTML += highlighted;
+
+            // Update position
+            lastIndex = match.end;
+            changed = true;
+        }
+
+        // Add remaining text after last match
+        if (changed) {
+            newHTML += normalizedText.substring(lastIndex);
+        }
+
+        if (changed) {
+            const wrapper = document.createElement('span');
+            wrapper.innerHTML = newHTML;
+            while (wrapper.firstChild) {
+                node.parentNode.insertBefore(wrapper.firstChild, node);
+            }
+            node.parentNode.removeChild(node);
+            created++;
+        }
+
         seenNodes.add(node);
     }
 
@@ -1847,7 +1711,7 @@ function loadBookmarksContent() {
                 <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
                     ${bookmark.type} · 儲存於 ${new Date(bookmark.dateAdded).toLocaleDateString('zh-TW')}
                 </div>
-                <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                <div style="font-size: 13px, color: #555; line-height: 1.5;">
                     ${bookmark.content ? bookmark.content.substring(0, 100) + (bookmark.content.length > 100 ? '...' : '') : '無內容摘要'}
                 </div>
                 <div style="margin-top: 12px; display: flex; gap: 8px;">
@@ -2195,24 +2059,84 @@ function splitConnectedCitations(text) {
 
 // MutationObserver to handle dynamically loaded content
 (function setupObserver(){
+    let highlightTimeout;
+    let isHighlighting = false;
+
     function safeHighlight(){
-        try { highlightCitations(); } catch (e) { console.error('Highlight error', e); }
+        // Prevent re-entrance during highlighting
+        if (isHighlighting) {
+            console.log('🚫 Already highlighting, skipping...');
+            return;
+        }
+
+        // Clear any pending timeout
+        clearTimeout(highlightTimeout);
+
+        // Debounce to prevent rapid successive calls
+        highlightTimeout = setTimeout(() => {
+            try {
+                isHighlighting = true;
+                console.log('🔄 Starting debounced highlight...');
+                highlightCitations();
+            } catch (e) {
+                console.error('Highlight error', e);
+            } finally {
+                isHighlighting = false;
+            }
+        }, 150); // 150ms debounce
     }
-    if (!document.body) { return document.addEventListener('DOMContentLoaded', safeHighlight); }
+
+    if (!document.body) {
+        return document.addEventListener('DOMContentLoaded', safeHighlight);
+    }
+
     const observer = new MutationObserver(mutations => {
-        let textAdded = false;
+        // Skip mutations caused by our own highlighting
+        let shouldProcess = false;
+
         for (const m of mutations) {
             if (m.type === 'childList') {
-                if ([...m.addedNodes].some(n => n.nodeType === Node.TEXT_NODE || (n.nodeType === 1 && n.innerText))) {
-                    textAdded = true; break;
+                for (const node of m.addedNodes) {
+                    // Skip if this is one of our highlight spans
+                    if (node.nodeType === 1 && node.classList && node.classList.contains('citeright-link')) {
+                        continue;
+                    }
+                    // Skip if this is inside our highlight spans
+                    if (node.nodeType === 1 && node.closest && node.closest('.citeright-link')) {
+                        continue;
+                    }
+                    // Process if it's text or contains text
+                    if (node.nodeType === Node.TEXT_NODE ||
+                        (node.nodeType === 1 && node.innerText && !node.classList.contains('citeright-link'))) {
+                        shouldProcess = true;
+                        break;
+                    }
                 }
-            } else if (m.type === 'characterData') { textAdded = true; break; }
+                if (shouldProcess) break;
+            } else if (m.type === 'characterData') {
+                // Skip if the text change is in our highlight spans
+                if (m.target.parentNode && m.target.parentNode.closest &&
+                    m.target.parentNode.closest('.citeright-link')) {
+                    continue;
+                }
+                shouldProcess = true;
+                break;
+            }
         }
-        if (textAdded) safeHighlight();
+
+        if (shouldProcess) {
+            console.log('🔍 DOM changed, scheduling highlight...');
+            safeHighlight();
+        }
     });
+
     try {
-        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-        console.log('🔁 MutationObserver active');
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+        console.log('🔁 MutationObserver active with debouncing');
     } catch (e) {
         console.warn('Observer failed to start', e.message);
     }
@@ -2342,10 +2266,10 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             isExtensionEnabled = message.enabled;
 
             if (isExtensionEnabled) {
-                console.log('🟢 CiteRight 擴充功能已透過彈出視窗啟用');
+                console.log('🟢 CiteRight 擴充功能已透过彈出視窗啟用');
                 showActivationNotification('擴充功能已啟用', '按 Ctrl 啟動懸停模式', '#52c41a');
             } else {
-                console.log('🔴 CiteRight 擴充功能已透過彈出視窗停用');
+                console.log('🔴 CiteRight 擴充功能已透过彈出視窗停用');
                 isActivated = false;
                 popover.style.display = 'none';
                 clearTimeout(activationTimeout);
