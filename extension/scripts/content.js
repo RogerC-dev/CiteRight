@@ -568,13 +568,9 @@ function isAlreadyHighlighted(node, matchText) {
     
     for (const highlight of existingHighlights) {
         const highlightText = highlight.textContent;
-        // If the current match is a substring of an existing highlight, skip it
-        if (highlightText.includes(matchText) && highlightText !== matchText) {
-            // Additional check: make sure the matched text is within reasonable proximity
-            // to avoid false positives across distant elements
-            if (isTextInProximity(node, highlight)) {
-                return true;
-            }
+        // Only skip exact duplicates, allow overlapping matches of different lengths
+        if (highlightText === matchText && isTextInProximity(node, highlight)) {
+            return true;
         }
     }
     return false;
@@ -634,8 +630,79 @@ function removeOverlappingMatches(matches) {
     return result;
 }
 
+// Global set to track processed nodes across all highlighting functions
+const globalSeenNodes = new WeakSet();
+
+// Global set to track applied highlights by position and text to prevent exact duplicates
+const appliedHighlights = new Set();
+
+// Function to apply highlights with proper overlap handling
+function applyLayeredHighlights(node, matches, normalizedText) {
+    if (matches.length === 0) return false;
+    
+    // Sort matches by start position, then by length (longest first)
+    matches.sort((a, b) => {
+        if (a.start !== b.start) return a.start - b.start;
+        return (b.end - b.start) - (a.end - a.start);
+    });
+    
+    // Remove exact duplicates
+    const uniqueMatches = [];
+    const seen = new Set();
+    
+    for (const match of matches) {
+        const key = `${match.start}_${match.end}_${match.text}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueMatches.push(match);
+        }
+    }
+    
+    // Build HTML with non-overlapping highlights only
+    let newHTML = '';
+    let lastIndex = 0;
+    let changed = false;
+    
+    for (const match of uniqueMatches) {
+        // Skip if this match overlaps with already processed text
+        if (match.start < lastIndex) {
+            continue;
+        }
+        
+        // Add text before this match
+        newHTML += normalizedText.substring(lastIndex, match.start);
+        
+        // Add the highlighted span
+        const highlighted = makeSpan(match.text, match.key, match.groups);
+        newHTML += highlighted;
+        
+        // Update position
+        lastIndex = match.end;
+        changed = true;
+    }
+    
+    // Add remaining text
+    newHTML += normalizedText.substring(lastIndex);
+    
+    // Replace the node content if changed
+    if (changed && newHTML !== normalizedText) {
+        const wrapper = document.createElement('span');
+        wrapper.innerHTML = newHTML;
+        while (wrapper.firstChild) {
+            node.parentNode.insertBefore(wrapper.firstChild, node);
+        }
+        node.parentNode.removeChild(node);
+        return true;
+    }
+    
+    return false;
+}
+
 function highlightCitations() {
     console.log('🔍 Starting highlightCitations (TreeWalker)...');
+    
+    // Clear previous highlight tracking
+    appliedHighlights.clear();
     
     // 調試：檢查頁面文本中的法條
     const pageText = document.body.textContent || document.body.innerText || '';
@@ -645,7 +712,7 @@ function highlightCitations() {
     } else {
         console.log('🔍 頁面中沒有發現法條引用');
     }
-    const seenNodes = new WeakSet();
+    const seenNodes = globalSeenNodes;
     let created = 0;
 
     function processTextNode(node) {
@@ -727,8 +794,8 @@ function highlightCitations() {
             console.log('🔍 Found matches before filtering:', allMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
         }
 
-        // Remove overlapping matches - simple version
-        const filteredMatches = removeOverlappingMatches(allMatches);
+        // Allow overlapping matches - no filtering
+        const filteredMatches = allMatches;
 
         // Debug: log filtered matches
         if (filteredMatches.length > 0 && filteredMatches.length !== allMatches.length) {
@@ -737,44 +804,8 @@ function highlightCitations() {
 
         if (filteredMatches.length === 0) return;
 
-        // Build HTML in a single pass to avoid corruption
-        let newHTML = '';
-        let lastIndex = 0;
-        let changed = false;
-
-        // Sort matches by start position (forward order)
-        filteredMatches.sort((a, b) => a.start - b.start);
-
-        for (const match of filteredMatches) {
-            // Check if this match is already part of a highlighted element
-            if (isAlreadyHighlighted(node, match.text)) {
-                continue; // Skip this match
-            }
-
-            // Add text before this match
-            newHTML += normalizedText.substring(lastIndex, match.start);
-
-            // Add the highlighted span
-            const highlighted = makeSpan(match.text, match.key, match.groups);
-            newHTML += highlighted;
-
-            // Update position
-            lastIndex = match.end;
-            changed = true;
-        }
-
-        // Add remaining text after last match
-        if (changed) {
-            newHTML += normalizedText.substring(lastIndex);
-        }
-
-        if (changed) {
-            const wrapper = document.createElement('span');
-            wrapper.innerHTML = newHTML;
-            while (wrapper.firstChild) {
-                node.parentNode.insertBefore(wrapper.firstChild, node);
-            }
-            node.parentNode.removeChild(node);
+        // Apply layered highlights instead of creating duplicate text
+        if (applyLayeredHighlights(node, filteredMatches, normalizedText)) {
             created++;
         }
 
@@ -839,7 +870,9 @@ function highlightCitations() {
 // Helper function to highlight citations in a specific element
 function highlightCitationsInElement(element) {
     console.log('🔍 Applying highlighting to element:', element);
-    const seenNodes = new WeakSet();
+    
+    // Note: Don't clear appliedHighlights here since this function may run after highlightCitations
+    const seenNodes = globalSeenNodes;
     let created = 0;
 
     function processTextNode(node) {
@@ -912,8 +945,8 @@ function highlightCitationsInElement(element) {
             console.log('🔍 Found matches before filtering:', allMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
         }
 
-        // Remove overlapping matches - simple version
-        const filteredMatches = removeOverlappingMatches(allMatches);
+        // Allow overlapping matches - no filtering
+        const filteredMatches = allMatches;
 
         // Debug: log filtered matches
         if (filteredMatches.length > 0 && filteredMatches.length !== allMatches.length) {
@@ -922,44 +955,8 @@ function highlightCitationsInElement(element) {
 
         if (filteredMatches.length === 0) return;
 
-        // Build HTML in a single pass to avoid corruption
-        let newHTML = '';
-        let lastIndex = 0;
-        let changed = false;
-
-        // Sort matches by start position (forward order)
-        filteredMatches.sort((a, b) => a.start - b.start);
-
-        for (const match of filteredMatches) {
-            // Check if this match is already part of a highlighted element
-            if (isAlreadyHighlighted(node, match.text)) {
-                continue; // Skip this match
-            }
-
-            // Add text before this match
-            newHTML += normalizedText.substring(lastIndex, match.start);
-
-            // Add the highlighted span
-            const highlighted = makeSpan(match.text, match.key, match.groups);
-            newHTML += highlighted;
-
-            // Update position
-            lastIndex = match.end;
-            changed = true;
-        }
-
-        // Add remaining text after last match
-        if (changed) {
-            newHTML += normalizedText.substring(lastIndex);
-        }
-
-        if (changed) {
-            const wrapper = document.createElement('span');
-            wrapper.innerHTML = newHTML;
-            while (wrapper.firstChild) {
-                node.parentNode.insertBefore(wrapper.firstChild, node);
-            }
-            node.parentNode.removeChild(node);
+        // Apply layered highlights instead of creating duplicate text
+        if (applyLayeredHighlights(node, filteredMatches, normalizedText)) {
             created++;
         }
 
