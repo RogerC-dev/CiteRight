@@ -376,8 +376,8 @@ const CHINESE_NUMBERS = '[0-9０-９一二三四五六七八九十百千萬億�
 const CHINESE_NUMBER_PATTERN = '(?:[0-9０-９]+|[一二三四五六七八九十拾壹貳參肆伍陸柒捌玖拾百佰千仟萬億兆零]+|二十[一二三四五六七八九]?|三十[一二三四五六七八九]?|[一二三四五六七八九]?十[一二三四五六七八九]?)';
 
 const TAIWAN_LEGAL_PATTERNS = {
-    // 司法院大法官解釋: 釋字第748號
-    interpretation: /釋字第\s*([0-9０-９]+)\s*號/g,
+    // 司法院大法官解釋: 釋字第748號, 釋字第二一六號
+    interpretation: new RegExp(`釋字第\\s*(${CHINESE_NUMBER_PATTERN})\\s*號`, 'g'),
 
     // 法律名稱本身的高亮（新增）
     law_name_only: null, // Will be dynamically generated
@@ -387,6 +387,9 @@ const TAIWAN_LEGAL_PATTERNS = {
 
     // 統一法條組合模式: 匹配所有可能的 第X條/項/款/目 組合 (無語境限制) - SIMPLIFIED AND FIXED
     universal_legal_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?|第\\s*(${CHINESE_NUMBER_PATTERN})\\s*([項款目])`, 'g'),
+
+    // Pattern for sub-articles with 之: 第X條之X第X項
+    subarticle_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條之\\s*(${CHINESE_NUMBER_PATTERN})(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?`, 'g'),
 
     // Add a simpler backup pattern for basic articles
     simple_article_only: /第\s*([一二三四五六七八九十百千萬0-9０-９]+)\s*條/g,
@@ -475,7 +478,7 @@ function makeSpan(match, key, groups) {
 
     if (key === 'interpretation') {
         caseType = '釋字';
-        number = toHalfWidthDigits(groups[0]);
+        number = chineseToArabic(toHalfWidthDigits(groups[0]));
     } else if (key === 'law_name_only') {
         const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
         lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
@@ -504,6 +507,21 @@ function makeSpan(match, key, groups) {
         lawName = lastLawName || ''; // Use the last seen law name or empty
         article = chineseToArabic(toHalfWidthDigits(groups[0])); // 條號 - groups[0] is the article number
         paragraph = ''; // 沒有項款目
+        caseType = '法條';
+    } else if (key === 'subarticle_pattern') {
+        // Handle sub-articles with 之: 第271條之1第1項
+        // groups: [0]=article number, [1]=sub-article number, [2]=item, [3]=subsection, [4]=subsubsection
+        lawName = lastLawName || ''; // Use the last seen law name or empty
+        const mainArticle = chineseToArabic(toHalfWidthDigits(groups[0])); // 主條號 (271)
+        const subArticle = chineseToArabic(toHalfWidthDigits(groups[1])); // 子條號 (1)
+        article = `${mainArticle}-${subArticle}`; // 271-1
+        
+        // Build paragraph from remaining groups
+        let paragraphParts = [];
+        if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2]))); // 項
+        if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 款
+        if (groups[4]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[4]))); // 目
+        paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
         caseType = '法條';
     } else if (key === 'universal_legal_pattern') {
         lawName = lastLawName || ''; // Use the last seen law name or empty
@@ -754,6 +772,7 @@ function highlightCitations() {
             'dynamic_law_articles',    // 民法第184條第1項 - specific law + article + subsections
             'simple_law_articles',     // 民法第184條 - specific law + article only
             'law_name_only',          // 民法 - just law names
+            'subarticle_pattern',     // 第271條之1第1項 - sub-articles with 之
             'universal_legal_pattern', // 第184條, 第四條 - generic articles with complex structure
             'simple_article_only'      // 第四條 - simple standalone articles (fallback)
         ];
@@ -905,6 +924,7 @@ function highlightCitationsInElement(element) {
             'dynamic_law_articles',    // 民法第184條第1項 - specific law + article + subsections
             'simple_law_articles',     // 民法第184條 - specific law + article only
             'law_name_only',          // 民法 - just law names
+            'subarticle_pattern',     // 第271條之1第1項 - sub-articles with 之
             'universal_legal_pattern', // 第184條, 第四條 - generic articles with complex structure
             'simple_article_only'      // 第四條 - simple standalone articles (fallback)
         ];
