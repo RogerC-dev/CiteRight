@@ -5,6 +5,41 @@ const { asyncHandler, ApiError } = require('../middleware/errorHandler');
 
 /**
  * @swagger
+ * /api/laws:
+ *   get:
+ *     summary: Get all laws names
+ *     description: Retrieve a list of all laws names
+ *     responses:
+ *       200:
+ *         description: A list of laws names
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ */
+router.get('/', asyncHandler(async (req, res) => {
+    if (!database.isConnected()) {
+        throw new ApiError(503, 'Database not connected');
+    }
+    const [rows] = await database.query(`
+        SELECT DISTINCT LawName FROM Law ORDER BY LawName
+    `);
+    res.json({
+        success: true,
+        data: rows.map(row => row.LawName)
+    });
+}));
+
+
+/**
+ * @swagger
  * /api/laws/search:
  *   get:
  *     summary: Search laws

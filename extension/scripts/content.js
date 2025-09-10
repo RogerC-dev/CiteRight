@@ -1,7 +1,7 @@
 // content.js - 台灣法源探測器 (CiteRight)
 // 整合台灣法律資料庫，支援法條、釋字、判決自動識別
 
-// 內嵌必要的函數以避免ES6模組問題
+const API_BASE_URL = 'http://localhost:3000';
 
 /**
  * 動態產生法條搜尋的正規表示式
@@ -280,15 +280,7 @@ function generateDynamicPatterns(legalNamesArray) {
         'g'
     );
 
-    console.log('✅ 動態生成法律模式完成，涵蓋', legalNamesArray.length, '個法律名稱 +', Object.keys(LAW_ALIASES).length, '個別名');
-    
-    // 調試：顯示一些別名對應的例子
-    const aliasExamples = ['憲法', '民法', '刑法', '集會遊行法', '消保法', '個資法'].map(alias => {
-        const standard = findStandardLawName(alias);
-        return `${alias} → ${standard}`;
-    });
-    console.log('📋 別名對應示例:', aliasExamples.join(', '));
-    
+    console.log('動態生成法律模式完成，涵蓋', legalNamesArray.length, '個法律名稱 +', Object.keys(LAW_ALIASES).length, '個別名');
 }
 
 // 暴露給全域以便調试
@@ -303,9 +295,9 @@ if (typeof window !== 'undefined') {
 // 使用fetch異步載入Law.json
 (async function initializeLegalData() {
     try {
-        const response = await fetch(chrome.runtime.getURL('scripts/Law.json'));
+        const response = await fetch(API_BASE_URL + '/api/laws');
         const legalNamesData = await response.json();
-        legalNames = loadLegalNamesFromJson(legalNamesData);
+        legalNames = legalNamesData.data;
         dynamicLegalArticleRegex = generateLegalArticleRegex(legalNames, {
             caseSensitive: false,
             matchWholeWord: false,
@@ -317,7 +309,7 @@ if (typeof window !== 'undefined') {
         // 動態生成額外的法律模式
         generateDynamicPatterns(legalNames);
         
-        console.log('✅ 法律資料載入完成，共', legalNames.length, '個法律名稱');
+        console.log('法律資料載入完成，共', legalNames.length, '個法律名稱');
         
         // 法律資料載入完成後，重新執行 highlighting
         if (document.readyState === 'loading') {
@@ -328,44 +320,9 @@ if (typeof window !== 'undefined') {
             setTimeout(() => highlightCitations(), 100);
         }
     } catch (error) {
-        console.error('❌ 載入法律資料失敗:', error);
-        // 使用fallback資料 - 添加基本法律名稱
-        legalNames = [
-            // 基本憲法
-            '中華民國憲法', '憲法', '憲法增修條文',
-            // 基本民刑法
-            '民法', '中華民國刑法', '刑法',
-            // 程序法
-            '行政程序法', '民事訴訟法', '刑事訴訟法', '行政訴訟法',
-            // 常見特別法
-            '集會遊行法', '公司法', '勞動基準法', '勞基法',
-            '消費者保護法', '消保法', '個人資料保護法', '個資法',
-            '所得稅法', '營業稅法', '土地法', '建築法',
-            '著作權法', '專利法', '商標法', '公平交易法',
-            // 行政相關
-            '國家安全法', '社會秩序維護法', '警察法',
-            '都市計畫法', '環境保護法', '文化資產保存法'
-        ];
-        dynamicLegalArticleRegex = generateLegalArticleRegex(legalNames, {
-            caseSensitive: false,
-            matchWholeWord: false,
-            captureGroups: true,
-            allowSpaces: true,
-            supportSubsections: true
-        });
-        
-        // 為fallback資料也生成動態模式
-        generateDynamicPatterns(legalNames);
-        console.log('⚠️ 使用預設法律資料');
-        
-        // 預設資料載入完成後，重新執行 highlighting
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                setTimeout(() => highlightCitations(), 100);
-            });
-        } else {
-            setTimeout(() => highlightCitations(), 100);
-        }
+        console.error('載入法律資料失敗:', error);
+        alert('載入法律資料失敗，請檢查伺服器是否運行。');
+        return;
     }
 })();
 
@@ -376,28 +333,30 @@ const CHINESE_NUMBERS = '[0-9０-９一二三四五六七八九十百千萬億�
 const CHINESE_NUMBER_PATTERN = '(?:[0-9０-９]+|[一二三四五六七八九十拾壹貳參肆伍陸柒捌玖拾百佰千仟萬億兆零]+|二十[一二三四五六七八九]?|三十[一二三四五六七八九]?|[一二三四五六七八九]?十[一二三四五六七八九]?)';
 
 const TAIWAN_LEGAL_PATTERNS = {
-    // 司法院大法官解釋: 釋字第748號, 釋字第二一六號
+    // 司法院大法官解釋: 釋字第748號, 釋字第二一六號 - most specific, process first
     interpretation: new RegExp(`釋字第\\s*(${CHINESE_NUMBER_PATTERN})\\s*號`, 'g'),
 
-    // 法律名稱本身的高亮（新增）
+    // 民法第184條第1項 - specific law + article + subsections (dynamically generated)
+    dynamic_law_articles: null, // Will be dynamically generated
+
+    // 民法第184條 - specific law + article only (dynamically generated)
+    simple_law_articles: null, // Will be dynamically generated
+
+    // 民法 - just law names (dynamically generated)
     law_name_only: null, // Will be dynamically generated
 
-    // 法條引用: 使用動態生成的正規表示式，支援從Law.json載入的所有法律名稱
-    law_article: null,
-
-    // 統一法條組合模式: 匹配所有可能的 第X條/項/款/目 組合 (無語境限制) - SIMPLIFIED AND FIXED
-    universal_legal_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?|第\\s*(${CHINESE_NUMBER_PATTERN})\\s*([項款目])`, 'g'),
-
-    // Pattern for sub-articles with 之: 第X條之X第X項
+    // 第271條之1第1項 - sub-articles with 之: 第X條之X第X項
     subarticle_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條之\\s*(${CHINESE_NUMBER_PATTERN})(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?`, 'g'),
 
-    // Add a simpler backup pattern for basic articles
-    simple_article_only: /第\s*([一二三四五六七八九十百千萬0-9０-９]+)\s*條/g,
-};
+    // 第184條, 第四條 - generic articles with complex structure - 統一法條組合模式: 匹配所有可能的 第X條/項/款/目 組合 (無語境限制)
+    universal_legal_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?|第\\s*(${CHINESE_NUMBER_PATTERN})\\s*([項款目])`, 'g'),
 
-// 調試：檢查模式創建
-console.log('🔍 CHINESE_NUMBER_PATTERN:', CHINESE_NUMBER_PATTERN);
-console.log('🔍 universal_legal_pattern:', TAIWAN_LEGAL_PATTERNS.universal_legal_pattern);
+    // 第四條 - simple standalone articles (fallback)
+    simple_article_only: /第\s*([一二三四五六七八九十百千萬0-9０-９]+)\s*條/g,
+
+    // 法條引用: 使用動態生成的正規表示式，支援從資料庫載入的所有法律名稱 (legacy, not used in processingOrder)
+    law_article: null,
+};
 
 function toHalfWidthDigits(str) {
     return str.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFF10 + 0x30));
@@ -575,7 +534,6 @@ function makeSpan(match, key, groups) {
                 data-legal-type="${escapeHtml(key)}"
                 style="background-color: rgba(24, 144, 255, 0.08) !important; border-bottom: 1px solid rgba(24, 144, 255, 0.3) !important; padding: 1px 2px !important; border-radius: 2px !important; cursor: pointer !important;"
                 title="按住 Ctrl 並移動滑鼠查看詳情">${escapeMatch(match)}</span>`;
-    console.log('🎨 生成的高亮HTML:', result);
     return result;
 }
 
@@ -651,8 +609,6 @@ function removeOverlappingMatches(matches) {
 // Global set to track processed nodes across all highlighting functions
 const globalSeenNodes = new WeakSet();
 
-// Global set to track applied highlights by position and text to prevent exact duplicates
-const appliedHighlights = new Set();
 
 // Function to apply highlights with proper overlap handling
 function applyLayeredHighlights(node, matches, normalizedText) {
@@ -717,180 +673,14 @@ function applyLayeredHighlights(node, matches, normalizedText) {
 }
 
 function highlightCitations() {
-    console.log('🔍 Starting highlightCitations (TreeWalker)...');
-    
-    // Clear previous highlight tracking
-    appliedHighlights.clear();
-    
-    // 調試：檢查頁面文本中的法條
-    const pageText = document.body.textContent || document.body.innerText || '';
-    const legalRefs = pageText.match(/第[一二三四五六七八九十\d]+條/g);
-    if (legalRefs) {
-        console.log('🔍 頁面中發現的法條引用:', legalRefs.slice(0, 10)); // 只顯示前10個
-    } else {
-        console.log('🔍 頁面中沒有發現法條引用');
-    }
-    const seenNodes = globalSeenNodes;
-    let created = 0;
-
-    function processTextNode(node) {
-        if (seenNodes.has(node)) return;
-        if (!node.parentNode) return;
-        // Skip inside our own spans or script/style/inputs
-        const parentTag = node.parentNode.tagName;
-        if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA' || parentTag === 'INPUT') return;
-        if (node.parentNode.closest && node.parentNode.closest('.citeright-link')) return;
-
-        // Skip bookmark panel content completely, but allow side panel content with legal highlighting
-        if (node.parentNode.closest && node.parentNode.closest('#citeright-bookmarks-panel')) return;
-
-        // Skip side panel headers (blue title column) but allow content area
-        const sidePanelHeader = node.parentNode.closest && node.parentNode.closest('#citeright-sidepanel > div:first-child');
-        if (sidePanelHeader) return;
-
-        // Skip any elements with blue background (title columns)
-        const hasBlueBackground = node.parentNode.closest && node.parentNode.closest('[style*="background: linear-gradient(135deg, #1890ff"]');
-        if (hasBlueBackground) return;
-
-        // Allow highlighting in legal content areas of side panel
-        const isInLegalContentArea = node.parentNode.closest && node.parentNode.closest('.legal-content-area');
-        const isInSidepanelContent = node.parentNode.closest && node.parentNode.closest('#sidepanel-content');
-        if (isInLegalContentArea || isInSidepanelContent) {
-            // Continue with highlighting for legal content
-        }
-        const original = node.textContent;
-        if (!original || !original.trim()) return;
-
-        const normalizedText = original;
-
-        // Find all potential matches first
-        const allMatches = [];
-
-        // IMPROVED processing order - standalone articles should be processed last to avoid conflicts
-        const processingOrder = [
-            'interpretation',          // 釋字第748號 - most specific, process first
-            'dynamic_law_articles',    // 民法第184條第1項 - specific law + article + subsections
-            'simple_law_articles',     // 民法第184條 - specific law + article only
-            'law_name_only',          // 民法 - just law names
-            'subarticle_pattern',     // 第271條之1第1項 - sub-articles with 之
-            'universal_legal_pattern', // 第184條, 第四條 - generic articles with complex structure
-            'simple_article_only'      // 第四條 - simple standalone articles (fallback)
-        ];
-
-        // Debug: log which patterns are available
-        console.log('🔍 Available patterns:', Object.keys(TAIWAN_LEGAL_PATTERNS).filter(k => TAIWAN_LEGAL_PATTERNS[k]));
-
-        for (const key of processingOrder) {
-            const pattern = TAIWAN_LEGAL_PATTERNS[key];
-            if (!pattern) {
-                console.log(`⚠️ Pattern ${key} not available`);
-                continue;
-            }
-
-            let actualPattern = new RegExp(pattern.source, pattern.flags);
-
-            let match;
-            while ((match = actualPattern.exec(normalizedText)) !== null) {
-                const matchText = match[0];
-
-                // Debug: log each match found
-                console.log(`🎯 Found ${key} match: "${matchText}" at position ${match.index}-${match.index + matchText.length}`);
-
-                allMatches.push({
-                    text: matchText,
-                    start: match.index,
-                    end: match.index + matchText.length,
-                    key: key,
-                    groups: Array.from(match).slice(1)
-                });
-                // Prevent infinite loop on global regex
-                if (!actualPattern.global) break;
-            }
-        }
-
-        // Debug: log all matches before filtering
-        if (allMatches.length > 0) {
-            console.log('🔍 Found matches before filtering:', allMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
-        }
-
-        // Allow overlapping matches - no filtering
-        const filteredMatches = allMatches;
-
-        // Debug: log filtered matches
-        if (filteredMatches.length > 0 && filteredMatches.length !== allMatches.length) {
-            console.log('⚠️ After filtering:', filteredMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
-        }
-
-        if (filteredMatches.length === 0) return;
-
-        // Apply layered highlights instead of creating duplicate text
-        if (applyLayeredHighlights(node, filteredMatches, normalizedText)) {
-            created++;
-        }
-
-        seenNodes.add(node);
-    }
-
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-        acceptNode(node) {
-            if (!node.textContent || !/[字號釋憲判第度年]/.test(node.textContent)) return NodeFilter.FILTER_REJECT;
-            
-            // 調試：記錄包含"第四條"的節點
-            if (node.textContent.includes('第四條')) {
-                console.log('🔍 找到包含"第四條"的文本節點:', node.textContent.substring(0, 100) + '...');
-            }
-            
-            return NodeFilter.FILTER_ACCEPT;
-        }
-    });
-
-    const batch = [];
-    while (walker.nextNode()) {
-        batch.push(walker.currentNode);
-        if (batch.length >= 500) {
-            batch.forEach(processTextNode);
-            batch.length = 0;
-        }
-    }
-    if (batch.length) batch.forEach(processTextNode);
-
-    const finalCount = document.querySelectorAll('.citeright-link').length;
-    if (finalCount === 0) {
-        console.warn('❌ 未檢測到法律引用標示。請檢查擴充套件是否已重新載入 / 或目前頁面無法律引用');
-    } else {
-        console.log(`✅ 法律引用偵測完成。找到 ${finalCount} 個法律引用標示 (本次新增: ${created})`);
-        
-        // 調試：統計各種模式的匹配次數
-        const patternStats = {};
-        document.querySelectorAll('.citeright-link').forEach(link => {
-            const type = link.getAttribute('data-legal-type') || 'unknown';
-            patternStats[type] = (patternStats[type] || 0) + 1;
-        });
-        console.log('📊 法條類型統計:', patternStats);
-        
-        // 調試：檢查頁面是否包含"第四條"
-        const pageText = document.body.textContent || document.body.innerText || '';
-        if (pageText.includes('第四條')) {
-            console.log('🔍 頁面包含"第四條"文字，但可能沒被標記');
-            // 檢查是否有被標記
-            const markedFourth = Array.from(document.querySelectorAll('.citeright-link')).find(link => 
-                link.textContent.includes('第四條')
-            );
-            if (markedFourth) {
-                console.log('✅ 找到標記的第四條:', markedFourth.textContent);
-            } else {
-                console.log('❌ 第四條沒有被標記');
-            }
-        }
-    }
-    return finalCount;
+    console.log('全頁面標記法條引用開始');
+    return highlightCitationsInElement(document.body);
 }
 
 // Helper function to highlight citations in a specific element
 function highlightCitationsInElement(element) {
     console.log('🔍 Applying highlighting to element:', element);
     
-    // Note: Don't clear appliedHighlights here since this function may run after highlightCitations
     const seenNodes = globalSeenNodes;
     let created = 0;
 
@@ -918,21 +708,11 @@ function highlightCitationsInElement(element) {
         // Find all potential matches first
         const allMatches = [];
 
-        // IMPROVED processing order - standalone articles should be processed last to avoid conflicts
-        const processingOrder = [
-            'interpretation',          // 釋字第748號 - most specific, process first
-            'dynamic_law_articles',    // 民法第184條第1項 - specific law + article + subsections
-            'simple_law_articles',     // 民法第184條 - specific law + article only
-            'law_name_only',          // 民法 - just law names
-            'subarticle_pattern',     // 第271條之1第1項 - sub-articles with 之
-            'universal_legal_pattern', // 第184條, 第四條 - generic articles with complex structure
-            'simple_article_only'      // 第四條 - simple standalone articles (fallback)
-        ];
-
         // Debug: log which patterns are available
         console.log('🔍 Available patterns:', Object.keys(TAIWAN_LEGAL_PATTERNS).filter(k => TAIWAN_LEGAL_PATTERNS[k]));
 
-        for (const key of processingOrder) {
+        // Process patterns in the order defined in TAIWAN_LEGAL_PATTERNS object
+        for (const key of Object.keys(TAIWAN_LEGAL_PATTERNS)) {
             const pattern = TAIWAN_LEGAL_PATTERNS[key];
             if (!pattern) {
                 console.log(`⚠️ Pattern ${key} not available`);
@@ -1001,32 +781,11 @@ function highlightCitationsInElement(element) {
     return created;
 }
 
-// Get current session statistics
-function getSessionStats() {
-    const stats = {
-        hoverCounts: Object.fromEntries(sessionLawCount),
-        currentlyActive: activePopupLaw,
-        currentlyHovered: currentHoveredLaw
-    };
-    console.log('📈 Session Statistics:', stats);
-    return stats;
-}
-
-// Reset session data
-function resetSessionData() {
-    sessionLawCount.clear();
-    activePopupLaw = null;
-    currentHoveredLaw = null;
-    popover.style.display = 'none';
-    console.log('🔄 Reset session data');
-}
 
 // Expose for manual debug
 if (typeof window !== 'undefined') {
     window.citerightForceHighlight = highlightCitations;
     window.citerightHighlightElement = highlightCitationsInElement;
-    window.citerightSessionStats = getSessionStats;
-    window.citerightResetSession = resetSessionData;
 }
 
 function createPopoverElement() {
@@ -1144,7 +903,6 @@ let showTimeout;              // Delay before showing popover
 let currentHoveredLaw = null; // Track currently hovered law to prevent duplicates
 let activePopupLaw = null;    // Track law currently shown in popup to prevent duplicates
 let popupCooldown = false;    // Prevent rapid popup opening
-let sessionLawCount = new Map(); // Count how many times each law has been hovered
 
 // Enhanced state management for better UX
 let isCtrlPressed = false;    // Current Ctrl key state
