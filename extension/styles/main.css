@@ -23,31 +23,26 @@
   transition: all 0.2s ease;
 }
 
-/* Modern CiteRight link styling - Enhanced specificity */
+/* Modern CiteRight link styling - Light transparent highlighting */
 span.citeright-link,
 .citeright-link {
-    background-color: #e6f7ff !important;
-    border: 1px solid #1890ff !important;
-    border-bottom: 2px solid #1890ff !important;
+    background-color: rgba(24, 144, 255, 0.08) !important; /* Very light blue background */
+    border-bottom: 1px solid rgba(24, 144, 255, 0.3) !important; /* Subtle underline */
     cursor: pointer !important;
     transition: all 0.2s ease !important;
-    padding: 2px 4px !important;
-    border-radius: 3px !important;
-    color: #1890ff !important;
+    padding: 1px 2px !important;
+    border-radius: 2px !important;
     text-decoration: none !important;
-    font-weight: 500 !important;
-    box-shadow: 0 1px 3px rgba(24, 144, 255, 0.2) !important;
+    /* Preserve original text color - no color override */
     display: inline !important;
     position: relative !important;
-    z-index: 1000 !important;
+    box-shadow: none !important; /* Remove shadow for subtlety */
 }
 
 span.citeright-link:hover,
 .citeright-link:hover {
-    background-color: #bae7ff !important;
-    border: 1px solid #40a9ff !important;
-    border-bottom: 2px solid #40a9ff !important;
-    box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3) !important;
+    background-color: rgba(24, 144, 255, 0.15) !important; /* Slightly more visible on hover */
+    border-bottom: 1px solid rgba(24, 144, 255, 0.6) !important; /* More visible underline */
 }
 
 /* Popover main container */

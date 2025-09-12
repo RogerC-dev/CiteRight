@@ -5,6 +5,41 @@ const { asyncHandler, ApiError } = require('../middleware/errorHandler');
 
 /**
  * @swagger
+ * /api/laws:
+ *   get:
+ *     summary: Get all laws names
+ *     description: Retrieve a list of all laws names
+ *     responses:
+ *       200:
+ *         description: A list of laws names
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ */
+router.get('/', asyncHandler(async (req, res) => {
+    if (!database.isConnected()) {
+        throw new ApiError(503, 'Database not connected');
+    }
+    const [rows] = await database.query(`
+        SELECT DISTINCT LawName FROM Law ORDER BY LawName
+    `);
+    res.json({
+        success: true,
+        data: rows.map(row => row.LawName)
+    });
+}));
+
+
+/**
+ * @swagger
  * /api/laws/search:
  *   get:
  *     summary: Search laws
@@ -146,23 +181,22 @@ router.get('/:lawLevel/:lawName', asyncHandler(async (req, res) => {
     }
     
     // Get captions and articles for this law
-    const [captionRows] = await database.query(
-        `SELECT lc.Id, lc.CaptionTitle, la.ArticleNo, la.ArticleContent
-         FROM LawCaption lc
-         LEFT JOIN LawArticle la ON lc.Id = la.CaptionId
-         WHERE lc.LawLevel = ? AND lc.LawName = ?
-         ORDER BY lc.Id, la.Id`,
+    const [[articles]] = await database.query(
+        `SELECT JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'CaptionTitle', c.CaptionTitle,
+                    'ArticleNo', a.ArticleNo,
+                    'Article', a.ArticleContent
+                ) 
+            ) AS Articles FROM LawArticle a 
+                    LEFT JOIN LawCaption c ON c.Id = a.CaptionId
+                WHERE a.LawLevel = ? 
+                  AND a.LawName = ?
+            `,
         [lawLevel, decodeURIComponent(lawName)]
     );
-    
-    console.log(`✅ Found law with ${captionRows.length} caption entries`);
-    
-    res.json({
-        success: true,
-        law: lawRows[0],
-        captions: captionRows,
-        captionCount: captionRows.length
-    });
+    lawRows[0].Articles = JSON.parse(articles.Articles)
+    res.json(lawRows[0]);
 }));
 
 module.exports = router;

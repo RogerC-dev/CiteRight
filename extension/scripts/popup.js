@@ -60,22 +60,28 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function toggleExtension() {
-    console.log('Toggle clicked, current state:', isEnabled);
+    console.log('🔄 Toggle clicked, current state:', isEnabled);
     isEnabled = !isEnabled;
+    console.log('🔄 New state:', isEnabled ? 'ENABLED' : 'DISABLED');
     updateUI();
     saveExtensionState();
     
     // Send global enable state change to background script
     if (isExtensionContext) {
         try {
+            console.log('📤 Sending global toggle to background script...');
             chrome.runtime.sendMessage({
                 action: 'GLOBAL_TOGGLE_ENABLE_STATE',
                 enabled: isEnabled
             }, (response) => {
-                console.log('Global toggle response:', response);
+                if (chrome.runtime.lastError) {
+                    console.error('❌ Background script error:', chrome.runtime.lastError);
+                } else {
+                    console.log('✅ Global toggle response:', response);
+                }
             });
         } catch (e) {
-            console.log('Error sending to background:', e);
+            console.error('❌ Error sending to background:', e);
         }
     } else {
         console.log('Not in extension context - background message skipped');
@@ -86,19 +92,23 @@ function toggleExtension() {
         try {
             chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
                 if (tabs && tabs[0]) {
+                    console.log('📤 Sending toggle message to content script on tab:', tabs[0].id);
                     chrome.tabs.sendMessage(tabs[0].id, {
                         action: 'toggleExtension',
                         enabled: isEnabled
                     }, (response) => {
-                        console.log('Content script response:', response);
+                        if (chrome.runtime.lastError) {
+                            console.error('❌ Content script error:', chrome.runtime.lastError);
+                        } else {
+                            console.log('✅ Content script response:', response);
+                        }
                     });
-                    console.log('Message sent to content script');
                 } else {
-                    console.log('No active tab found');
+                    console.log('❌ No active tab found for toggle');
                 }
             });
         } catch (e) {
-            console.log('Error sending to content script:', e);
+            console.error('❌ Error sending to content script:', e);
         }
     } else {
         // For testing without extension context
@@ -114,21 +124,30 @@ function toggleExtension() {
 }
 
 function openSettings() {
-    console.log('Settings button clicked');
+    console.log('⚙️ Settings button clicked');
     if (isExtensionContext) {
         try {
+            const settingsUrl = chrome.runtime.getURL('extension/pages/index.html');
+            console.log('📤 Opening settings URL:', settingsUrl);
+            
             // Open index.html in new tab (extension context)
             chrome.tabs.create({ 
-                url: chrome.runtime.getURL('pages/index.html') 
+                url: settingsUrl 
+            }, (tab) => {
+                if (chrome.runtime.lastError) {
+                    console.error('❌ Error creating settings tab:', chrome.runtime.lastError);
+                    alert('無法開啟設定頁面。請確認擴充功能正常運行。');
+                } else {
+                    console.log('✅ Settings tab created:', tab.id);
+                }
             });
-            console.log('Opening settings via chrome.tabs.create');
             
             // Close popup after action
             if (typeof window.close === 'function') {
-                setTimeout(() => window.close(), 100);
+                setTimeout(() => window.close(), 200);
             }
         } catch (e) {
-            console.log('Error opening settings:', e);
+            console.error('❌ Error in openSettings:', e);
             alert('無法開啟設定頁面。請確認 index.html 檔案存在。');
         }
     } else {
@@ -139,29 +158,35 @@ function openSettings() {
 }
 
 function openBookmarks() {
-    console.log('Bookmarks button clicked');
+    console.log('📚 Bookmarks button clicked');
     if (isExtensionContext) {
         try {
             // Send message to content script to open bookmarks
             chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
                 if (tabs && tabs[0]) {
+                    console.log('📤 Sending openBookmarks message to tab:', tabs[0].id);
                     chrome.tabs.sendMessage(tabs[0].id, {
                         action: 'openBookmarks'
                     }, (response) => {
-                        console.log('Bookmarks response:', response);
+                        if (chrome.runtime.lastError) {
+                            console.error('❌ Error sending bookmarks message:', chrome.runtime.lastError);
+                            alert('無法開啟書籤面板。請重新載入頁面後再試。');
+                        } else {
+                            console.log('✅ Bookmarks response:', response);
+                        }
                     });
-                    console.log('Bookmarks message sent to content script');
                 } else {
-                    console.log('No active tab for bookmarks');
+                    console.log('❌ No active tab found for bookmarks');
+                    alert('無法找到活躍的分頁。請確認您在正確的頁面上。');
                 }
             });
             
             // Close popup after action
             if (typeof window.close === 'function') {
-                setTimeout(() => window.close(), 100);
+                setTimeout(() => window.close(), 300); // Increased delay
             }
         } catch (e) {
-            console.log('Error opening bookmarks:', e);
+            console.error('❌ Error in openBookmarks:', e);
             alert('無法開啟書籤面板。請確認擴充功能正常運行。');
         }
     } else {

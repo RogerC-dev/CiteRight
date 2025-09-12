@@ -1,7 +1,7 @@
 // content.js - 台灣法源探測器 (CiteRight)
 // 整合台灣法律資料庫，支援法條、釋字、判決自動識別
 
-// 內嵌必要的函數以避免ES6模組問題
+const API_BASE_URL = 'http://localhost:3000';
 
 /**
  * 動態產生法條搜尋的正規表示式
@@ -116,6 +116,14 @@ const LAW_ALIASES = {
     '建築法': ['建築法'],
     '環保法': ['環境保護法'],
     
+    // 大法官相關法律 (新增)
+    '大法官審理案件法': ['司法院大法官審理案件法'],
+    '司法院大法官審理案件法施行細則': ['司法院大法官審理案件法施行細則'],
+
+    // 國安相關法律 (新增)
+    '國家安全法': ['國家安全法'],
+    '社會秩序維護法': ['社會秩序維護法'],
+
     // 其他常見別名
     '著作權法': ['著作權法'],
     '專利法': ['專利法'],
@@ -272,18 +280,10 @@ function generateDynamicPatterns(legalNamesArray) {
         'g'
     );
 
-    console.log('✅ 動態生成法律模式完成，涵蓋', legalNamesArray.length, '個法律名稱 +', Object.keys(LAW_ALIASES).length, '個別名');
-    
-    // 調試：顯示一些別名對應的例子
-    const aliasExamples = ['憲法', '民法', '刑法', '集會遊行法', '消保法', '個資法'].map(alias => {
-        const standard = findStandardLawName(alias);
-        return `${alias} → ${standard}`;
-    });
-    console.log('📋 別名對應示例:', aliasExamples.join(', '));
-    
+    console.log('動態生成法律模式完成，涵蓋', legalNamesArray.length, '個法律名稱 +', Object.keys(LAW_ALIASES).length, '個別名');
 }
 
-// 暴露給全域以便調試
+// 暴露給全域以便調试
 if (typeof window !== 'undefined') {
     window.debugLawAliases = function() {
         console.log('🔍 法律別名字典:', LAW_ALIASES);
@@ -295,9 +295,9 @@ if (typeof window !== 'undefined') {
 // 使用fetch異步載入Law.json
 (async function initializeLegalData() {
     try {
-        const response = await fetch(chrome.runtime.getURL('scripts/Law.json'));
+        const response = await fetch(API_BASE_URL + '/api/laws');
         const legalNamesData = await response.json();
-        legalNames = loadLegalNamesFromJson(legalNamesData);
+        legalNames = legalNamesData.data;
         dynamicLegalArticleRegex = generateLegalArticleRegex(legalNames, {
             caseSensitive: false,
             matchWholeWord: false,
@@ -309,66 +309,59 @@ if (typeof window !== 'undefined') {
         // 動態生成額外的法律模式
         generateDynamicPatterns(legalNames);
         
-        console.log('✅ 法律資料載入完成，共', legalNames.length, '個法律名稱');
+        console.log('法律資料載入完成，共', legalNames.length, '個法律名稱');
         
-        // 法律資料載入完成後，重新執行 highlighting
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
+        // 法律資料載入完成後，重新執行 highlighting (only if extension is enabled)
+        if (isExtensionEnabled) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    setTimeout(() => highlightCitations(), 100);
+                });
+            } else {
                 setTimeout(() => highlightCitations(), 100);
-            });
-        } else {
-            setTimeout(() => highlightCitations(), 100);
+            }
         }
     } catch (error) {
-        console.error('❌ 載入法律資料失敗:', error);
-        // 使用fallback資料
-        legalNames = ['中華民國憲法', '憲法增修條文', '民法', '中華民國刑法', '行政程序法', '民事訴訟法', '刑事訴訟法', '集會遊行法', '公司法', '勞動基準法', '消費者保護法', '個人資料保護法'];
-        dynamicLegalArticleRegex = generateLegalArticleRegex(legalNames, {
-            caseSensitive: false,
-            matchWholeWord: false,
-            captureGroups: true,
-            allowSpaces: true,
-            supportSubsections: true
-        });
-        
-        // 為fallback資料也生成動態模式
-        generateDynamicPatterns(legalNames);
-        console.log('⚠️ 使用預設法律資料');
-        
-        // 預設資料載入完成後，重新執行 highlighting
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                setTimeout(() => highlightCitations(), 100);
-            });
-        } else {
-            setTimeout(() => highlightCitations(), 100);
+        console.error('載入法律資料失敗:', error);
+        // Only show alert if extension is enabled
+        if (isExtensionEnabled) {
+            alert('載入法律資料失敗，請檢查伺服器是否運行。');
         }
+        return;
     }
 })();
 
 // 統一的中文數字字符集 - 擴展以支援更複雜的數字組合
 const CHINESE_NUMBERS = '[0-9０-９一二三四五六七八九十百千萬億兆零壹貳參肆伍陸柒捌玖拾佰仟萬憶]';
 
-// 更精確的中文數字模式，支援十以上的數字
-const CHINESE_NUMBER_PATTERN = '(?:[0-9０-９]+|[一二三四五六七八九十拾壹貳參肆伍陸柒捌玖拾百佰千仟萬]+)';
+// 更精確的中文數字模式，支援十以上的數字 - FIXED VERSION
+const CHINESE_NUMBER_PATTERN = '(?:[0-9０-９]+|[一二三四五六七八九十拾壹貳參肆伍陸柒捌玖拾百佰千仟萬億兆零]+|二十[一二三四五六七八九]?|三十[一二三四五六七八九]?|[一二三四五六七八九]?十[一二三四五六七八九]?)';
 
 const TAIWAN_LEGAL_PATTERNS = {
-    // 司法院大法官解釋: 釋字第748號
-    interpretation: /釋字第\s*([0-9０-９]+)\s*號/g,
+    // 司法院大法官解釋: 釋字第748號, 釋字第二一六號 - most specific, process first
+    interpretation: new RegExp(`釋字第\\s*(${CHINESE_NUMBER_PATTERN})\\s*號`, 'g'),
 
-    // 法律名稱本身的高亮（新增）
+    // 民法第184條第1項 - specific law + article + subsections (dynamically generated)
+    dynamic_law_articles: null, // Will be dynamically generated
+
+    // 民法第184條 - specific law + article only (dynamically generated)
+    simple_law_articles: null, // Will be dynamically generated
+
+    // 民法 - just law names (dynamically generated)
     law_name_only: null, // Will be dynamically generated
 
-    // 法條引用: 使用動態生成的正規表示式，支援從Law.json載入的所有法律名稱
+    // 第271條之1第1項 - sub-articles with 之: 第X條之X第X項
+    subarticle_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條之\\s*(${CHINESE_NUMBER_PATTERN})(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?`, 'g'),
+
+    // 第184條, 第四條 - generic articles with complex structure - 統一法條組合模式: 匹配所有可能的 第X條/項/款/目 組合 (無語境限制)
+    universal_legal_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?|第\\s*(${CHINESE_NUMBER_PATTERN})\\s*([項款目])`, 'g'),
+
+    // 第四條 - simple standalone articles (fallback)
+    simple_article_only: /第\s*([一二三四五六七八九十百千萬0-9０-９]+)\s*條/g,
+
+    // 法條引用: 使用動態生成的正規表示式，支援從資料庫載入的所有法律名稱 (legacy, not used in processingOrder)
     law_article: null,
-
-    // 統一法條組合模式: 匹配所有可能的 第X條/項/款/目 組合 (無語境限制)
-    universal_legal_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(條)(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(項))?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(款))?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*(目))?|第\\s*(${CHINESE_NUMBER_PATTERN})\\s*([項款目])`, 'g'),
 };
-
-// 調試：檢查模式創建
-console.log('🔍 CHINESE_NUMBER_PATTERN:', CHINESE_NUMBER_PATTERN);
-console.log('🔍 universal_legal_pattern:', TAIWAN_LEGAL_PATTERNS.universal_legal_pattern);
 
 function toHalfWidthDigits(str) {
     return str.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFF10 + 0x30));
@@ -444,6 +437,111 @@ function chineseToArabic(str) {
 // Context tracking for mixed law references
 let lastLawName = '';
 
+function makeSpan(match, key, groups) {
+    let year = '', caseType = '', number = '', lawName = '', article = '', paragraph = '';
+
+    if (key === 'interpretation') {
+        caseType = '釋字';
+        number = chineseToArabic(toHalfWidthDigits(groups[0]));
+    } else if (key === 'law_name_only') {
+        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
+        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
+        lastLawName = lawName; // Store for mixed references
+        caseType = '法律名稱';
+        article = ''; // No article for law name only
+        paragraph = '';
+    } else if (key === 'dynamic_law_articles') {
+        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
+        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
+        lastLawName = lawName; // Store for mixed references
+        article = chineseToArabic(toHalfWidthDigits(groups[1])); // 184、271條之1、一八四、三百二十
+        // Build paragraph from multiple groups
+        let paragraphParts = [];
+        if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2]))); // 項
+        if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 款
+        if (groups[4]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[4]))); // 目
+        paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
+        caseType = '法條';
+    } else if (key === 'simple_law_articles') {
+        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
+        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
+        lastLawName = lawName; // Store for mixed references
+        // For simple_article_only pattern: /第\s*([一二三四五六七八九十百千萬0-9０-９]+)\s*條/g
+        // groups[0] is the article number, not the law name
+        lawName = lastLawName || ''; // Use the last seen law name or empty
+        article = chineseToArabic(toHalfWidthDigits(groups[0])); // 條號 - groups[0] is the article number
+        paragraph = ''; // 沒有項款目
+        caseType = '法條';
+    } else if (key === 'subarticle_pattern') {
+        // Handle sub-articles with 之: 第271條之1第1項
+        // groups: [0]=article number, [1]=sub-article number, [2]=item, [3]=subsection, [4]=subsubsection
+        lawName = lastLawName || ''; // Use the last seen law name or empty
+        const mainArticle = chineseToArabic(toHalfWidthDigits(groups[0])); // 主條號 (271)
+        const subArticle = chineseToArabic(toHalfWidthDigits(groups[1])); // 子條號 (1)
+        article = `${mainArticle}-${subArticle}`; // 271-1
+        
+        // Build paragraph from remaining groups
+        let paragraphParts = [];
+        if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2]))); // 項
+        if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 款
+        if (groups[4]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[4]))); // 目
+        paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
+        caseType = '法條';
+    } else if (key === 'universal_legal_pattern') {
+        lawName = lastLawName || ''; // Use the last seen law name or empty
+
+        // 判斷是條文組合還是單獨項款目
+        if (groups[1] && groups[2] === '條') {
+            // 這是條文組合: 第X條[第X項][第X款][第X目]
+            article = chineseToArabic(toHalfWidthDigits(groups[1])); // 條號
+            let paragraphParts = [];
+            if (groups[3] && groups[4] === '項') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 項
+            if (groups[5] && groups[6] === '款') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[5]))); // 款
+            if (groups[7] && groups[8] === '目') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[7]))); // 目
+            paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
+        } else if (groups[9] && groups[10]) {
+            // 這是單獨項款目: 第X項/款/目
+            article = ''; // No article number for standalone subsections
+            const subsectionNum = chineseToArabic(toHalfWidthDigits(groups[9]));
+            const subsectionType = groups[10]; // 項/款/目
+            paragraph = `-${subsectionNum}`;
+        }
+        caseType = '法條';
+    }
+
+    // Escape HTML attributes to prevent corruption
+    const escapeHtml = (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
+    // Escape the match text for safe insertion
+    const escapeMatch = (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    };
+
+    const result = `<span class="citeright-link" 
+                data-year="${escapeHtml(year)}" 
+                data-case-type="${escapeHtml(caseType)}" 
+                data-number="${escapeHtml(number)}"
+                data-law-name="${escapeHtml(lawName)}"
+                data-article="${escapeHtml(article)}"
+                data-paragraph="${escapeHtml(paragraph)}"
+                data-legal-type="${escapeHtml(key)}"
+                style="background-color: rgba(24, 144, 255, 0.08) !important; border-bottom: 1px solid rgba(24, 144, 255, 0.3) !important; padding: 1px 2px !important; border-radius: 2px !important; cursor: pointer !important;"
+                title="按住 Ctrl 並懸停查看詳情">${escapeMatch(match)}</span>`;
+    return result;
+}
+
 // Helper function to check if text is already part of a highlighted element
 function isAlreadyHighlighted(node, matchText) {
     // Get all existing highlighted elements in the document
@@ -451,13 +549,9 @@ function isAlreadyHighlighted(node, matchText) {
     
     for (const highlight of existingHighlights) {
         const highlightText = highlight.textContent;
-        // If the current match is a substring of an existing highlight, skip it
-        if (highlightText.includes(matchText) && highlightText !== matchText) {
-            // Additional check: make sure the matched text is within reasonable proximity
-            // to avoid false positives across distant elements
-            if (isTextInProximity(node, highlight)) {
-                return true;
-            }
+        // Only skip exact duplicates, allow overlapping matches of different lengths
+        if (highlightText === matchText && isTextInProximity(node, highlight)) {
+            return true;
         }
     }
     return false;
@@ -484,23 +578,11 @@ function isTextInProximity(textNode, highlightElement) {
 function removeOverlappingMatches(matches) {
     if (matches.length === 0) return matches;
     
-    // 定義優先級：完整法條 > 釋字 > 複雜法條 > 條款組合 > 單獨條文 > 單獨項款目
-    const priorityOrder = {
-        'dynamic_law_articles': 1,
-        'simple_law_articles': 2,
-        'interpretation': 3, 
-        'law_name_only': 4,
-        'universal_legal_pattern': 5
-    };
-    
-    // Sort by start position, then by priority (lower number = higher priority), then by length (longer first)
+    console.log(`🔍 Processing ${matches.length} matches for overlap removal`);
+
+    // Sort by start position, then by length (longest first for same position)
     matches.sort((a, b) => {
         if (a.start !== b.start) return a.start - b.start;
-        
-        const priorityA = priorityOrder[a.key] || 999;
-        const priorityB = priorityOrder[b.key] || 999;
-        if (priorityA !== priorityB) return priorityA - priorityB;
-        
         return b.text.length - a.text.length;
     });
     
@@ -508,380 +590,157 @@ function removeOverlappingMatches(matches) {
     
     for (const match of matches) {
         let hasOverlap = false;
-        
-        // Check if this match overlaps with any already selected match
-        for (const selected of result) {
-            if (match.start < selected.end && match.end > selected.start) {
+
+        // Check against all previously accepted matches
+        for (const accepted of result) {
+            // Check for any overlap
+            if (match.start < accepted.end && match.end > accepted.start) {
+                console.log(`🚫 Rejecting overlapping match: "${match.text}" (${match.start}-${match.end}) overlaps with "${accepted.text}" (${accepted.start}-${accepted.end})`);
                 hasOverlap = true;
                 break;
             }
         }
         
-        // Only add if no overlap
         if (!hasOverlap) {
             result.push(match);
+            console.log(`✅ Accepted match: "${match.text}" (${match.key}, ${match.start}-${match.end})`);
+        }
+    }
+
+    console.log(`📊 Final result: ${matches.length} → ${result.length} matches after overlap removal`);
+    return result;
+}
+
+// Global set to track processed nodes across all highlighting functions
+const globalSeenNodes = new WeakSet();
+
+
+// Function to apply highlights with proper overlap handling
+function applyLayeredHighlights(node, matches, normalizedText) {
+    if (matches.length === 0) return false;
+    
+    // Sort matches by start position, then by length (longest first)
+    matches.sort((a, b) => {
+        if (a.start !== b.start) return a.start - b.start;
+        return (b.end - b.start) - (a.end - a.start);
+    });
+    
+    // Remove exact duplicates
+    const uniqueMatches = [];
+    const seen = new Set();
+    
+    for (const match of matches) {
+        const key = `${match.start}_${match.end}_${match.text}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueMatches.push(match);
         }
     }
     
-    return result;
-}
-
-function makeSpan(match, key, groups) {
-    let year = '', caseType = '', number = '', lawName = '', article = '', paragraph = '';
-
-    if (key === 'interpretation') {
-        caseType = '釋字';
-        number = toHalfWidthDigits(groups[0]);
-    } else if (key === 'law_name_only') {
-        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
-        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
-        lastLawName = lawName; // Store for mixed references
-        caseType = '法律名稱';
-        article = ''; // No article for law name only
-        paragraph = '';
-    } else if (key === 'dynamic_law_articles') {
-        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
-        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
-        lastLawName = lawName; // Store for mixed references
-        article = chineseToArabic(toHalfWidthDigits(groups[1])); // 184、271條之1、一八四、三百二十
-        // Build paragraph from multiple groups
-        let paragraphParts = [];
-        if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2]))); // 項
-        if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 款
-        if (groups[4]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[4]))); // 目
-        paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
-        caseType = '法條';
-    } else if (key === 'simple_law_articles') {
-        const inputLawName = groups[0]; // 匹配到的法律名稱（可能是別名）
-        lawName = findStandardLawName(inputLawName); // 轉換為標準名稱
-        lastLawName = lawName; // Store for mixed references
-        article = chineseToArabic(toHalfWidthDigits(groups[1])); // 條號
-        paragraph = ''; // 沒有項款目
-        caseType = '法條';
-    } else if (key === 'universal_legal_pattern') {
-        lawName = lastLawName || ''; // Use the last seen law name or empty
+    // Build HTML with non-overlapping highlights only
+    let newHTML = '';
+    let lastIndex = 0;
+    let changed = false;
+    
+    for (const match of uniqueMatches) {
+        // Skip if this match overlaps with already processed text
+        if (match.start < lastIndex) {
+            continue;
+        }
         
-        // 判斷是條文組合還是單獨項款目
-        if (groups[1] && groups[2] === '條') {
-            // 這是條文組合: 第X條[第X項][第X款][第X目]
-            article = chineseToArabic(toHalfWidthDigits(groups[1])); // 條號
-            let paragraphParts = [];
-            if (groups[3] && groups[4] === '項') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 項
-            if (groups[5] && groups[6] === '款') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[5]))); // 款  
-            if (groups[7] && groups[8] === '目') paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[7]))); // 目
-            paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
-        } else if (groups[9] && groups[10]) {
-            // 這是單獨項款目: 第X項/款/目
-            article = ''; // No article number for standalone subsections
-            const subsectionNum = chineseToArabic(toHalfWidthDigits(groups[9]));
-            const subsectionType = groups[10]; // 項/款/目
-            paragraph = `-${subsectionNum}`;
-        }
-        caseType = '法條';
-    } else if (key === 'complex_article') {
-        lawName = lastLawName || ''; // Use the last seen law name or empty
-        article = chineseToArabic(toHalfWidthDigits(groups[0])); // 條號
-        // Build paragraph from multiple groups
-        let paragraphParts = [];
-        paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[1]))); // 項 (必須存在)
-        if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2]))); // 款  
-        if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 目
-        paragraph = '-' + paragraphParts.join('-');
-        caseType = '法條';
-    } else if (key === 'article_section') {
-        lawName = lastLawName || ''; // Use the last seen law name or empty
-        article = chineseToArabic(toHalfWidthDigits(groups[0])); // 條號
-        const sectionNum = chineseToArabic(toHalfWidthDigits(groups[1])); // 款/目號
-        const sectionType = groups[2]; // 款/目
-        if (sectionType === '款') {
-            paragraph = `-0-${sectionNum}`; // 沒有項，但有款：-0-2
-        } else {
-            paragraph = `-0-0-${sectionNum}`; // 沒有項款，但有目：-0-0-3
-        }
-        caseType = '法條';
-    } else if (key === 'standalone_article') {
-        lawName = lastLawName || ''; // Use the last seen law name or empty
-        article = chineseToArabic(toHalfWidthDigits(groups[0])); // 條號
-        // Build paragraph from multiple groups
-        let paragraphParts = [];
-        if (groups[1]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[1]))); // 項
-        if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2]))); // 款
-        if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3]))); // 目
-        paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : '';
-        caseType = '法條';
-    } else if (key === 'standalone_subsection') {
-        lawName = lastLawName || ''; // Use the last seen law name or empty
-        article = ''; // No article number for standalone subsections
-        const subsectionNum = chineseToArabic(toHalfWidthDigits(groups[0]));
-        const subsectionType = groups[1]; // 項/款/目
-        paragraph = `-${subsectionNum}`;
-        caseType = '法條';
+        // Add text before this match
+        newHTML += normalizedText.substring(lastIndex, match.start);
+        
+        // Add the highlighted span
+        const highlighted = makeSpan(match.text, match.key, match.groups);
+        newHTML += highlighted;
+        
+        // Update position
+        lastIndex = match.end;
+        changed = true;
     }
-
-    const result = `<span class="citeright-link" 
-                data-year="${year}" 
-                data-case-type="${caseType}" 
-                data-number="${number}"
-                data-law-name="${lawName}"
-                data-article="${article}"
-                data-paragraph="${paragraph}"
-                data-legal-type="${key}"
-                style="background-color: #e6f7ff !important; border: 1px solid #1890ff !important; padding: 2px 4px !important; color: #1890ff !important; font-weight: 500 !important;"
-                title="按住 Ctrl 並移動滑鼠查看詳情">${match}</span>`;
-    console.log('🎨 生成的高亮HTML:', result);
-    return result;
-}
-
-// Format paragraph numbers for database lookup (第1項 -> -1, 第1項第2款 -> -1-2)
-function formatParagraphForDB(paragraphStr) {
-    if (!paragraphStr) return '';
-
-    // Handle multiple items like "1項第2款" -> "1-2"
-    const parts = paragraphStr.split(/項第?|款第?|目第?/).filter(part => part.trim());
-
-    if (parts.length === 0) return '';
-    if (parts.length === 1) return '-' + parts[0];
-
-    return '-' + parts.join('-');
+    
+    // Add remaining text
+    newHTML += normalizedText.substring(lastIndex);
+    
+    // Replace the node content if changed
+    if (changed && newHTML !== normalizedText) {
+        const wrapper = document.createElement('span');
+        wrapper.innerHTML = newHTML;
+        while (wrapper.firstChild) {
+            node.parentNode.insertBefore(wrapper.firstChild, node);
+        }
+        node.parentNode.removeChild(node);
+        return true;
+    }
+    
+    return false;
 }
 
 function highlightCitations() {
-    console.log('🔍 Starting highlightCitations (TreeWalker)...');
+    // Check if extension is enabled before highlighting
+    if (!isExtensionEnabled) {
+        console.log('❌ 擴充功能已停用，跳過高亮處理');
+        return 0;
+    }
     
-    // 調試：檢查頁面文本中的法條
-    const pageText = document.body.textContent || document.body.innerText || '';
-    const legalRefs = pageText.match(/第[一二三四五六七八九十\d]+條/g);
-    if (legalRefs) {
-        console.log('🔍 頁面中發現的法條引用:', legalRefs.slice(0, 10)); // 只顯示前10個
-    } else {
-        console.log('🔍 頁面中沒有發現法條引用');
-    }
-    const seenNodes = new WeakSet();
-    let created = 0;
-
-    function processTextNode(node) {
-        if (seenNodes.has(node)) return;
-        if (!node.parentNode) return;
-        // Skip inside our own spans or script/style/inputs
-        const parentTag = node.parentNode.tagName;
-        if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA' || parentTag === 'INPUT') return;
-        if (node.parentNode.closest && node.parentNode.closest('.citeright-link')) return;
-
-        // Skip bookmark panel content completely, but allow side panel content with legal highlighting
-        if (node.parentNode.closest && node.parentNode.closest('#citeright-bookmarks-panel')) return;
-
-        // Skip side panel headers (blue title column) but allow content area
-        const sidePanelHeader = node.parentNode.closest && node.parentNode.closest('#citeright-sidepanel > div:first-child');
-        if (sidePanelHeader) return;
-
-        // Skip any elements with blue background (title columns)
-        const hasBlueBackground = node.parentNode.closest && node.parentNode.closest('[style*="background: linear-gradient(135deg, #1890ff"]');
-        if (hasBlueBackground) return;
-
-        // Allow highlighting in legal content areas of side panel
-        const isInLegalContentArea = node.parentNode.closest && node.parentNode.closest('.legal-content-area');
-        const isInSidepanelContent = node.parentNode.closest && node.parentNode.closest('#sidepanel-content');
-        if (isInLegalContentArea || isInSidepanelContent) {
-            // Continue with highlighting for legal content
-        }
-        const original = node.textContent;
-        if (!original || !original.trim()) return;
-
-        // Split text into segments, separating citations connected by "及"
-        const textSegments = splitConnectedCitations(original);
-
-        // If no splits were made, process normally
-        if (textSegments.length === 1 && !textSegments[0].isSplit) {
-            const normalizedText = original;
-
-            // Find all potential matches first
-            const allMatches = [];
-
-            // 確保處理順序：優先處理動態法條，然後按複雜度排序
-            const processingOrder = ['dynamic_law_articles', 'simple_law_articles', 'interpretation', 'law_name_only', 'universal_legal_pattern'];
-
-            for (const key of processingOrder) {
-                const pattern = TAIWAN_LEGAL_PATTERNS[key];
-                if (!pattern) continue;
-
-                let actualPattern;
-
-                // fresh pattern each pass for other patterns
-                actualPattern = new RegExp(pattern.source, pattern.flags);
-
-                let match;
-                while ((match = actualPattern.exec(normalizedText)) !== null) {
-                    allMatches.push({
-                        text: match[0],
-                        start: match.index,
-                        end: match.index + match[0].length,
-                        key: key,
-                        groups: Array.from(match).slice(1)
-                    });
-                    // Prevent infinite loop on global regex
-                    if (!actualPattern.global) break;
-                }
-            }
-
-            // Remove overlapping matches, keeping longer/more specific ones
-            const filteredMatches = removeOverlappingMatches(allMatches);
-
-            if (filteredMatches.length === 0) return;
-
-            // Apply highlights in reverse order to maintain correct indices
-            let newHTML = normalizedText;
-            let changed = false;
-
-            filteredMatches.sort((a, b) => b.start - a.start).forEach(match => {
-                // Check if this match is already part of a highlighted element
-                if (isAlreadyHighlighted(node, match.text)) {
-                    return; // Skip this match
-                }
-
-                const before = newHTML.substring(0, match.start);
-                const after = newHTML.substring(match.end);
-                const highlighted = makeSpan(match.text, match.key, match.groups);
-
-                newHTML = before + highlighted + after;
-                changed = true;
-            });
-            if (changed) {
-                const wrapper = document.createElement('span');
-                wrapper.innerHTML = newHTML;
-                while (wrapper.firstChild) {
-                    node.parentNode.insertBefore(wrapper.firstChild, node);
-                }
-                node.parentNode.removeChild(node);
-                created++;
-            }
-        } else {
-            // Process each segment separately to handle split citations
-            let newHTML = '';
-            let hasHighlights = false;
-
-            for (const segment of textSegments) {
-                if (segment.isSplit) {
-                    // This is a split citation part - check for matches
-                    const allMatches = [];
-                    const processingOrder = ['dynamic_law_articles', 'simple_law_articles', 'interpretation', 'law_name_only', 'universal_legal_pattern'];
-
-                    for (const key of processingOrder) {
-                        const pattern = TAIWAN_LEGAL_PATTERNS[key];
-                        if (!pattern) continue;
-
-                        let actualPattern = new RegExp(pattern.source, pattern.flags);
-
-                        let match;
-                        while ((match = actualPattern.exec(segment.text)) !== null) {
-                            allMatches.push({
-                                text: match[0],
-                                start: match.index,
-                                end: match.index + match[0].length,
-                                key: key,
-                                groups: Array.from(match).slice(1)
-                            });
-                            if (!actualPattern.global) break;
-                        }
-                    }
-
-                    const filteredMatches = removeOverlappingMatches(allMatches);
-
-                    if (filteredMatches.length > 0) {
-                        let segmentHTML = segment.text;
-
-                        filteredMatches.sort((a, b) => b.start - a.start).forEach(match => {
-                            if (!isAlreadyHighlighted(node, match.text)) {
-                                const before = segmentHTML.substring(0, match.start);
-                                const after = segmentHTML.substring(match.end);
-                                const highlighted = makeSpan(match.text, match.key, match.groups);
-
-                                segmentHTML = before + highlighted + after;
-                                hasHighlights = true;
-                            }
-                        });
-
-                        newHTML += segmentHTML;
-                    } else {
-                        newHTML += segment.text;
-                    }
-                } else {
-                    // Regular text segment - just append
-                    newHTML += segment.text;
-                }
-            }
-
-            if (hasHighlights) {
-                const wrapper = document.createElement('span');
-                wrapper.innerHTML = newHTML;
-                while (wrapper.firstChild) {
-                    node.parentNode.insertBefore(wrapper.firstChild, node);
-                }
-                node.parentNode.removeChild(node);
-                created++;
-            }
-        }
-        seenNodes.add(node);
-    }
-
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-        acceptNode(node) {
-            if (!node.textContent || !/[字號釋憲判第度年]/.test(node.textContent)) return NodeFilter.FILTER_REJECT;
-            
-            // 調試：記錄包含"第四條"的節點
-            if (node.textContent.includes('第四條')) {
-                console.log('🔍 找到包含"第四條"的文本節點:', node.textContent.substring(0, 100) + '...');
-            }
-            
-            return NodeFilter.FILTER_ACCEPT;
-        }
-    });
-
-    const batch = [];
-    while (walker.nextNode()) {
-        batch.push(walker.currentNode);
-        if (batch.length >= 500) {
-            batch.forEach(processTextNode);
-            batch.length = 0;
-        }
-    }
-    if (batch.length) batch.forEach(processTextNode);
-
-    const finalCount = document.querySelectorAll('.citeright-link').length;
-    if (finalCount === 0) {
-        console.warn('❌ 未檢測到法律引用標示。請檢查擴充套件是否已重新載入 / 或目前頁面無法律引用');
-    } else {
-        console.log(`✅ 法律引用偵測完成。找到 ${finalCount} 個法律引用標示 (本次新增: ${created})`);
-        
-        // 調試：統計各種模式的匹配次數
-        const patternStats = {};
-        document.querySelectorAll('.citeright-link').forEach(link => {
-            const type = link.getAttribute('data-legal-type') || 'unknown';
-            patternStats[type] = (patternStats[type] || 0) + 1;
-        });
-        console.log('📊 法條類型統計:', patternStats);
-        
-        // 調試：檢查頁面是否包含"第四條"
-        const pageText = document.body.textContent || document.body.innerText || '';
-        if (pageText.includes('第四條')) {
-            console.log('🔍 頁面包含"第四條"文字，但可能沒被標記');
-            // 檢查是否有被標記
-            const markedFourth = Array.from(document.querySelectorAll('.citeright-link')).find(link => 
-                link.textContent.includes('第四條')
-            );
-            if (markedFourth) {
-                console.log('✅ 找到標記的第四條:', markedFourth.textContent);
-            } else {
-                console.log('❌ 第四條沒有被標記');
-            }
-        }
-    }
-    return finalCount;
+    console.log('全頁面標記法條引用開始');
+    return highlightCitationsInElement(document.body);
 }
 
 // Helper function to highlight citations in a specific element
+// Function to remove all existing highlights
+function removeAllHighlights() {
+    console.log('🧹 移除所有高亮標記');
+    
+    const allHighlights = document.querySelectorAll('.citeright-link');
+    let removedCount = 0;
+    
+    allHighlights.forEach(highlight => {
+        // Replace the highlighted span with its text content
+        const parent = highlight.parentNode;
+        if (parent) {
+            parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+            removedCount++;
+        }
+    });
+    
+    // Normalize adjacent text nodes
+    if (removedCount > 0) {
+        const walker = document.createTreeWalker(
+            document.body,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        
+        const textNodes = [];
+        let node;
+        while (node = walker.nextNode()) {
+            textNodes.push(node);
+        }
+        
+        textNodes.forEach(textNode => {
+            if (textNode.parentNode) {
+                textNode.parentNode.normalize();
+            }
+        });
+    }
+    
+    console.log(`✅ 已移除 ${removedCount} 個高亮標記`);
+    return removedCount;
+}
+
 function highlightCitationsInElement(element) {
+    // Check if extension is enabled before highlighting
+    if (!isExtensionEnabled) {
+        console.log('❌ 擴充功能已停用，跳過元素高亮處理');
+        return 0;
+    }
+    
     console.log('🔍 Applying highlighting to element:', element);
-    const seenNodes = new WeakSet();
+    
+    const seenNodes = globalSeenNodes;
     let created = 0;
 
     function processTextNode(node) {
@@ -896,146 +755,121 @@ function highlightCitationsInElement(element) {
         // Skip bookmark panel content
         if (node.parentNode.closest && node.parentNode.closest('#citeright-bookmarks-panel')) return;
 
-        // Skip elements with blue background (title columns)
+        // Skip popup modal header (.citeright-header) but allow content below .citerightloader
+        if (node.parentNode.closest && node.parentNode.closest('.citeright-header')) return;
+        
+        // For popup modal: only highlight content that comes after .citerightloader
+        const popoverContent = node.parentNode.closest('.citeright-content');
+        if (popoverContent) {
+            const loader = popoverContent.querySelector('.citerightloader');
+            if (loader) {
+                // Check if this text node comes after the loader
+                const walker = document.createTreeWalker(
+                    popoverContent,
+                    NodeFilter.SHOW_TEXT,
+                    null,
+                    false
+                );
+                let foundLoader = false;
+                let currentNode;
+                while (currentNode = walker.nextNode()) {
+                    if (currentNode.parentNode && currentNode.parentNode.classList && 
+                        currentNode.parentNode.classList.contains('citerightloader')) {
+                        foundLoader = true;
+                        continue;
+                    }
+                    if (currentNode === node) {
+                        if (!foundLoader) {
+                            return; // Skip if this text node comes before the loader
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // For side panel: only highlight content in divs, not law title spans
+        const sidePanel = node.parentNode.closest('#citeright-tool-panel');
+        if (sidePanel) {
+            // Only allow highlighting in tool content areas
+            const isInToolContent = node.parentNode.closest('#tool-content') || 
+                                  node.parentNode.closest('#tool-main-content') ||
+                                  node.parentNode.closest('.tab-content-inner');
+            if (!isInToolContent) {
+                return; // Skip if not in main content area
+            }
+            
+            // Skip law title spans - don't highlight titles/headings that are already citeright-link
+            const isInExistingLawTitle = node.parentNode.closest('span.citeright-link') || 
+                                       node.parentNode.closest('.bookmark-item [style*="font-weight: 600"]') ||
+                                       node.parentNode.closest('[style*="color: #1890ff"]');
+            if (isInExistingLawTitle) {
+                return; // Skip if this is part of a law title or heading
+            }
+            
+            // Only highlight content that's inside div elements (not spans, headings, etc.)
+            const isInDiv = node.parentNode.closest('div');
+            if (!isInDiv) {
+                return; // Skip if not inside a div element
+            }
+            
+            // Additional check: skip if this is in a title/heading area
+            const parentElement = node.parentNode;
+            if (parentElement && parentElement.style && 
+                (parentElement.style.fontWeight === '600' || 
+                 parentElement.style.color === 'rgb(24, 144, 255)' ||
+                 parentElement.classList.contains('bookmark-title'))) {
+                return; // Skip title/heading elements
+            }
+        }
+
+        // Skip elements with blue background (title columns/headers)
         const hasBlueBackground = node.parentNode.closest && node.parentNode.closest('[style*="background: linear-gradient(135deg, #1890ff"]');
         if (hasBlueBackground) return;
 
         const original = node.textContent;
         if (!original || !original.trim()) return;
 
-        // Split text into segments, separating citations connected by "及"
-        const textSegments = splitConnectedCitations(original);
+        const normalizedText = original;
 
-        // If no splits were made, process normally
-        if (textSegments.length === 1 && !textSegments[0].isSplit) {
-            const normalizedText = original;
+        // Find all potential matches first
+        const allMatches = [];
 
-            // Find all potential matches first
-            const allMatches = [];
-
-            // 確保處理順序：優先處理動態法條，然後按複雜度排序
-            const processingOrder = ['dynamic_law_articles', 'simple_law_articles', 'interpretation', 'law_name_only', 'universal_legal_pattern'];
-
-            for (const key of processingOrder) {
-                const pattern = TAIWAN_LEGAL_PATTERNS[key];
-                if (!pattern) continue;
-
-                let actualPattern;
-
-                // fresh pattern each pass for other patterns
-                actualPattern = new RegExp(pattern.source, pattern.flags);
-
-                let match;
-                while ((match = actualPattern.exec(normalizedText)) !== null) {
-                    allMatches.push({
-                        text: match[0],
-                        start: match.index,
-                        end: match.index + match[0].length,
-                        key: key,
-                        groups: Array.from(match).slice(1)
-                    });
-                    // Prevent infinite loop on global regex
-                    if (!actualPattern.global) break;
-                }
+        // Process patterns in the order defined in TAIWAN_LEGAL_PATTERNS object
+        for (const key of Object.keys(TAIWAN_LEGAL_PATTERNS)) {
+            const pattern = TAIWAN_LEGAL_PATTERNS[key];
+            if (!pattern) {
+                continue;
             }
 
-            // Remove overlapping matches, keeping longer/more specific ones
-            const filteredMatches = removeOverlappingMatches(allMatches);
+            let actualPattern = new RegExp(pattern.source, pattern.flags);
 
-            if (filteredMatches.length === 0) return;
+            let match;
+            while ((match = actualPattern.exec(normalizedText)) !== null) {
+                const matchText = match[0];
 
-            // Apply highlights in reverse order to maintain correct indices
-            let newHTML = normalizedText;
-            let changed = false;
-
-            filteredMatches.sort((a, b) => b.start - a.start).forEach(match => {
-                // Check if this match is already part of a highlighted element
-                if (isAlreadyHighlighted(node, match.text)) {
-                    return; // Skip this match
-                }
-
-                const before = newHTML.substring(0, match.start);
-                const after = newHTML.substring(match.end);
-                const highlighted = makeSpan(match.text, match.key, match.groups);
-
-                newHTML = before + highlighted + after;
-                changed = true;
-            });
-            if (changed) {
-                const wrapper = document.createElement('span');
-                wrapper.innerHTML = newHTML;
-                while (wrapper.firstChild) {
-                    node.parentNode.insertBefore(wrapper.firstChild, node);
-                }
-                node.parentNode.removeChild(node);
-                created++;
-            }
-        } else {
-            // Process each segment separately to handle split citations
-            let newHTML = '';
-            let hasHighlights = false;
-
-            for (const segment of textSegments) {
-                if (segment.isSplit) {
-                    // This is a split citation part - check for matches
-                    const allMatches = [];
-                    const processingOrder = ['dynamic_law_articles', 'simple_law_articles', 'interpretation', 'law_name_only', 'universal_legal_pattern'];
-
-                    for (const key of processingOrder) {
-                        const pattern = TAIWAN_LEGAL_PATTERNS[key];
-                        if (!pattern) continue;
-
-                        let actualPattern = new RegExp(pattern.source, pattern.flags);
-
-                        let match;
-                        while ((match = actualPattern.exec(segment.text)) !== null) {
-                            allMatches.push({
-                                text: match[0],
-                                start: match.index,
-                                end: match.index + match[0].length,
-                                key: key,
-                                groups: Array.from(match).slice(1)
-                            });
-                            if (!actualPattern.global) break;
-                        }
-                    }
-
-                    const filteredMatches = removeOverlappingMatches(allMatches);
-
-                    if (filteredMatches.length > 0) {
-                        let segmentHTML = segment.text;
-
-                        filteredMatches.sort((a, b) => b.start - a.start).forEach(match => {
-                            if (!isAlreadyHighlighted(node, match.text)) {
-                                const before = segmentHTML.substring(0, match.start);
-                                const after = segmentHTML.substring(match.end);
-                                const highlighted = makeSpan(match.text, match.key, match.groups);
-
-                                segmentHTML = before + highlighted + after;
-                                hasHighlights = true;
-                            }
-                        });
-
-                        newHTML += segmentHTML;
-                    } else {
-                        newHTML += segment.text;
-                    }
-                } else {
-                    // Regular text segment - just append
-                    newHTML += segment.text;
-                }
-            }
-
-            if (hasHighlights) {
-                const wrapper = document.createElement('span');
-                wrapper.innerHTML = newHTML;
-                while (wrapper.firstChild) {
-                    node.parentNode.insertBefore(wrapper.firstChild, node);
-                }
-                node.parentNode.removeChild(node);
-                created++;
+                allMatches.push({
+                    text: matchText,
+                    start: match.index,
+                    end: match.index + matchText.length,
+                    key: key,
+                    groups: Array.from(match).slice(1)
+                });
+                // Prevent infinite loop on global regex
+                if (!actualPattern.global) break;
             }
         }
+
+        // Allow overlapping matches - no filtering
+        const filteredMatches = allMatches;
+
+        if (filteredMatches.length === 0) return;
+
+        // Apply layered highlights instead of creating duplicate text
+        if (applyLayeredHighlights(node, filteredMatches, normalizedText)) {
+            created++;
+        }
+
         seenNodes.add(node);
     }
 
@@ -1057,42 +891,35 @@ function highlightCitationsInElement(element) {
     return created;
 }
 
-// Get current session statistics
-function getSessionStats() {
-    const stats = {
-        hoverCounts: Object.fromEntries(sessionLawCount),
-        currentlyActive: activePopupLaw,
-        currentlyHovered: currentHoveredLaw
-    };
-    console.log('📈 Session Statistics:', stats);
-    return stats;
-}
-
-// Reset session data
-function resetSessionData() {
-    sessionLawCount.clear();
-    activePopupLaw = null;
-    currentHoveredLaw = null;
-    popover.style.display = 'none';
-    console.log('🔄 Reset session data');
-}
 
 // Expose for manual debug
 if (typeof window !== 'undefined') {
     window.citerightForceHighlight = highlightCitations;
     window.citerightHighlightElement = highlightCitationsInElement;
-    window.citerightSessionStats = getSessionStats;
-    window.citerightResetSession = resetSessionData;
 }
 
 function createPopoverElement() {
     // Remove any existing popover
     const existing = document.getElementById('citeright-popover');
     if (existing) existing.remove();
-    const popover = document.createElement('div');
-    popover.id = 'citeright-popover';
-    popover.style.cssText = `position:fixed;z-index:2147483650;background:#fff;border:2px solid #1890ff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.15);width:480px;max-width:95vw;font-family:"Microsoft JhengHei","Noto Sans TC",Arial,sans-serif;font-size:14px;color:#333;display:none;pointer-events:auto;backdrop-filter:blur(8px);`;
-    popover.innerHTML = `
+    const popover = $(`<div id='citeright-popover'>`);
+    popover.css({
+        position: "fixed",
+        zIndex: 2147483650,
+        background: "#fff",
+        border: "2px solid #1890ff",
+        borderRadius: "12px",
+        boxShadow: "0 12px 40px rgba(0,0,0,.15)",
+        width: "480px",
+        maxWidth: "95vw",
+        fontFamily: "Microsoft JhengHei, Noto Sans TC, Arial, sans-serif",
+        fontSize: "14px",
+        color: "#333",
+        display: "none",
+        pointerEvents: "auto",
+        backdropFilter: "blur(8px)"
+    })
+    popover.append($(`
       <div class="citeright-header" style="padding:14px 18px;background:linear-gradient(135deg,#1890ff,#096dd9);color:white;border-bottom:none;display:flex;justify-content:space-between;align-items:center;border-radius:10px 10px 0 0;cursor:move;user-select:none;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span id="citeright-icon" style="font-size:18px;">⚖️</span>
@@ -1101,16 +928,10 @@ function createPopoverElement() {
         <div style="display:flex;align-items:center;gap:8px;">
           <button class="citeright-bookmark" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;transition:all 0.2s;" title="加入書籤">📚 書籤</button>
           <button class="citeright-expand" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;transition:all 0.2s;" title="展開至側邊面板">📖 展開</button>
-          <button class="citeright-close" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:50%;padding:6px;cursor:pointer;font-size:16px;width:28px;height:28px;transition:all 0.2s;">&times;</button>
+          <button class="citeright-close" style="display:flex; align-items: center; justify-content: center; background:rgba(255,255,255,0.2);border:none;color:white;border-radius:50%;padding:6px;cursor:pointer;font-size:16px;width:28px;height:28px;transition:all 0.2s;">&times;</button>
         </div>
       </div>
-      <div class="citeright-loader" style="padding:24px;text-align:center;color:#666;background:white;">
-        <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-          <div style="width:16px;height:16px;border:2px solid #1890ff;border-top:2px solid transparent;border-radius:50%;animation:spin 1s linear infinite;"></div>
-          <span>正在查詢法律資料...</span>
-        </div>
-      </div>
-      <div class="citeright-content" style="padding:18px;max-height:320px;overflow-y:auto;display:none;background:white;border-radius:0 0 10px 10px;line-height:1.6;"></div>
+      <div class="citeright-content" style="padding:18px;max-height:320px;overflow-y:auto;background:white;border-radius:0 0 10px 10px;line-height:1.6;"></div>
       <style>
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .citeright-header button:hover { background: rgba(255,255,255,0.3) !important; transform: scale(1.05); }
@@ -1118,32 +939,32 @@ function createPopoverElement() {
         .citeright-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
         .citeright-content::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
         .citeright-content::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
-      </style>`;
-    document.body.appendChild(popover);
+      </style>`));
+    $('body').append(popover);
 
     // Close button event - only hides popover
-    popover.querySelector('.citeright-close').addEventListener('click', e => {
+    popover.find('.citeright-close')?.on('click', e => {
         e.stopPropagation();
-        popover.style.display = 'none';
+        popover.hide();
         console.log('❌ 彈出視窗已關閉');
     });
 
     // Bookmark button event
-    popover.querySelector('.citeright-bookmark').addEventListener('click', e => {
+    popover.find('.citeright-bookmark')?.on('click', e => {
         e.stopPropagation();
         addToBookmarks();
     });
 
     // Expand button event - creates side panel
-    popover.querySelector('.citeright-expand').addEventListener('click', e => {
+    popover.find('.citeright-expand')?.on('click', e => {
         e.stopPropagation();
         console.log('🔧 Expand button clicked, currentLawData:', currentLawData);
         
         if (!currentLawData) {
             console.log('❌ No currentLawData, attempting to load from popup');
             // Try to extract data from popup if currentLawData is missing
-            const title = popover.querySelector('#citeright-title').textContent;
-            const content = popover.querySelector('.citeright-content').innerHTML;
+            const title = popover.find('#citeright-title').text();
+            const content = popover.find('.citeright-content').html();
             if (title && content) {
                 currentLawData = {
                     id: 'popup_' + Date.now(),
@@ -1159,35 +980,37 @@ function createPopoverElement() {
         openSidePanel();
         
         // Hide the popup after opening sidebar
-        popover.style.display = 'none';
+        popover.hide();
     });
 
     // Drag improvements
     let drag = { active: false, offsetX: 0, offsetY: 0 };
-    const header = popover.querySelector('.citeright-header');
-    header.addEventListener('mousedown', e => {
+    const header = popover.find('.citeright-header');
+    header.on('mousedown', e => {
         if (e.target.classList.contains('citeright-close')) return;
         drag.active = true;
-        const rect = popover.getBoundingClientRect();
+        const rect = popover.get(0).getBoundingClientRect();
         drag.offsetX = e.clientX - rect.left;
         drag.offsetY = e.clientY - rect.top;
-        header.style.cursor = 'grabbing';
+        header.css('cursor', 'grabbing');
         e.preventDefault();
     });
     window.addEventListener('mousemove', e => {
         if (!drag.active) return;
         let left = e.clientX - drag.offsetX;
         let top = e.clientY - drag.offsetY;
-        left = Math.max(0, Math.min(left, window.innerWidth - popover.offsetWidth));
+        left = Math.max(0, Math.min(left, window.innerWidth - popover.prop("offsetWidth")));
         top = Math.max(0, Math.min(top, window.innerHeight - 50));
-        popover.style.left = left + 'px';
-        popover.style.top = top + 'px';
+        popover.css({
+            "left": left + 'px',
+            "top": top + 'px'
+        })
     });
-    window.addEventListener('mouseup', () => { if (drag.active) { drag.active = false; header.style.cursor = 'move'; } });
+    window.addEventListener('mouseup', () => { if (drag.active) { drag.active = false; header.css("cursor", 'move'); } });
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
-            popover.style.display = 'none';
+            popover.hide();
         }
     });
     return popover;
@@ -1200,7 +1023,6 @@ let showTimeout;              // Delay before showing popover
 let currentHoveredLaw = null; // Track currently hovered law to prevent duplicates
 let activePopupLaw = null;    // Track law currently shown in popup to prevent duplicates
 let popupCooldown = false;    // Prevent rapid popup opening
-let sessionLawCount = new Map(); // Count how many times each law has been hovered
 
 // Enhanced state management for better UX
 let isCtrlPressed = false;    // Current Ctrl key state
@@ -1210,9 +1032,9 @@ let bookmarkedLaws = [];      // Saved bookmarks
 
 // Helper function to update activation status
 function updateActivationStatus() {
-    const title = popover.querySelector('#citeright-title');
+    const title = popover.find('#citeright-title');
     if (title) {
-        title.textContent = isActivated ? '台灣法源資訊 (滑鼠模式)' : '台灣法源資訊';
+        title.text(isActivated ? '台灣法源資訊 (滑鼠模式)' : '台灣法源資訊');
     }
 }
 
@@ -1228,46 +1050,55 @@ function getLawIdentifier(target) {
     }
 }
 
-// Enhanced Ctrl key listeners - toggles hover mode
+// Ctrl key listeners - must be held down simultaneously with hover
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && !isCtrlPressed) {
         isCtrlPressed = true;
 
         // Check if extension is globally enabled first
         if (!isExtensionEnabled) {
-            showActivationNotification('擴充功能已停用', '請在工具列圖示中啟用擴充功能', '#d73527');
+            console.log('❌ 擴充功能已停用');
             return;
         }
 
-        // Ctrl toggles hover mode
-        isActivated = !isActivated;
-
-        if (isActivated) {
-            console.log('⚖️ 滑鼠懸停模式已啟用');
-            showActivationNotification('滑鼠懸停模式已啟用', '移動滑鼠至法條引用查看詳情');
-
-            // Set auto-deactivation timer (3 minutes)
-            clearTimeout(activationTimeout);
-            activationTimeout = setTimeout(() => {
-                isActivated = false;
-                popover.style.display = 'none';
-                console.log('⏰ 滑鼠懸停模式已自動停用 (3分鐘無操作)');
-                updateActivationStatus();
-            }, 180000); // 3 minutes
-        } else {
-            console.log('❌ 滑鼠懸停模式已停用');
-            popover.style.display = 'none';
-            clearTimeout(activationTimeout);
-            showActivationNotification('滑鼠懸停模式已停用', '再按 Ctrl 重新啟用', '#d73527');
+        // Auto-enable activation when Ctrl is pressed (but don't toggle)
+        if (!isActivated) {
+            isActivated = true;
+            console.log('⚖️ Ctrl 按下 - 懸停模式已啟用');
+            updateActivationStatus();
         }
 
-        updateActivationStatus();
+        // Set auto-deactivation timer (3 minutes)
+        clearTimeout(activationTimeout);
+        activationTimeout = setTimeout(() => {
+            isActivated = false;
+            popover.hide();
+            console.log('⏰ 懸停模式已自動停用 (3分鐘無操作)');
+            updateActivationStatus();
+        }, 180000); // 3 minutes
+
+        // If currently hovering over a legal citation, show the popover
+        if (currentHoveredLaw && currentHoveredLaw.classList.contains('citeright-link')) {
+            clearTimeout(showTimeout);
+            showTimeout = setTimeout(() => {
+                if (isCtrlPressed && currentHoveredLaw) {
+                    showLegalPopover(currentHoveredLaw, e);
+                }
+            }, 100);
+        }
     }
 });
 
 document.addEventListener('keyup', (e) => {
     if (!e.ctrlKey && isCtrlPressed) {
         isCtrlPressed = false;
+        console.log('⚖️ Ctrl 釋放 - 只能透過點擊 X 或外部關閉彈窗');
+        
+        // Clear any pending show timeout
+        clearTimeout(showTimeout);
+        
+        // Don't auto-hide popover when Ctrl is released
+        // Popover will only close when X is clicked or clicking outside
     }
 });
 
@@ -1310,33 +1141,89 @@ function showActivationNotification(title, subtitle, bgColor = '#389e0d') {
     }, 2500);
 }
 
-// Helper function to check if popover is being hovered
-function isPopoverHovered() {
-    return popover.matches(':hover') || popover.contains(document.querySelector(':hover'));
-}
-
 // Global variable to store current law data for bookmarking
 let currentLawData = null;
 
-// Bookmark functionality
+// Normalize different data shapes (laws vs. interpretations) into a single bookmark schema
+function normalizeBookmarkItem(data) {
+    const d = data || {};
+
+    const isTypeInterpretation = typeof d.type === 'string' && (
+        /interpret/i.test(d.type) || d.type === '釋字'
+    );
+    const looksLikeInterpretation = (
+        isTypeInterpretation || !!d.issue || !!d.description
+    );
+
+    const derivedNumber = d.number || d.articleNumber || d.ArticleNo || '';
+    const derivedTitle = d.title || (
+        looksLikeInterpretation
+            ? (derivedNumber ? `釋字第${derivedNumber}號` : '解釋')
+            : [d.CaptionTitle, derivedNumber].filter(Boolean).join(' ')
+    ) || '未命名項目';
+
+    let derivedFull = d.fullContent || d.content || '';
+    let derivedPreview = d.content || '';
+    if (looksLikeInterpretation) {
+        const desc = d.description || '';
+        const issue = d.issue || '';
+        derivedFull = desc || derivedFull || issue;
+        derivedPreview = desc || issue || derivedPreview;
+    } else {
+        const articleText = (d.articleData && d.articleData.Article) || d.Article || '';
+        if (!derivedFull) derivedFull = articleText;
+        if (!derivedPreview) derivedPreview = articleText;
+    }
+
+    const derivedUrl = d.officialUrl || d.url || d.link || '';
+    const derivedType = (d.type === '釋字')
+        ? 'interpretation'
+        : (d.type || (looksLikeInterpretation ? 'interpretation' : 'law'));
+    const derivedId = d.id || `${derivedType}_${derivedNumber || Date.now()}`;
+
+    return {
+        id: derivedId,
+        type: derivedType,
+        title: derivedTitle,
+        number: derivedNumber,
+        content: derivedPreview,
+        fullContent: derivedFull,
+        officialUrl: derivedUrl,
+        lawData: d.lawData,
+        articleData: d.articleData,
+        date: d.date || d.dateAdded || undefined,
+        dateAdded: new Date().toISOString(),
+        raw: d
+    };
+}
+
+// Bookmark functionality - ONLY called when user explicitly clicks bookmark button
 function addToBookmarks() {
+    console.log('📚 addToBookmarks() called - User clicked bookmark button');
+    
     if (!currentLawData) {
         console.log('❌ 無法加入書籤：沒有目前的法律資料');
+        showActivationNotification('無法加入書籤', '沒有可用的法律資料', '#ff4d4f');
         return;
     }
 
-    // Check if already bookmarked
+    console.log('📚 Attempting to bookmark:', currentLawData);
+
+    // Normalize data and check if already bookmarked
+    currentLawData = normalizeBookmarkItem(currentLawData);
     const exists = bookmarkedLaws.find(item =>
         item.id === currentLawData.id ||
         (item.type === currentLawData.type && item.number === currentLawData.number)
     );
 
     if (exists) {
+        console.log('⚠️ Already bookmarked:', exists);
         showActivationNotification('已存在書籤', '此法條已經在您的書籤中', '#e67e22');
         return;
     }
 
     // Add to bookmarks with full content
+    console.log('✅ Adding new bookmark to collection');
     bookmarkedLaws.push({
         id: currentLawData.id || `${currentLawData.type}_${currentLawData.number}`,
         type: currentLawData.type,
@@ -1352,6 +1239,7 @@ function addToBookmarks() {
 
     // Save to localStorage
     localStorage.setItem('citeright_bookmarks', JSON.stringify(bookmarkedLaws));
+    console.log('💾 Bookmark saved to localStorage. Total bookmarks:', bookmarkedLaws.length);
 
     showActivationNotification('已加入書籤', `${currentLawData.title}`, '#52c41a');
     console.log('📚 已加入書籤:', currentLawData.title);
@@ -1422,7 +1310,7 @@ function createMainSidebar() {
         <div style="background: linear-gradient(135deg, #1890ff, #096dd9); color: white; padding: 16px; flex-shrink: 0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h2 style="margin: 0; font-size: 18px; font-weight: 600;">CiteRight 工具面板</h2>
-                <button id="close-tool-panel" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 8px; cursor: pointer; font-size: 18px; width: 36px; height: 36px;">&times;</button>
+                <button id="close-tool-panel" style="display:flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 8px; cursor: pointer; font-size: 18px; width: 36px; height: 36px;">&times;</button>
             </div>
             
             <div class="tab-navigation" style="display: flex; gap: 8px;">
@@ -1458,6 +1346,52 @@ function createMainSidebar() {
                 </div>
             </div>
         </div>
+        
+        <!-- Tab Panel CSS -->
+        <style>
+        .tab-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+        .tab-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+            background: #fafafa;
+        }
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .tab-content-inner {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: white;
+            margin: 8px;
+            border-radius: 8px;
+            border: 1px solid #e8e8e8;
+        }
+        .bookmark-item:hover {
+            border-color: #1890ff !important;
+            box-shadow: 0 2px 8px rgba(24,144,255,0.1) !important;
+        }
+        </style>
     `;
 
     document.body.appendChild(toolPanel);
@@ -1620,7 +1554,7 @@ function setupToolPanelResize(toolPanel) {
             const finalWidth = parseInt(toolPanel.style.width);
             
             // Save width to localStorage
-            localStorage.setItem('citeright-panel-width', finalWidth);
+            localStorage.setItem('citeright-panel-width', finalWidth.toString());
             console.log('💾 Saved panel width to localStorage:', finalWidth + 'px');
             
             // Reset handle visual state
@@ -1720,7 +1654,7 @@ function setupSidebarResize(sidebar) {
             const finalWidth = parseInt(sidebar.style.width);
             
             // Save the width to localStorage
-            localStorage.setItem('citeright-sidebar-width', finalWidth);
+            localStorage.setItem('citeright-sidebar-width', finalWidth.toString());
             console.log('💾 Saved sidebar width to localStorage:', finalWidth + 'px');
             
             // After dragging ends, switch back to 2-page layout
@@ -1739,29 +1673,38 @@ function setupSidebarResize(sidebar) {
 }
 
 // Close sidebar and restore web content
-function closeSidebar() {
-    const sidebar = document.getElementById('citeright-main-sidebar');
-    if (sidebar) {
-        sidebar.style.transform = 'translateX(100%)';
-        setTimeout(() => sidebar.remove(), 300);
-        adjustWebContentForSidebar(0);
-    }
-    
-    const overlay = document.getElementById('citeright-web-overlay');
-    if (overlay) {
-        overlay.remove();
-    }
-}
+// function closeSidebar() {
+//     const sidebar = document.getElementById('citeright-main-sidebar');
+//     if (sidebar) {
+//         sidebar.style.transform = 'translateX(100%)';
+//         setTimeout(() => sidebar.remove(), 300);
+//         adjustWebContentForSidebar(0);
+//     }
+//
+//     const overlay = document.getElementById('citeright-web-overlay');
+//     if (overlay) {
+//         overlay.remove();
+//     }
+// }
 
 // Load bookmarks content
 function loadBookmarksContent() {
+    console.log('📚 Loading bookmarks from localStorage...');
     const savedBookmarks = localStorage.getItem('citeright_bookmarks');
     if (savedBookmarks) {
         bookmarkedLaws = JSON.parse(savedBookmarks);
+        console.log('📚 Loaded bookmarks:', bookmarkedLaws.length, 'items');
+        console.log('📚 Bookmark titles:', bookmarkedLaws.map(b => b.title));
+    } else {
+        console.log('📚 No saved bookmarks found in localStorage');
+        bookmarkedLaws = [];
     }
 
     const bookmarksContent = document.getElementById('bookmarks-content');
-    if (!bookmarksContent) return;
+    if (!bookmarksContent) {
+        console.log('❌ Bookmarks content element not found');
+        return;
+    }
 
     if (bookmarkedLaws.length === 0) {
         bookmarksContent.innerHTML = `
@@ -1775,8 +1718,8 @@ function loadBookmarksContent() {
     }
 
     bookmarksContent.innerHTML = `
-        <div style="margin-bottom: 16px;">
-            <h3 style="margin: 0; font-size: 16px; color: #1890ff;">我的法律書籤 (${bookmarkedLaws.length})</h3>
+        <div style="margin-bottom: 16px; padding: 0 4px;">
+            <h3 style="margin: 0; font-size: 16px; color: #1890ff; word-break: keep-all; white-space: nowrap; overflow: visible;">📚 我的法律書籤 (${bookmarkedLaws.length})</h3>
         </div>
         ${bookmarkedLaws.map((bookmark, index) => `
             <div class="bookmark-item" data-bookmark-id="${bookmark.id}" style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; border: 1px solid #e8e8e8; cursor: pointer; transition: all 0.2s;">
@@ -1784,7 +1727,7 @@ function loadBookmarksContent() {
                 <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
                     ${bookmark.type} · 儲存於 ${new Date(bookmark.dateAdded).toLocaleDateString('zh-TW')}
                 </div>
-                <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                <div style="font-size: 13px, color: #555; line-height: 1.5;">
                     ${bookmark.content ? bookmark.content.substring(0, 100) + (bookmark.content.length > 100 ? '...' : '') : '無內容摘要'}
                 </div>
                 <div style="margin-top: 12px; display: flex; gap: 8px;">
@@ -1847,9 +1790,21 @@ function loadBookmarkInToolTab(bookmark) {
             content: bookmark.fullContent || bookmark.content,
             fullContent: bookmark.fullContent || bookmark.content
         };
+        // Normalize type for interpretations (釋字)
+        if (caseType === '釋字') {
+            currentLawData.type = 'interpretation';
+            if (currentLawData && (!currentLawData.id || /^law_/.test(currentLawData.id))) {
+                currentLawData.id = `interpretation_${number || Date.now()}`;
+            }
+            if (!currentLawData.title || /臺灣法規資料|法規資料/i.test(currentLawData.title)) {
+                currentLawData.title = number ? `釋字第${number}號` : (currentLawData.title || '釋字');
+            }
+        }
+
+        console.log(currentLawData)
         
         // Clean and prepare content
-        const displayContent = bookmark.fullContent || bookmark.content || '無內容可顯示';
+        const displayContent = currentLawData.fullContent || bookmark.fullContent || bookmark.content || '無內容可顯示';
         const cleanContent = displayContent.replace(/<script[^>]*>.*?<\/script>/gi, '');
         
         toolContentDiv.innerHTML = `
@@ -2132,24 +2087,90 @@ function splitConnectedCitations(text) {
 
 // MutationObserver to handle dynamically loaded content
 (function setupObserver(){
+    let highlightTimeout;
+    let isHighlighting = false;
+
     function safeHighlight(){
-        try { highlightCitations(); } catch (e) { console.error('Highlight error', e); }
+        // Check if extension is enabled
+        if (!isExtensionEnabled) {
+            console.log('❌ 擴充功能已停用，跳過自動高亮處理');
+            return;
+        }
+        
+        // Prevent re-entrance during highlighting
+        if (isHighlighting) {
+            console.log('🚫 Already highlighting, skipping...');
+            return;
+        }
+
+        // Clear any pending timeout
+        clearTimeout(highlightTimeout);
+
+        // Debounce to prevent rapid successive calls
+        highlightTimeout = setTimeout(() => {
+            try {
+                isHighlighting = true;
+                console.log('🔄 Starting debounced highlight...');
+                highlightCitations();
+            } catch (e) {
+                console.error('Highlight error', e);
+            } finally {
+                isHighlighting = false;
+            }
+        }, 150); // 150ms debounce
     }
-    if (!document.body) { return document.addEventListener('DOMContentLoaded', safeHighlight); }
+
+    if (!document.body) {
+        return document.addEventListener('DOMContentLoaded', safeHighlight);
+    }
+
     const observer = new MutationObserver(mutations => {
-        let textAdded = false;
+        // Skip mutations caused by our own highlighting
+        let shouldProcess = false;
+
         for (const m of mutations) {
             if (m.type === 'childList') {
-                if ([...m.addedNodes].some(n => n.nodeType === Node.TEXT_NODE || (n.nodeType === 1 && n.innerText))) {
-                    textAdded = true; break;
+                for (const node of m.addedNodes) {
+                    // Skip if this is one of our highlight spans
+                    if (node.nodeType === 1 && node.classList && node.classList.contains('citeright-link')) {
+                        continue;
+                    }
+                    // Skip if this is inside our highlight spans
+                    if (node.nodeType === 1 && node.closest && node.closest('.citeright-link')) {
+                        continue;
+                    }
+                    // Process if it's text or contains text
+                    if (node.nodeType === Node.TEXT_NODE ||
+                        (node.nodeType === 1 && node.innerText && !node.classList.contains('citeright-link'))) {
+                        shouldProcess = true;
+                        break;
+                    }
                 }
-            } else if (m.type === 'characterData') { textAdded = true; break; }
+                if (shouldProcess) break;
+            } else if (m.type === 'characterData') {
+                // Skip if the text change is in our highlight spans
+                if (m.target.parentNode && m.target.parentNode.closest &&
+                    m.target.parentNode.closest('.citeright-link')) {
+                    continue;
+                }
+                shouldProcess = true;
+                break;
+            }
         }
-        if (textAdded) safeHighlight();
+
+        if (shouldProcess) {
+            console.log('🔍 DOM changed, scheduling highlight...');
+            safeHighlight();
+        }
     });
+
     try {
-        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-        console.log('🔁 MutationObserver active');
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+        console.log('🔁 MutationObserver active with debouncing');
     } catch (e) {
         console.warn('Observer failed to start', e.message);
     }
@@ -2262,7 +2283,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             clearTimeout(activationTimeout);
             activationTimeout = setTimeout(() => {
                 isActivated = false;
-                popover.style.display = 'none';
+                popover.hide();
                 console.log('⏰ 法源探測器已自動停用 (5分鐘無操作)');
                 updateActivationStatus();
             }, 300000);
@@ -2270,7 +2291,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             sendResponse({ success: true });
         } else if (message.action === "deactivateCiteRight") {
             isActivated = false;
-            popover.style.display = 'none';
+            popover.hide();
             clearTimeout(activationTimeout);
             console.log('❌ 透過右鍵選單停用台灣法源探測器');
             updateActivationStatus();
@@ -2279,20 +2300,79 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             isExtensionEnabled = message.enabled;
 
             if (isExtensionEnabled) {
-                console.log('🟢 CiteRight 擴充功能已透過彈出視窗啟用');
-                showActivationNotification('擴充功能已啟用', '按 Ctrl 啟動懸停模式', '#52c41a');
+                console.log('🟢 CiteRight 擴充功能已透过彈出視窗啟用');
+                // Re-highlight all citations when enabled
+                setTimeout(() => {
+                    highlightCitations();
+                }, 100);
             } else {
-                console.log('🔴 CiteRight 擴充功能已透過彈出視窗停用');
+                console.log('🔴 CiteRight 擴充功能已透过彈出視窗停用');
                 isActivated = false;
-                popover.style.display = 'none';
+                popover.hide();
                 clearTimeout(activationTimeout);
-                showActivationNotification('擴充功能已停用', '所有功能已關閉', '#d73527');
+                
+                // Remove all highlights and close any open panels
+                removeAllHighlights();
+                
+                // Close side panel if open
+                const sidePanel = document.getElementById('citeright-tool-panel');
+                if (sidePanel) {
+                    sidePanel.remove();
+                }
+                
+                // Remove sidebar background
+                const sidebarBg = document.getElementById('citeright-sidebar-background');
+                if (sidebarBg) {
+                    sidebarBg.remove();
+                }
+                
+                // Restore page layout
+                document.body.style.width = '';
+                document.body.style.maxWidth = '';
+                document.body.style.transition = '';
             }
             updateActivationStatus();
             sendResponse({ success: true });
         } else if (message.action === "openBookmarks") {
             console.log('📚 透過彈出視窗開啟書籤面板');
-            showBookmarksPanel();
+            
+            // Check if side panel already exists
+            let existingPanel = document.getElementById('citeright-tool-panel');
+            
+            if (!existingPanel) {
+                // Create temporary law data if needed for side panel
+                if (!currentLawData) {
+                    currentLawData = {
+                        id: 'temp_bookmarks',
+                        title: '書籤管理',
+                        type: '書籤',
+                        content: '正在載入書籤...',
+                        fullContent: '正在載入書籤...'
+                    };
+                }
+                
+                // Create the sidebar
+                const sidebar = createMainSidebar();
+                console.log('✅ 側邊面板已創建');
+            }
+            
+            // Switch to bookmarks tab
+            setTimeout(() => {
+                const bookmarkTabBtn = document.getElementById('tab-bookmarks');
+                if (bookmarkTabBtn) {
+                    bookmarkTabBtn.click(); // This will trigger the tab switch and load bookmarks
+                    console.log('✅ 已切換到書籤分頁');
+                } else {
+                    console.log('❌ 找不到書籤分頁按鈕');
+                    // Try to create the sidebar again if tab button not found
+                    const sidebar = createMainSidebar();
+                    setTimeout(() => {
+                        const btn = document.getElementById('tab-bookmarks');
+                        if (btn) btn.click();
+                    }, 200);
+                }
+            }, 150);
+            
             sendResponse({ success: true });
         } else if (message.action === "getStatus") {
             sendResponse({
@@ -2320,6 +2400,244 @@ if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     });
 }
 
+
+// Function to show legal popover with content from API
+async function showLegalPopover(element, event) {
+    try {
+        // Extract data from the highlighted element (dataset converts kebab-case to camelCase)
+        const lawName = element.dataset.lawName || '';
+        const article = element.dataset.article || '';
+        const paragraph = element.dataset.paragraph || '';
+        const caseType = element.dataset.caseType || '';
+        const number = element.dataset.number || '';
+        const year = element.dataset.year || '';
+        const legalType = element.dataset.legalType || '';
+        
+        console.log('🔍 Element data:', {
+            lawName, article, paragraph, caseType, number, year, legalType,
+            text: element.textContent
+        });
+        
+        // Position popover near the hovered element
+        const rect = element.getBoundingClientRect();
+        let left = rect.left + window.scrollX;
+        let top = rect.bottom + window.scrollY + 5;
+        
+        // Ensure popover stays in viewport
+        if (left + 480 > window.innerWidth) {
+            left = window.innerWidth - 480 - 10;
+        }
+        if (left < 10) left = 10;
+        
+        if (top + 300 > window.innerHeight + window.scrollY) {
+            top = rect.top + window.scrollY - 305;
+        }
+        popover.css({
+            "left": left+'px',
+            "top": top+'px'
+        })
+        popover.show()
+        
+        // Update popover title
+        const titleElement = popover.find('#citeright-title');
+        const contentElement = popover.find('.citeright-content');
+
+        // let params = null;
+        //
+        // contentElement.html(`<div style="padding: 16px; text-align: center;">🔍 正在載入${caseType}內容...</div>`)
+        //
+        // switch (caseType) {
+        //     case '釋字':
+        //         titleElement.text(`釋字第 ${number} 號`);
+        //         params = new URLSearchParams({
+        //             'caseType': caseType,
+        //             'number': number
+        //         });
+        // }
+        
+        if (caseType === '釋字') {
+            titleElement.text(`釋字第 ${number} 號`);
+            contentElement.html('<div style="padding: 16px; text-align: center;">🔍 正在載入釋字內容...</div>');
+            
+            // Fetch interpretation data
+            try {
+                const params = new URLSearchParams({
+                    'caseType': caseType,
+                    'number': number
+                });
+                const response = await fetch(`${API_BASE_URL}/api/case?${params.toString()}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    contentElement.html(`
+                        <div style="padding: 16px;">
+                            <div style="margin-bottom: 12px;">
+                                <strong>解釋字號：</strong>
+                                <div style="margin-top: 8px; line-height: 1.6;">${data.caseNumber}</div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong>解釋公布院令：</strong>
+                                <div style="margin-top: 8px; line-height: 1.6;">${data.data.date}</div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong>解釋爭點：</strong>
+                                <div style="margin-top: 8px; line-height: 1.6;">${data.data.chinese.issue || '無法載入解釋文'}</div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong>解釋文：</strong>
+                                <div style="margin-top: 8px; line-height: 1.6;">${data.data.chinese.reasoning || '無法載入解釋文'}</div>
+                            </div>
+                        </div>
+                    `);
+                } else {
+                    contentElement.html('<div style="padding: 16px; color: #666;">❌ 無法載入釋字內容</div>');
+                }
+            } catch (error) {
+                contentElement.html('<div style="padding: 16px; color: #666;">❌ 載入釋字內容時發生錯誤</div>');
+            }
+        } else if (caseType === '法條' && lawName && article) {
+            titleElement.text(`${lawName} 第 ${article} 條${paragraph ? ` ${paragraph.replace('-', ' 第')} 項` : ''}`);
+            contentElement.html('<div style="padding: 16px; text-align: center;">🔍 正在載入法條內容...</div>');
+            
+            // Fetch law article data
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/law-article?lawName=${encodeURIComponent(lawName)}&article=${article}${paragraph ? `&paragraph=${paragraph}` : ''}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    contentElement.html(`
+                        <div style="padding: 16px;">
+                            <div style="margin-bottom: 12px;">
+                                <strong>條文內容：</strong>
+                                <div style="margin-top: 8px; line-height: 1.6;">${data.content || '無法載入條文內容'}</div>
+                            </div>
+                        </div>
+                    `);
+                } else {
+                    contentElement.html('<div style="padding: 16px; color: #666;">❌ 無法載入法條內容</div>');
+                }
+            } catch (error) {
+                contentElement.html('<div style="padding: 16px; color: #666;">❌ 載入法條內容時發生錯誤</div>');
+            }
+        } else if (caseType === '法律名稱' && lawName) {
+            titleElement.text(lawName);
+            contentElement.html('<div style="padding: 16px; text-align: center;">🔍 正在載入法律資訊...</div>');
+            
+            // Fetch law information
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/law-info?lawName=${encodeURIComponent(lawName)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    contentElement.html(`
+                        <div style="padding: 16px;">
+                            <div style="margin-bottom: 12px;">
+                                <strong>法律簡介：</strong>
+                                <div style="margin-top: 8px; line-height: 1.6;">${data.description || '無法載入法律簡介'}</div>
+                            </div>
+                        </div>
+                    `);
+                } else {
+                    contentElement.html('<div style="padding: 16px; color: #666;">❌ 無法載入法律資訊</div>');
+                }
+            } catch (error) {
+                contentElement.html('<div style="padding: 16px; color: #666;">❌ 載入法律資訊時發生錯誤</div>');
+            }
+        } else {
+            // Fallback for unrecognized patterns
+            titleElement.text('台灣法源資訊');
+            contentElement.html(`
+                <div style="padding: 16px;">
+                    <div style="margin-bottom: 12px;">
+                        <strong>識別內容：</strong> ${element.textContent}
+                    </div>
+                    <div style="color: #666; font-size: 13px;">
+                        類型: ${caseType || '未知'}<br>
+                        ${lawName ? `法律: ${lawName}<br>` : ''}
+                        ${article ? `條文: ${article}<br>` : ''}
+                        ${paragraph ? `項款目: ${paragraph}<br>` : ''}
+                        ${year ? `年度: ${year}<br>` : ''}
+                        ${number ? `字號: ${number}<br>` : ''}
+                    </div>
+                </div>
+            `);
+        }
+        
+        // Store current law data for bookmarking
+        currentLawData = {
+            id: `law_${Date.now()}`,
+            title: titleElement.text(),
+            type: caseType || '法律資訊',
+            lawName: lawName,
+            article: article,
+            paragraph: paragraph,
+            year: year,
+            number: number,
+            content: '',
+            fullContent: contentElement.html()
+        };
+        
+        console.log('✅ 彈出視窗已顯示:', titleElement.text());
+        
+    } catch (error) {
+        console.error('❌ 顯示法律彈出視窗時發生錯誤:', error);
+        
+        // Show error popover
+        popover.show();
+        popover.find('#citeright-title').text('載入錯誤');
+        popover.find('.citeright-content').html('<div style="padding: 16px; color: #666;">❌ 載入內容時發生錯誤</div>');
+    }
+}
+
+// Event delegation for hover detection on highlighted legal citations
+document.addEventListener('mouseover', (e) => {
+    if (e.target.classList && e.target.classList.contains('citeright-link')) {
+        currentHoveredLaw = e.target;
+        
+        // Only show popover if Ctrl is pressed AND extension is enabled AND activated
+        if (isCtrlPressed && isExtensionEnabled && isActivated) {
+            clearTimeout(hideTimeout);
+            clearTimeout(showTimeout);
+            
+            // Prevent duplicate popups for same law
+            const lawKey = `${e.target.dataset.lawName}-${e.target.dataset.article}-${e.target.dataset.paragraph}`;
+            if (activePopupLaw === lawKey && !popover.is(":hidden")) {
+                return;
+            }
+            
+            activePopupLaw = lawKey;
+            
+            // Small delay to prevent rapid firing
+            showTimeout = setTimeout(() => {
+                if (currentHoveredLaw === e.target && isCtrlPressed) {
+                    showLegalPopover(e.target, e);
+                }
+            }, 100);
+        }
+    }
+});
+
+document.addEventListener('mouseout', (e) => {
+    if (e.target.classList && e.target.classList.contains('citeright-link')) {
+        currentHoveredLaw = null;
+        
+        // Clear show timeout
+        clearTimeout(showTimeout);
+        
+        // Don't auto-hide popover - only hide on X click or outside click
+        // This ensures popover stays open after being shown
+    }
+});
+
+// Click outside popover to close it
+document.addEventListener('click', (e) => {
+    // Check if click is outside popover and not on a citeright-link
+    if (!popover.is(":hidden") &&
+        !popover.has(e.target) &&
+        !e.target.classList.contains('citeright-link')) {
+        popover.hide();
+        activePopupLaw = null;
+        console.log('❌ 彈出視窗已關閉 (點擊外部)');
+    }
+});
+
 // Initialize extension when content script loads
 initializeExtension();
 
@@ -2330,11 +2648,36 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             isExtensionEnabled = !!msg.enabled;
             if (!isExtensionEnabled) {
                 isActivated = false;
-                popover.style.display = 'none';
+                popover.hide();
                 clearTimeout(activationTimeout);
-                showActivationNotification('擴充功能已停用', '所有功能已關閉', '#d73527');
+                
+                // Remove all highlights and close any open panels
+                removeAllHighlights();
+                
+                // Close side panel if open
+                const sidePanel = document.getElementById('citeright-tool-panel');
+                if (sidePanel) {
+                    sidePanel.remove();
+                }
+                
+                // Remove sidebar background
+                const sidebarBg = document.getElementById('citeright-sidebar-background');
+                if (sidebarBg) {
+                    sidebarBg.remove();
+                }
+                
+                // Restore page layout
+                document.body.style.width = '';
+                document.body.style.maxWidth = '';
+                document.body.style.transition = '';
+                
+                console.log('🔴 擴充功能已停用');
             } else {
-                showActivationNotification('擴充功能已啟用', '按 Ctrl 啟動懸停模式', '#52c41a');
+                console.log('🟢 擴充功能已啟用');
+                // Re-highlight all citations when enabled
+                setTimeout(() => {
+                    highlightCitations();
+                }, 100);
             }
             updateActivationStatus();
         }
