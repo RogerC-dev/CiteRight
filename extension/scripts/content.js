@@ -311,17 +311,22 @@ if (typeof window !== 'undefined') {
         
         console.log('法律資料載入完成，共', legalNames.length, '個法律名稱');
         
-        // 法律資料載入完成後，重新執行 highlighting
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
+        // 法律資料載入完成後，重新執行 highlighting (only if extension is enabled)
+        if (isExtensionEnabled) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    setTimeout(() => highlightCitations(), 100);
+                });
+            } else {
                 setTimeout(() => highlightCitations(), 100);
-            });
-        } else {
-            setTimeout(() => highlightCitations(), 100);
+            }
         }
     } catch (error) {
         console.error('載入法律資料失敗:', error);
-        alert('載入法律資料失敗，請檢查伺服器是否運行。');
+        // Only show alert if extension is enabled
+        if (isExtensionEnabled) {
+            alert('載入法律資料失敗，請檢查伺服器是否運行。');
+        }
         return;
     }
 })();
@@ -914,10 +919,24 @@ function createPopoverElement() {
     // Remove any existing popover
     const existing = document.getElementById('citeright-popover');
     if (existing) existing.remove();
-    const popover = document.createElement('div');
-    popover.id = 'citeright-popover';
-    popover.style.cssText = `position:fixed;z-index:2147483650;background:#fff;border:2px solid #1890ff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.15);width:480px;max-width:95vw;font-family:"Microsoft JhengHei","Noto Sans TC",Arial,sans-serif;font-size:14px;color:#333;display:none;pointer-events:auto;backdrop-filter:blur(8px);`;
-    popover.innerHTML = `
+    const popover = $(`<div id='citeright-popover'>`);
+    popover.css({
+        position: "fixed",
+        zIndex: 2147483650,
+        background: "#fff",
+        border: "2px solid #1890ff",
+        borderRadius: "12px",
+        boxShadow: "0 12px 40px rgba(0,0,0,.15)",
+        width: "480px",
+        maxWidth: "95vw",
+        fontFamily: "Microsoft JhengHei, Noto Sans TC, Arial, sans-serif",
+        fontSize: "14px",
+        color: "#333",
+        display: "none",
+        pointerEvents: "auto",
+        backdropFilter: "blur(8px)"
+    })
+    popover.append($(`
       <div class="citeright-header" style="padding:14px 18px;background:linear-gradient(135deg,#1890ff,#096dd9);color:white;border-bottom:none;display:flex;justify-content:space-between;align-items:center;border-radius:10px 10px 0 0;cursor:move;user-select:none;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span id="citeright-icon" style="font-size:18px;">⚖️</span>
@@ -929,13 +948,7 @@ function createPopoverElement() {
           <button class="citeright-close" style="display:flex; align-items: center; justify-content: center; background:rgba(255,255,255,0.2);border:none;color:white;border-radius:50%;padding:6px;cursor:pointer;font-size:16px;width:28px;height:28px;transition:all 0.2s;">&times;</button>
         </div>
       </div>
-      <div class="citeright-loader" style="padding:24px;text-align:center;color:#666;background:white;">
-        <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-          <div style="width:16px;height:16px;border:2px solid #1890ff;border-top:2px solid transparent;border-radius:50%;animation:spin 1s linear infinite;"></div>
-          <span>正在查詢法律資料...</span>
-        </div>
-      </div>
-      <div class="citeright-content" style="padding:18px;max-height:320px;overflow-y:auto;display:none;background:white;border-radius:0 0 10px 10px;line-height:1.6;"></div>
+      <div class="citeright-content" style="padding:18px;max-height:320px;overflow-y:auto;background:white;border-radius:0 0 10px 10px;line-height:1.6;"></div>
       <style>
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .citeright-header button:hover { background: rgba(255,255,255,0.3) !important; transform: scale(1.05); }
@@ -943,32 +956,32 @@ function createPopoverElement() {
         .citeright-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
         .citeright-content::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
         .citeright-content::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
-      </style>`;
-    document.body.appendChild(popover);
+      </style>`));
+    $('body').append(popover);
 
     // Close button event - only hides popover
-    popover.querySelector('.citeright-close').addEventListener('click', e => {
+    popover.find('.citeright-close')?.on('click', e => {
         e.stopPropagation();
-        popover.style.display = 'none';
+        popover.hide();
         console.log('❌ 彈出視窗已關閉');
     });
 
     // Bookmark button event
-    popover.querySelector('.citeright-bookmark').addEventListener('click', e => {
+    popover.find('.citeright-bookmark')?.on('click', e => {
         e.stopPropagation();
         addToBookmarks();
     });
 
     // Expand button event - creates side panel
-    popover.querySelector('.citeright-expand').addEventListener('click', e => {
+    popover.find('.citeright-expand')?.on('click', e => {
         e.stopPropagation();
         console.log('🔧 Expand button clicked, currentLawData:', currentLawData);
         
         if (!currentLawData) {
             console.log('❌ No currentLawData, attempting to load from popup');
             // Try to extract data from popup if currentLawData is missing
-            const title = popover.querySelector('#citeright-title').textContent;
-            const content = popover.querySelector('.citeright-content').innerHTML;
+            const title = popover.find('#citeright-title').text();
+            const content = popover.find('.citeright-content').html();
             if (title && content) {
                 currentLawData = {
                     id: 'popup_' + Date.now(),
@@ -984,35 +997,37 @@ function createPopoverElement() {
         openSidePanel();
         
         // Hide the popup after opening sidebar
-        popover.style.display = 'none';
+        popover.hide();
     });
 
     // Drag improvements
     let drag = { active: false, offsetX: 0, offsetY: 0 };
-    const header = popover.querySelector('.citeright-header');
-    header.addEventListener('mousedown', e => {
+    const header = popover.find('.citeright-header');
+    header.on('mousedown', e => {
         if (e.target.classList.contains('citeright-close')) return;
         drag.active = true;
-        const rect = popover.getBoundingClientRect();
+        const rect = popover.get(0).getBoundingClientRect();
         drag.offsetX = e.clientX - rect.left;
         drag.offsetY = e.clientY - rect.top;
-        header.style.cursor = 'grabbing';
+        header.css('cursor', 'grabbing');
         e.preventDefault();
     });
     window.addEventListener('mousemove', e => {
         if (!drag.active) return;
         let left = e.clientX - drag.offsetX;
         let top = e.clientY - drag.offsetY;
-        left = Math.max(0, Math.min(left, window.innerWidth - popover.offsetWidth));
+        left = Math.max(0, Math.min(left, window.innerWidth - popover.prop("offsetWidth")));
         top = Math.max(0, Math.min(top, window.innerHeight - 50));
-        popover.style.left = left + 'px';
-        popover.style.top = top + 'px';
+        popover.css({
+            "left": left + 'px',
+            "top": top + 'px'
+        })
     });
-    window.addEventListener('mouseup', () => { if (drag.active) { drag.active = false; header.style.cursor = 'move'; } });
+    window.addEventListener('mouseup', () => { if (drag.active) { drag.active = false; header.css("cursor", 'move'); } });
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
-            popover.style.display = 'none';
+            popover.hide();
         }
     });
     return popover;
@@ -1034,9 +1049,9 @@ let bookmarkedLaws = [];      // Saved bookmarks
 
 // Helper function to update activation status
 function updateActivationStatus() {
-    const title = popover.querySelector('#citeright-title');
+    const title = popover.find('#citeright-title');
     if (title) {
-        title.textContent = isActivated ? '台灣法源資訊 (滑鼠模式)' : '台灣法源資訊';
+        title.text(isActivated ? '台灣法源資訊 (滑鼠模式)' : '台灣法源資訊');
     }
 }
 
@@ -1074,7 +1089,7 @@ document.addEventListener('keydown', (e) => {
         clearTimeout(activationTimeout);
         activationTimeout = setTimeout(() => {
             isActivated = false;
-            popover.style.display = 'none';
+            popover.hide();
             console.log('⏰ 懸停模式已自動停用 (3分鐘無操作)');
             updateActivationStatus();
         }, 180000); // 3 minutes
@@ -1141,11 +1156,6 @@ function showActivationNotification(title, subtitle, bgColor = '#389e0d') {
     setTimeout(() => {
         notification.remove();
     }, 2500);
-}
-
-// Helper function to check if popover is being hovered
-function isPopoverHovered() {
-    return popover.matches(':hover') || popover.contains(document.querySelector(':hover'));
 }
 
 // Global variable to store current law data for bookmarking
@@ -1507,7 +1517,7 @@ function setupToolPanelResize(toolPanel) {
             const finalWidth = parseInt(toolPanel.style.width);
             
             // Save width to localStorage
-            localStorage.setItem('citeright-panel-width', finalWidth);
+            localStorage.setItem('citeright-panel-width', finalWidth.toString());
             console.log('💾 Saved panel width to localStorage:', finalWidth + 'px');
             
             // Reset handle visual state
@@ -1607,7 +1617,7 @@ function setupSidebarResize(sidebar) {
             const finalWidth = parseInt(sidebar.style.width);
             
             // Save the width to localStorage
-            localStorage.setItem('citeright-sidebar-width', finalWidth);
+            localStorage.setItem('citeright-sidebar-width', finalWidth.toString());
             console.log('💾 Saved sidebar width to localStorage:', finalWidth + 'px');
             
             // After dragging ends, switch back to 2-page layout
@@ -1626,19 +1636,19 @@ function setupSidebarResize(sidebar) {
 }
 
 // Close sidebar and restore web content
-function closeSidebar() {
-    const sidebar = document.getElementById('citeright-main-sidebar');
-    if (sidebar) {
-        sidebar.style.transform = 'translateX(100%)';
-        setTimeout(() => sidebar.remove(), 300);
-        adjustWebContentForSidebar(0);
-    }
-    
-    const overlay = document.getElementById('citeright-web-overlay');
-    if (overlay) {
-        overlay.remove();
-    }
-}
+// function closeSidebar() {
+//     const sidebar = document.getElementById('citeright-main-sidebar');
+//     if (sidebar) {
+//         sidebar.style.transform = 'translateX(100%)';
+//         setTimeout(() => sidebar.remove(), 300);
+//         adjustWebContentForSidebar(0);
+//     }
+//
+//     const overlay = document.getElementById('citeright-web-overlay');
+//     if (overlay) {
+//         overlay.remove();
+//     }
+// }
 
 // Load bookmarks content
 function loadBookmarksContent() {
@@ -2224,7 +2234,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             clearTimeout(activationTimeout);
             activationTimeout = setTimeout(() => {
                 isActivated = false;
-                popover.style.display = 'none';
+                popover.hide();
                 console.log('⏰ 法源探測器已自動停用 (5分鐘無操作)');
                 updateActivationStatus();
             }, 300000);
@@ -2232,7 +2242,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             sendResponse({ success: true });
         } else if (message.action === "deactivateCiteRight") {
             isActivated = false;
-            popover.style.display = 'none';
+            popover.hide();
             clearTimeout(activationTimeout);
             console.log('❌ 透過右鍵選單停用台灣法源探測器');
             updateActivationStatus();
@@ -2249,7 +2259,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             } else {
                 console.log('🔴 CiteRight 擴充功能已透过彈出視窗停用');
                 isActivated = false;
-                popover.style.display = 'none';
+                popover.hide();
                 clearTimeout(activationTimeout);
                 
                 // Remove all highlights and close any open panels
@@ -2341,6 +2351,21 @@ if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     });
 }
 
+class BookMark {
+    constructor(id, type, title, number, content, fullContent, officialUrl, lawData, articleData, dateAdded) {
+        this.id = id;
+        this.type = type;
+        this.title = title;
+        this.number = number;
+        this.content = content;
+        this.fullContent = fullContent;
+        this.officialUrl = officialUrl;
+        this.lawData = lawData;
+        this.articleData = articleData;
+        this.dateAdded = dateAdded || new Date().toISOString();
+    }
+}
+
 // Function to show legal popover with content from API
 async function showLegalPopover(element, event) {
     try {
@@ -2372,88 +2397,118 @@ async function showLegalPopover(element, event) {
         if (top + 300 > window.innerHeight + window.scrollY) {
             top = rect.top + window.scrollY - 305;
         }
-        
-        popover.style.left = left + 'px';
-        popover.style.top = top + 'px';
-        popover.style.display = 'block';
+        popover.css({
+            "left": left+'px',
+            "top": top+'px'
+        })
+        popover.show()
         
         // Update popover title
-        const titleElement = popover.querySelector('#citeright-title');
-        const contentElement = popover.querySelector('.citeright-content');
+        const titleElement = popover.find('#citeright-title');
+        const contentElement = popover.find('.citeright-content');
+
+        // let params = null;
+        //
+        // contentElement.html(`<div style="padding: 16px; text-align: center;">🔍 正在載入${caseType}內容...</div>`)
+        //
+        // switch (caseType) {
+        //     case '釋字':
+        //         titleElement.text(`釋字第 ${number} 號`);
+        //         params = new URLSearchParams({
+        //             'caseType': caseType,
+        //             'number': number
+        //         });
+        // }
         
         if (caseType === '釋字') {
-            titleElement.textContent = `釋字第 ${number} 號`;
-            contentElement.innerHTML = '<div style="padding: 16px; text-align: center;">🔍 正在載入釋字內容...</div>';
+            titleElement.text(`釋字第 ${number} 號`);
+            contentElement.html('<div style="padding: 16px; text-align: center;">🔍 正在載入釋字內容...</div>');
             
             // Fetch interpretation data
             try {
-                const response = await fetch(`${API_BASE_URL}/api/interpretation/${number}`);
+                const params = new URLSearchParams({
+                    'caseType': caseType,
+                    'number': number
+                });
+                const response = await fetch(`${API_BASE_URL}/api/case?${params.toString()}`);
                 if (response.ok) {
                     const data = await response.json();
-                    contentElement.innerHTML = `
+                    contentElement.html(`
                         <div style="padding: 16px;">
                             <div style="margin-bottom: 12px;">
+                                <strong>解釋字號：</strong>
+                                <div style="margin-top: 8px; line-height: 1.6;">${data.caseNumber}</div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong>解釋公布院令：</strong>
+                                <div style="margin-top: 8px; line-height: 1.6;">${data.data.date}</div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong>解釋爭點：</strong>
+                                <div style="margin-top: 8px; line-height: 1.6;">${data.data.chinese.issue || '無法載入解釋文'}</div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
                                 <strong>解釋文：</strong>
-                                <div style="margin-top: 8px; line-height: 1.6;">${data.content || '無法載入解釋文'}</div>
+                                <div style="margin-top: 8px; line-height: 1.6;">${data.data.chinese.reasoning || '無法載入解釋文'}</div>
                             </div>
                         </div>
-                    `;
+                    `);
                 } else {
-                    contentElement.innerHTML = '<div style="padding: 16px; color: #666;">❌ 無法載入釋字內容</div>';
+                    contentElement.html('<div style="padding: 16px; color: #666;">❌ 無法載入釋字內容</div>');
                 }
             } catch (error) {
-                contentElement.innerHTML = '<div style="padding: 16px; color: #666;">❌ 載入釋字內容時發生錯誤</div>';
+                contentElement.html('<div style="padding: 16px; color: #666;">❌ 載入釋字內容時發生錯誤</div>');
             }
         } else if (caseType === '法條' && lawName && article) {
-            titleElement.textContent = `${lawName} 第 ${article} 條${paragraph ? ` ${paragraph.replace('-', ' 第')} 項` : ''}`;
-            contentElement.innerHTML = '<div style="padding: 16px; text-align: center;">🔍 正在載入法條內容...</div>';
+            titleElement.text(`${lawName} 第 ${article} 條${paragraph ? ` ${paragraph.replace('-', ' 第')} 項` : ''}`);
+            contentElement.html('<div style="padding: 16px; text-align: center;">🔍 正在載入法條內容...</div>');
             
             // Fetch law article data
             try {
                 const response = await fetch(`${API_BASE_URL}/api/law-article?lawName=${encodeURIComponent(lawName)}&article=${article}${paragraph ? `&paragraph=${paragraph}` : ''}`);
                 if (response.ok) {
                     const data = await response.json();
-                    contentElement.innerHTML = `
+                    contentElement.html(`
                         <div style="padding: 16px;">
                             <div style="margin-bottom: 12px;">
                                 <strong>條文內容：</strong>
                                 <div style="margin-top: 8px; line-height: 1.6;">${data.content || '無法載入條文內容'}</div>
                             </div>
                         </div>
-                    `;
+                    `);
                 } else {
-                    contentElement.innerHTML = '<div style="padding: 16px; color: #666;">❌ 無法載入法條內容</div>';
+                    contentElement.html('<div style="padding: 16px; color: #666;">❌ 無法載入法條內容</div>');
                 }
             } catch (error) {
-                contentElement.innerHTML = '<div style="padding: 16px; color: #666;">❌ 載入法條內容時發生錯誤</div>';
+                contentElement.html('<div style="padding: 16px; color: #666;">❌ 載入法條內容時發生錯誤</div>');
             }
         } else if (caseType === '法律名稱' && lawName) {
-            titleElement.textContent = lawName;
-            contentElement.innerHTML = '<div style="padding: 16px; text-align: center;">🔍 正在載入法律資訊...</div>';
+            titleElement.text(lawName);
+            contentElement.html('<div style="padding: 16px; text-align: center;">🔍 正在載入法律資訊...</div>');
             
             // Fetch law information
             try {
                 const response = await fetch(`${API_BASE_URL}/api/law-info?lawName=${encodeURIComponent(lawName)}`);
                 if (response.ok) {
                     const data = await response.json();
-                    contentElement.innerHTML = `
+                    contentElement.html(`
                         <div style="padding: 16px;">
                             <div style="margin-bottom: 12px;">
                                 <strong>法律簡介：</strong>
                                 <div style="margin-top: 8px; line-height: 1.6;">${data.description || '無法載入法律簡介'}</div>
                             </div>
                         </div>
-                    `;
+                    `);
                 } else {
-                    contentElement.innerHTML = '<div style="padding: 16px; color: #666;">❌ 無法載入法律資訊</div>';
+                    contentElement.html('<div style="padding: 16px; color: #666;">❌ 無法載入法律資訊</div>');
                 }
             } catch (error) {
-                contentElement.innerHTML = '<div style="padding: 16px; color: #666;">❌ 載入法律資訊時發生錯誤</div>';
+                contentElement.html('<div style="padding: 16px; color: #666;">❌ 載入法律資訊時發生錯誤</div>');
             }
         } else {
             // Fallback for unrecognized patterns
-            titleElement.textContent = '台灣法源資訊';
-            contentElement.innerHTML = `
+            titleElement.text('台灣法源資訊');
+            contentElement.html(`
                 <div style="padding: 16px;">
                     <div style="margin-bottom: 12px;">
                         <strong>識別內容：</strong> ${element.textContent}
@@ -2467,13 +2522,13 @@ async function showLegalPopover(element, event) {
                         ${number ? `字號: ${number}<br>` : ''}
                     </div>
                 </div>
-            `;
+            `);
         }
         
         // Store current law data for bookmarking
         currentLawData = {
             id: `law_${Date.now()}`,
-            title: titleElement.textContent,
+            title: titleElement.text(),
             type: caseType || '法律資訊',
             lawName: lawName,
             article: article,
@@ -2484,15 +2539,15 @@ async function showLegalPopover(element, event) {
             fullContent: ''
         };
         
-        console.log('✅ 彈出視窗已顯示:', titleElement.textContent);
+        console.log('✅ 彈出視窗已顯示:', titleElement.text());
         
     } catch (error) {
         console.error('❌ 顯示法律彈出視窗時發生錯誤:', error);
         
         // Show error popover
-        popover.style.display = 'block';
-        popover.querySelector('#citeright-title').textContent = '載入錯誤';
-        popover.querySelector('.citeright-content').innerHTML = '<div style="padding: 16px; color: #666;">❌ 載入內容時發生錯誤</div>';
+        popover.show();
+        popover.find('#citeright-title').text('載入錯誤');
+        popover.find('.citeright-content').html('<div style="padding: 16px; color: #666;">❌ 載入內容時發生錯誤</div>');
     }
 }
 
@@ -2508,7 +2563,7 @@ document.addEventListener('mouseover', (e) => {
             
             // Prevent duplicate popups for same law
             const lawKey = `${e.target.dataset.lawName}-${e.target.dataset.article}-${e.target.dataset.paragraph}`;
-            if (activePopupLaw === lawKey && popover.style.display === 'block') {
+            if (activePopupLaw === lawKey && !popover.is(":hidden")) {
                 return;
             }
             
@@ -2539,10 +2594,10 @@ document.addEventListener('mouseout', (e) => {
 // Click outside popover to close it
 document.addEventListener('click', (e) => {
     // Check if click is outside popover and not on a citeright-link
-    if (popover.style.display === 'block' && 
-        !popover.contains(e.target) && 
+    if (!popover.is(":hidden") &&
+        !popover.has(e.target) &&
         !e.target.classList.contains('citeright-link')) {
-        popover.style.display = 'none';
+        popover.hide();
         activePopupLaw = null;
         console.log('❌ 彈出視窗已關閉 (點擊外部)');
     }
@@ -2558,7 +2613,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             isExtensionEnabled = !!msg.enabled;
             if (!isExtensionEnabled) {
                 isActivated = false;
-                popover.style.display = 'none';
+                popover.hide();
                 clearTimeout(activationTimeout);
                 
                 // Remove all highlights and close any open panels
