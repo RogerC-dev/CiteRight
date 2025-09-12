@@ -15,7 +15,7 @@ class LawAttachment(sqlmodel.SQLModel, table=True):
     id: Optional[int] = sqlmodel.Field(default=None, primary_key=True, sa_column_kwargs={"name": "Id"})
     law_level: str = sqlmodel.Field(index=True, max_length=50, sa_column_kwargs={"name": "LawLevel"})
     law_name: str = sqlmodel.Field(index=True, max_length=255, sa_column_kwargs={"name": "LawName"})
-    title: Optional[str] = sqlmodel.Field(default=None, max_length=255, sa_column_kwargs={"name": "Title"})
+    file_name: Optional[str] = sqlmodel.Field(default=None, max_length=255, sa_column_kwargs={"name": "FileName"})
     file_url: str = sqlmodel.Field(max_length=500, sa_column_kwargs={"name": "FileUrl"})
 
     __table_args__ = (
@@ -33,7 +33,7 @@ class LawAttachment(sqlmodel.SQLModel, table=True):
 class LawCaption(sqlmodel.SQLModel, table=True):
     __tablename__ = "LawCaption"
 
-    id: Optional[int] = sqlmodel.Field(default=None, primary_key=True, sa_column_kwargs={"name": "Id"})
+    id: int = sqlmodel.Field(primary_key=True, sa_column_kwargs={"name": "Id"})
     law_level: str = sqlmodel.Field(index=True, max_length=50, sa_column_kwargs={"name": "LawLevel"})
     law_name: str = sqlmodel.Field(index=True, max_length=255, sa_column_kwargs={"name": "LawName"})
     caption_title: str = sqlmodel.Field(max_length=255, sa_column_kwargs={"name": "CaptionTitle"})
@@ -54,7 +54,7 @@ class LawCaption(sqlmodel.SQLModel, table=True):
 class LawArticle(sqlmodel.SQLModel, table=True):
     __tablename__ = "LawArticle"
 
-    id: Optional[int] = sqlmodel.Field(default=None, primary_key=True, sa_column_kwargs={"name": "Id"})
+    id: int = sqlmodel.Field(primary_key=True, sa_column_kwargs={"name": "Id"})
     caption_id: Optional[int] = sqlmodel.Field(foreign_key="LawCaption.Id", index=True, sa_column_kwargs={"name": "CaptionId"})
     article_no: str = sqlmodel.Field(max_length=50, sa_column_kwargs={"name": "ArticleNo"})
     law_level: str = sqlmodel.Field(index=True, max_length=50, sa_column_kwargs={"name": "LawLevel"})

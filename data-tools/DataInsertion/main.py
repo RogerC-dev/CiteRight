@@ -2,6 +2,7 @@ import asyncio
 import os
 import logging
 import json
+from datetime import datetime
 
 from pathlib import Path
 
@@ -10,12 +11,13 @@ import dotenv
 import httpx
 import sqlmodel
 
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import SQLModel, Session, create_engine, delete
 
 import API
 
 from models import Categories, Resources, ResourceFiles
 from models.law import Law, LawAttachment, LawArticle, LawCaption
+from models.interpretations import Interpretations, InterpretationsEN, InterpretationsZH, InterpretationAdditions
 
 # Configure logging
 logging.basicConfig(
@@ -154,6 +156,110 @@ async def download_file(file: ResourceFiles):
         except httpx.HTTPStatusError as e:
             logger.error(f"Error downloading file {file.file_set_id}: {e}")
 
+def insert_interpretation_data(path: Path):
+    
+    # Prepare SQL output file
+    sql_output_path = Path("interpretation_data.sql")
+    sql_statements = []
+    
+    # Add clear existing data statements
+    sql_statements.extend([
+        "-- Clear existing interpretation data",
+        "DELETE FROM interpretation_additions;",
+        "DELETE FROM interpretations_en;", 
+        "DELETE FROM interpretations_zh;",
+        "DELETE FROM interpretations;",
+        "",
+        "-- Insert new interpretation data"
+    ])
+    
+    with Session(engine) as session:
+        for file in path.glob("**/*.json"):
+            with open(file, 'r', encoding='utf-8') as f:
+                data_wrapper = json.load(f)
+                data = data_wrapper.get("data", {})
+                
+                # Parse interpretation date
+                interpretation_date = data.get("inte_date")
+                if interpretation_date:
+                    interpretation_date = datetime.strptime(interpretation_date, "%Y/%m/%d 上午 12:00:00").date()
+                
+                # Generate SQL for main interpretation record
+                inte_no = data.get("inte_no", "").replace("'", "''")
+                source_url = data.get("data_url", "").replace("'", "''")
+                order_val = data.get("inte_order", "").replace("'", "''")
+                order_title = data.get("inte_order_title", "").replace("'", "''")
+                order_change = data.get("inte_order_change", "").replace("'", "''")
+                number_change = data.get("inte_no_chg", "").replace("'", "''")
+                announcement_order = data.get("inte_announcement_order_en", "").replace("'", "''")
+                amendment_order = data.get("inte_amendment_order_en", "").replace("'", "''")
+                
+                date_str = f"'{interpretation_date}'" if interpretation_date else "NULL"
+                
+                sql_statements.append(
+                    f"INSERT INTO interpretations (interpretation_number, interpretation_date, source_url, `order`, order_title, order_change, number_change, announcement_order, amendment_order) "
+                    f"VALUES ('{inte_no}', {date_str}, '{source_url}', '{order_val}', '{order_title}', '{order_change}', '{number_change}', '{announcement_order}', '{amendment_order}');"
+                )
+                
+                # Generate SQL for Chinese version record
+                def escape_sql(text):
+                    if text is None:
+                        return "NULL"
+                    return f"'{text.replace(chr(39), chr(39)+chr(39))}'"
+                
+                number_title_zh = escape_sql(data.get("inte_no_title"))
+                issue_zh = escape_sql(data.get("inte_issue"))
+                description_zh = escape_sql(data.get("inte_desc"))
+                reasoning_zh = escape_sql(data.get("inte_reason"))
+                other_documents = escape_sql(data.get("other_doc"))
+                kind_1 = escape_sql(data.get("inte_kind_1"))
+                kind_2 = escape_sql(data.get("inte_kind_2"))
+                fact_zh = escape_sql(data.get("inte_fact"))
+                
+                sql_statements.append(
+                    f"INSERT INTO interpretations_zh (interpretation_number, number_title, issue, description, reasoning, other_documents, interpretation_kind_1, interpretation_kind_2, fact) "
+                    f"VALUES ('{inte_no}', {number_title_zh}, {issue_zh}, {description_zh}, {reasoning_zh}, {other_documents}, {kind_1}, {kind_2}, {fact_zh});"
+                )
+                
+                # Generate SQL for English version record if available
+                if data.get("inte_no_title_en") or data.get("inte_issue_en"):
+                    number_title_en = escape_sql(data.get("inte_no_title_en"))
+                    issue_en = escape_sql(data.get("inte_issue_en"))
+                    description_en = escape_sql(data.get("inte_desc_en"))
+                    reasoning_en = escape_sql(data.get("inte_reason_en"))
+                    fact_en = escape_sql(data.get("inte_fact_en"))
+                    other_opinion = escape_sql(data.get("inte_opinions_en"))
+                    constitutional_complaint = escape_sql(data.get("inte_constitutional_complaint_en"))
+                    decision = escape_sql(data.get("inte_decision_en"))
+                    regulations = escape_sql(data.get("inte_regulations_en"))
+                    appendix = escape_sql(data.get("inte_appendix_en"))
+                    
+                    sql_statements.append(
+                        f"INSERT INTO interpretations_en (interpretation_number, number_title, issue, description, reasoning, fact, other_opinion, constitutional_complaint, decision, regulations, appendix) "
+                        f"VALUES ('{inte_no}', {number_title_en}, {issue_en}, {description_en}, {reasoning_en}, {fact_en}, {other_opinion}, {constitutional_complaint}, {decision}, {regulations}, {appendix});"
+                    )
+                
+                # Generate SQL for addition records
+                additions = data_wrapper.get("addition", {})
+                for desc, url in additions.items():
+                    if url:  # Only add if URL exists
+                        desc_escaped = escape_sql(desc)
+                        full_url = url if url.startswith("http") else f"https://cons.judicial.gov.tw{url}"
+                        url_escaped = escape_sql(full_url)
+                        
+                        sql_statements.append(
+                            f"INSERT INTO interpretation_additions (interpretation_number, description, url) "
+                            f"VALUES ('{inte_no}', {desc_escaped}, {url_escaped});"
+                        )
+                
+                logger.info(f"Generated SQL for interpretation: {data.get('inte_no')} - {data.get('inte_no_title')}")
+        
+        # Write SQL statements to file
+        with open(sql_output_path, 'w', encoding='utf-8') as sql_file:
+            sql_file.write('\n'.join(sql_statements))
+        
+        logger.info(f"SQL statements written to {sql_output_path}")
+        logger.info("Interpretation data SQL generation completed.")
 
 @click.group()
 def cli():
@@ -161,29 +267,23 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--reset-database', is_flag=True, help='Drop and recreate all tables before updating')
-def update_categories(reset_database):
+@click.pass_context
+def update_categories(ctx):
     """Update categories from API."""
-    if reset_database:
-        recreate_tables()
     logger.info("Starting category update...")
     update_category()
 
 @cli.command()
-@click.option('--reset-database', is_flag=True, help='Drop and recreate all tables before updating')
-def update_resources(reset_database):
+@click.pass_context
+def update_resources(ctx):
     """Update resources from API."""
-    if reset_database:
-        recreate_tables()
     logger.info("Starting resource update...")
     update_resources()
 
 @cli.command()
-@click.option('--reset-database', is_flag=True, help='Drop and recreate all tables before syncing')
-def sync_all(reset_database):
+@click.pass_context
+def sync_all(ctx):
     """Update both categories and resources."""
-    if reset_database:
-        recreate_tables()
     logger.info("Starting full sync...")
     update_category()
     update_resources()
@@ -192,6 +292,11 @@ def sync_all(reset_database):
 def reset_tables():
     """Drop and recreate all database tables."""
     recreate_tables()
+
+@cli.command()
+def create_tables():
+    """Create all database tables."""
+    SQLModel.metadata.create_all(engine)
 
 @cli.command()
 @click.option('--category-no', prompt='Category number',
@@ -227,12 +332,15 @@ def download_files():
     logger.info("File download completed.")
 
 @cli.command()
-@click.option('--reset-database', default=False, is_flag=True, help='Drop and recreate all tables before inserting')
+def insert_interpretations():
+    """Insert interpretation data from JSON files."""
+    logger.info("Starting interpretation data insertion...")
+    insert_interpretation_data()
+
+@cli.command()
 @click.argument("law_data_file", type=click.Path(exists=True))
-def insert_law_data(reset_database, law_data_file):
+def insert_law_data(law_data_file):
     """Insert law data into the database."""
-    if reset_database:
-        recreate_tables()
     logger.info("Starting law data insertion...")
     with Session(engine) as session, open(law_data_file, 'r', encoding='utf-8-sig') as f:
         law_data = json.load(f)
@@ -264,7 +372,7 @@ def insert_law_data(reset_database, law_data_file):
                 attachment_model = LawAttachment(
                     law_level=law_model.law_level,
                     law_name=law_model.law_name,
-                    title=attachment.get("Title"),
+                    file_name=attachment.get("FileName"),
                     file_url=attachment.get("FileURL")
                 )
                 session.add(attachment_model)
@@ -278,6 +386,7 @@ def insert_law_data(reset_database, law_data_file):
                         caption_title=article.get("ArticleContent")
                     )
                     session.add(last_caption)
+                    session.flush([last_caption])
                 else:
                     if last_caption:
                         article_model = LawArticle(
