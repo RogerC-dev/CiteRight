@@ -1148,9 +1148,11 @@ let currentLawData = null;
 function normalizeBookmarkItem(data) {
     const d = data || {};
 
+    const isTypeInterpretation = typeof d.type === 'string' && (
+        /interpret/i.test(d.type) || d.type === '釋字'
+    );
     const looksLikeInterpretation = (
-        (typeof d.type === 'string' && (/interpret/i.test(d.type))) ||
-        !!d.issue || !!d.description
+        isTypeInterpretation || !!d.issue || !!d.description
     );
 
     const derivedNumber = d.number || d.articleNumber || d.ArticleNo || '';
@@ -1174,7 +1176,9 @@ function normalizeBookmarkItem(data) {
     }
 
     const derivedUrl = d.officialUrl || d.url || d.link || '';
-    const derivedType = d.type || (looksLikeInterpretation ? 'interpretation' : 'law');
+    const derivedType = (d.type === '釋字')
+        ? 'interpretation'
+        : (d.type || (looksLikeInterpretation ? 'interpretation' : 'law'));
     const derivedId = d.id || `${derivedType}_${derivedNumber || Date.now()}`;
 
     return {
@@ -1786,6 +1790,16 @@ function loadBookmarkInToolTab(bookmark) {
             content: bookmark.fullContent || bookmark.content,
             fullContent: bookmark.fullContent || bookmark.content
         };
+        // Normalize type for interpretations (釋字)
+        if (caseType === '釋字') {
+            currentLawData.type = 'interpretation';
+            if (currentLawData && (!currentLawData.id || /^law_/.test(currentLawData.id))) {
+                currentLawData.id = `interpretation_${number || Date.now()}`;
+            }
+            if (!currentLawData.title || /臺灣法規資料|法規資料/i.test(currentLawData.title)) {
+                currentLawData.title = number ? `釋字第${number}號` : (currentLawData.title || '釋字');
+            }
+        }
 
         console.log(currentLawData)
         
