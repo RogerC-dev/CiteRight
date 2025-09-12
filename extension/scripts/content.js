@@ -835,14 +835,10 @@ function highlightCitationsInElement(element) {
         // Find all potential matches first
         const allMatches = [];
 
-        // Debug: log which patterns are available
-        console.log('🔍 Available patterns:', Object.keys(TAIWAN_LEGAL_PATTERNS).filter(k => TAIWAN_LEGAL_PATTERNS[k]));
-
         // Process patterns in the order defined in TAIWAN_LEGAL_PATTERNS object
         for (const key of Object.keys(TAIWAN_LEGAL_PATTERNS)) {
             const pattern = TAIWAN_LEGAL_PATTERNS[key];
             if (!pattern) {
-                console.log(`⚠️ Pattern ${key} not available`);
                 continue;
             }
 
@@ -851,9 +847,6 @@ function highlightCitationsInElement(element) {
             let match;
             while ((match = actualPattern.exec(normalizedText)) !== null) {
                 const matchText = match[0];
-
-                // Debug: log each match found
-                console.log(`🎯 Found ${key} match: "${matchText}" at position ${match.index}-${match.index + matchText.length}`);
 
                 allMatches.push({
                     text: matchText,
@@ -867,18 +860,8 @@ function highlightCitationsInElement(element) {
             }
         }
 
-        // Debug: log all matches before filtering
-        if (allMatches.length > 0) {
-            console.log('🔍 Found matches before filtering:', allMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
-        }
-
         // Allow overlapping matches - no filtering
         const filteredMatches = allMatches;
-
-        // Debug: log filtered matches
-        if (filteredMatches.length > 0 && filteredMatches.length !== allMatches.length) {
-            console.log('⚠️ After filtering:', filteredMatches.map(m => ({key: m.key, text: m.text, start: m.start, end: m.end})));
-        }
 
         if (filteredMatches.length === 0) return;
 
@@ -1161,6 +1144,55 @@ function showActivationNotification(title, subtitle, bgColor = '#389e0d') {
 // Global variable to store current law data for bookmarking
 let currentLawData = null;
 
+// Normalize different data shapes (laws vs. interpretations) into a single bookmark schema
+function normalizeBookmarkItem(data) {
+    const d = data || {};
+
+    const looksLikeInterpretation = (
+        (typeof d.type === 'string' && (/interpret/i.test(d.type))) ||
+        !!d.issue || !!d.description
+    );
+
+    const derivedNumber = d.number || d.articleNumber || d.ArticleNo || '';
+    const derivedTitle = d.title || (
+        looksLikeInterpretation
+            ? (derivedNumber ? `釋字第${derivedNumber}號` : '解釋')
+            : [d.CaptionTitle, derivedNumber].filter(Boolean).join(' ')
+    ) || '未命名項目';
+
+    let derivedFull = d.fullContent || d.content || '';
+    let derivedPreview = d.content || '';
+    if (looksLikeInterpretation) {
+        const desc = d.description || '';
+        const issue = d.issue || '';
+        derivedFull = desc || derivedFull || issue;
+        derivedPreview = desc || issue || derivedPreview;
+    } else {
+        const articleText = (d.articleData && d.articleData.Article) || d.Article || '';
+        if (!derivedFull) derivedFull = articleText;
+        if (!derivedPreview) derivedPreview = articleText;
+    }
+
+    const derivedUrl = d.officialUrl || d.url || d.link || '';
+    const derivedType = d.type || (looksLikeInterpretation ? 'interpretation' : 'law');
+    const derivedId = d.id || `${derivedType}_${derivedNumber || Date.now()}`;
+
+    return {
+        id: derivedId,
+        type: derivedType,
+        title: derivedTitle,
+        number: derivedNumber,
+        content: derivedPreview,
+        fullContent: derivedFull,
+        officialUrl: derivedUrl,
+        lawData: d.lawData,
+        articleData: d.articleData,
+        date: d.date || d.dateAdded || undefined,
+        dateAdded: new Date().toISOString(),
+        raw: d
+    };
+}
+
 // Bookmark functionality - ONLY called when user explicitly clicks bookmark button
 function addToBookmarks() {
     console.log('📚 addToBookmarks() called - User clicked bookmark button');
@@ -1173,7 +1205,8 @@ function addToBookmarks() {
 
     console.log('📚 Attempting to bookmark:', currentLawData);
 
-    // Check if already bookmarked
+    // Normalize data and check if already bookmarked
+    currentLawData = normalizeBookmarkItem(currentLawData);
     const exists = bookmarkedLaws.find(item =>
         item.id === currentLawData.id ||
         (item.type === currentLawData.type && item.number === currentLawData.number)
@@ -1753,9 +1786,11 @@ function loadBookmarkInToolTab(bookmark) {
             content: bookmark.fullContent || bookmark.content,
             fullContent: bookmark.fullContent || bookmark.content
         };
+
+        console.log(currentLawData)
         
         // Clean and prepare content
-        const displayContent = bookmark.fullContent || bookmark.content || '無內容可顯示';
+        const displayContent = currentLawData.fullContent || bookmark.fullContent || bookmark.content || '無內容可顯示';
         const cleanContent = displayContent.replace(/<script[^>]*>.*?<\/script>/gi, '');
         
         toolContentDiv.innerHTML = `
@@ -2351,20 +2386,6 @@ if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     });
 }
 
-class BookMark {
-    constructor(id, type, title, number, content, fullContent, officialUrl, lawData, articleData, dateAdded) {
-        this.id = id;
-        this.type = type;
-        this.title = title;
-        this.number = number;
-        this.content = content;
-        this.fullContent = fullContent;
-        this.officialUrl = officialUrl;
-        this.lawData = lawData;
-        this.articleData = articleData;
-        this.dateAdded = dateAdded || new Date().toISOString();
-    }
-}
 
 // Function to show legal popover with content from API
 async function showLegalPopover(element, event) {
@@ -2536,7 +2557,7 @@ async function showLegalPopover(element, event) {
             year: year,
             number: number,
             content: '',
-            fullContent: ''
+            fullContent: contentElement.html()
         };
         
         console.log('✅ 彈出視窗已顯示:', titleElement.text());
