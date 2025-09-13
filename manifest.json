@@ -19,8 +19,7 @@
         "<all_urls>"
       ],
       "js": [
-        "extension/vendor/jquery.min.js",
-        "extension/scripts/content.js"
+        "dist/content.js"
       ]
     }
   ],

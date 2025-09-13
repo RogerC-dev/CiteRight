@@ -40,6 +40,201 @@ router.get('/', asyncHandler(async (req, res) => {
 
 /**
  * @swagger
+ * /api/laws/{lawName}:
+ *   get:
+ *     summary: Get law details
+ *     description: Get detailed information about a specific law including its metadata and an Articles array (each item has CaptionTitle, ArticleNo, Article)
+ *     parameters:
+ *       - in: path
+ *         name: lawName
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Law name (URL encoded)
+ *     responses:
+ *       200:
+ *         description: Law details with captions and articles
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 LawLevel:
+ *                   type: string
+ *                 LawName:
+ *                   type: string
+ *                 LawUrl:
+ *                   type: string
+ *                   format: uri
+ *                 LawCategory:
+ *                   type: string
+ *                 LawModifiedDate:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Last modified date
+ *                 LawEffectiveDate:
+ *                   type: string
+ *                   format: date-time
+ *                   nullable: true
+ *                 LawEffectiveNote:
+ *                   type: string
+ *                 LawAbandonNote:
+ *                   type: string
+ *                 LawHistories:
+ *                   type: string
+ *                 LawHasEngVersion:
+ *                   type: integer
+ *                 EngLawName:
+ *                   type: string
+ *                 LawForeword:
+ *                   type: string
+ *                 CreatedAt:
+ *                   type: string
+ *                   format: date-time
+ *                 UpdatedAt:
+ *                   type: string
+ *                   format: date-time
+ *                 Articles:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       CaptionTitle:
+ *                         type: string
+ *                       ArticleNo:
+ *                         type: string
+ *                       Article:
+ *                         type: string
+ *       404:
+ *         description: Law not found
+ *       500:
+ *         description: Server error
+ *       503:
+ *         description: Database not connected
+ */
+router.get('/:lawName', asyncHandler(async (req, res) => {
+    const { lawName } = req.params;
+
+    if (!database.isConnected()) {
+        throw new ApiError(503, 'Database not connected');
+    }
+
+    console.log(`🔍 Getting law details for: ${decodeURIComponent(lawName)}`);
+
+    // Get law details
+    const [lawRows] = await database.query(
+        `SELECT * FROM Law WHERE LawName = ?`,
+        [decodeURIComponent(lawName)]
+    );
+
+    if (lawRows.length === 0) {
+        throw new ApiError(404, 'Law not found');
+    }
+
+    // Get captions and articles for this law
+    const [[articles]] = await database.query(
+        `SELECT JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'CaptionTitle', c.CaptionTitle,
+                    'ArticleNo', a.ArticleNo,
+                    'Article', a.ArticleContent
+                )
+            ) AS Articles FROM LawArticle a
+                    LEFT JOIN LawCaption c ON c.Id = a.CaptionId
+                WHERE a.LawName = ?
+            `,
+        [decodeURIComponent(lawName)]
+    );
+    lawRows[0].Articles = JSON.parse(articles.Articles)
+    lawRows[0].type = '法律';
+    res.json(lawRows[0]);
+}));
+
+
+/**
+ * @swagger
+ * /api/laws/search:
+ *   get:
+ *     summary: Search laws
+ *     description: Search for laws by name (Chinese or English)
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Law level (e.g., "憲法", "法律", "命令")
+ *       - in: path
+ *         name: lawName
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Law name (URL encoded)
+ *     responses:
+ *       200:
+ *         description: Law details with captions and articles
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 law:
+ *                   type: object
+ *                 captions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 captionCount:
+ *                   type: number
+ *       404:
+ *         description: Law not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/:lawLevel/:lawName', asyncHandler(async (req, res) => {
+    const { lawLevel, lawName } = req.params;
+    
+    if (!database.isConnected()) {
+        throw new ApiError(503, 'Database not connected');
+    }
+    
+    console.log(`🔍 Getting law details for: ${lawLevel} - ${decodeURIComponent(lawName)}`);
+    
+    // Get law details
+    const [lawRows] = await database.query(
+        `SELECT * FROM Law WHERE LawLevel = ? AND LawName = ?`,
+        [lawLevel, decodeURIComponent(lawName)]
+    );
+    
+    if (lawRows.length === 0) {
+        throw new ApiError(404, 'Law not found');
+    }
+    
+    // Get captions and articles for this law
+    const [[articles]] = await database.query(
+        `SELECT JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'CaptionTitle', c.CaptionTitle,
+                    'ArticleNo', a.ArticleNo,
+                    'Article', a.ArticleContent
+                ) 
+            ) AS Articles FROM LawArticle a 
+                    LEFT JOIN LawCaption c ON c.Id = a.CaptionId
+                WHERE a.LawLevel = ? 
+                  AND a.LawName = ?
+            `,
+        [lawLevel, decodeURIComponent(lawName)]
+    );
+    lawRows[0].Articles = JSON.parse(articles.Articles)
+    lawRows[0].type = '法條';
+    res.json(lawRows[0]);
+}));
+
+
+/**
+ * @swagger
  * /api/laws/search:
  *   get:
  *     summary: Search laws

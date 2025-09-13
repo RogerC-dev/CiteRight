@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const database = require('../config/database');
 const { asyncHandler, ApiError } = require('../middleware/errorHandler');
+const { type } = require('jquery');
 
 /**
  * @swagger
@@ -79,25 +80,22 @@ router.get('/', asyncHandler(async (req, res) => {
             console.log(`✅ Found interpretation ${number}`);
             
             return res.json({
-                success: true,
-                data: {
-                    number: interpretation.interpretation_number,
-                    date: interpretation.interpretation_date,
-                    url: interpretation.source_url,
-                    chinese: {
-                        issue: interpretation.issue,
-                        description: interpretation.description,
-                        reasoning: interpretation.reasoning,
-                        fact: interpretation.fact
-                    },
-                    english: {
-                        issue: interpretation.english_issue,
-                        description: interpretation.english_description,
-                        reasoning: interpretation.english_reasoning,
-                        fact: interpretation.english_fact
-                    }
+                type: '釋字',
+                number: interpretation.interpretation_number,
+                date: interpretation.interpretation_date,
+                url: interpretation.source_url,
+                chinese: {
+                    issue: interpretation.issue,
+                    description: interpretation.description,
+                    reasoning: interpretation.reasoning,
+                    fact: interpretation.fact
                 },
-                caseNumber: `釋字第${number}號`
+                english: {
+                    issue: interpretation.english_issue,
+                    description: interpretation.english_description,
+                    reasoning: interpretation.english_reasoning,
+                    fact: interpretation.english_fact
+                }
             });
         } else {
             console.log(`❌ Interpretation ${number} not found`);
@@ -199,7 +197,6 @@ router.get('/search', asyncHandler(async (req, res) => {
         console.log(`✅ Found ${results.length} search results`);
         
         return res.json({
-            success: true,
             results: results,
             total: results.length,
             query: q

@@ -1,0 +1,405 @@
+<template>
+  <div id="tool-content" class="tool-content">
+    <div v-if="!hasCurrentData" class="empty-state">
+      <div class="empty-icon">🔧</div>
+      <div class="empty-title">請點擊法律條文來查看詳細資訊</div>
+      <div class="empty-subtitle">按 Ctrl 啟動懸停模式</div>
+    </div>
+    
+    <div v-else class="content-loaded">
+      <!-- 標題區域 -->
+      <div class="content-header">
+        <h3 class="content-title">{{ displayData.title }}</h3>
+        <div class="content-meta">
+          📝 {{ displayData.type }} 
+          <span v-if="displayData.number">
+            · 第{{ displayData.number }}{{ displayData.type === '釋字' ? '號' : '條' }}
+          </span>
+          <span v-if="displayData.dateAdded">
+            · {{ formatDate(displayData.dateAdded) }}
+          </span>
+        </div>
+      </div>
+      
+      <!-- 主要內容區域 -->
+      <div id="tool-main-content" class="main-content" v-html="cleanContent"></div>
+      
+      <!-- 操作按鈕區域 -->
+      <div class="action-area">
+        <div class="action-buttons">
+          <button
+            class="action-btn bookmark-btn"
+            @click="handleBookmark"
+            :disabled="isBookmarking"
+          >
+            📚 {{ isAlreadyBookmarked ? '已收藏' : '加入書籤' }}
+          </button>
+          
+          <button
+            v-if="displayData.officialUrl"
+            class="action-btn link-btn"
+            @click="openOfficialLink"
+          >
+            🔗 官方頁面
+          </button>
+          
+          <button
+            class="action-btn share-btn"
+            @click="shareContent"
+          >
+            📤 分享
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, watch, nextTick } from 'vue'
+import { useBookmarkStore } from '../../stores/bookmark.js'
+import { usePopoverStore } from '../../stores/popover.js'
+
+const bookmarkStore = useBookmarkStore()
+const popoverStore = usePopoverStore()
+
+// 狀態
+const isBookmarking = ref(false)
+const currentData = ref(null)
+
+// 計算屬性
+const hasCurrentData = computed(() => {
+  return currentData.value !== null
+})
+
+const displayData = computed(() => {
+  if (!currentData.value) return {}
+  console.log(currentData.value, '顯示數據');
+
+  return {
+    title: currentData.value.title || '未命名項目',
+    type: currentData.value.type || '法律資訊',
+    number: currentData.value.number || '',
+    dateAdded: currentData.value.dateAdded || new Date().toISOString(),
+    officialUrl: currentData.value.officialUrl || '',
+    content: currentData.value.content || '無內容可顯示',
+    ...currentData.value
+  }
+})
+
+const cleanContent = computed(() => {
+  if (!displayData.value.content) return document.querySelector("div.citeright-content").innerHTML
+  
+  // 清理和處理內容
+  let content = displayData.value.content
+  
+  // 移除 script 標籤
+  content = content.replace(/<script[^>]*>.*?<\/script>/gi, '')
+  
+  // 確保內容安全
+  content = content.replace(/<iframe[^>]*>/gi, '')
+  content = content.replace(/<object[^>]*>/gi, '')
+  content = content.replace(/<embed[^>]*>/gi, '')
+  
+  return content
+})
+
+const isAlreadyBookmarked = computed(() => {
+  if (!currentData.value) return false
+
+  return bookmarkStore.bookmarks.some(bookmark =>
+    bookmark.id === currentData.value.id ||
+    (bookmark.type === currentData.value.type && bookmark.number === currentData.value.number)
+  )
+})
+
+/**
+ * 載入數據到工具分頁
+ */
+function loadData(data) {
+  console.log('📝 載入內容到工具分頁:', data?.title)
+
+  if (!data) {
+    currentData.value = null
+    return
+  }
+
+  // 正規化數據
+  currentData.value = {
+    ...data,
+    content: data.fullContent || data.content,
+    fullContent: data.fullContent || data.content
+  }
+
+  // 正規化釋字類型
+  if (data.caseType === '釋字' || data.type === '釋字') {
+    currentData.value.type = 'interpretation'
+    if (!currentData.value.id || /^law_/.test(currentData.value.id)) {
+      currentData.value.id = `interpretation_${data.number || Date.now()}`
+    }
+    if (!currentData.value.title || /臺灣法規資料|法規資料/i.test(currentData.value.title)) {
+      currentData.value.title = data.number ? `釋字第${data.number}號` : (currentData.value.title || '釋字')
+    }
+  }
+
+  // 應用高亮處理到新內容
+  nextTick(() => {
+    const contentDiv = document.querySelector('#tool-main-content')
+    if (contentDiv && window.citerightHighlightElement) {
+      window.citerightHighlightElement(contentDiv)
+    }
+  })
+}
+
+/**
+ * 處理書籤操作
+ */
+async function handleBookmark() {
+  if (!currentData.value || isBookmarking.value) return
+
+  isBookmarking.value = true
+
+  try {
+    if (isAlreadyBookmarked.value) {
+      // 移除書籤
+      const success = bookmarkStore.removeBookmark(currentData.value.id)
+      if (success) {
+        window.dispatchEvent(new CustomEvent('citeright:bookmark-removed', {
+          detail: { title: currentData.value.title }
+        }))
+      }
+    } else {
+      // 加入書籤
+      const success = bookmarkStore.addBookmark(currentData.value)
+      if (success) {
+        window.dispatchEvent(new CustomEvent('citeright:bookmark-added', {
+          detail: { title: currentData.value.title }
+        }))
+      } else {
+        window.dispatchEvent(new CustomEvent('citeright:bookmark-exists', {
+          detail: { title: currentData.value.title }
+        }))
+      }
+    }
+  } catch (error) {
+    console.error('書籤操作失敗:', error)
+    window.dispatchEvent(new CustomEvent('citeright:error', {
+      detail: {
+        title: '書籤操作失敗',
+        subtitle: error.message
+      }
+    }))
+  } finally {
+    isBookmarking.value = false
+  }
+}
+
+/**
+ * 開啟官方連結
+ */
+function openOfficialLink() {
+  if (displayData.value.officialUrl) {
+    window.open(displayData.value.officialUrl, '_blank')
+  }
+}
+
+/**
+ * 分享內容
+ */
+function shareContent() {
+  if (!currentData.value) return
+
+  const shareData = {
+    title: displayData.value.title,
+    text: `${displayData.value.title} - 來自 CiteRight 台灣法源探測器`,
+    url: displayData.value.officialUrl || window.location.href
+  }
+
+  if (navigator.share) {
+    navigator.share(shareData).catch(console.error)
+  } else {
+    // 備用方案：複製到剪貼簿
+    const textToShare = `${shareData.title}\n${shareData.text}\n${shareData.url}`
+    navigator.clipboard.writeText(textToShare).then(() => {
+      window.dispatchEvent(new CustomEvent('citeright:notification', {
+        detail: {
+          title: '已複製到剪貼簿',
+          subtitle: '可以分享給其他人了',
+          type: 'success'
+        }
+      }))
+    }).catch(console.error)
+  }
+}
+
+/**
+ * 格式化日期
+ */
+function formatDate(dateStr) {
+  if (!dateStr) return '未知日期'
+  
+  try {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('zh-TW')
+  } catch {
+    return '未知日期'
+  }
+}
+
+/**
+ * 清空內容
+ */
+function clearContent() {
+  currentData.value = null
+}
+
+// 監聽 popover 當前數據變化
+watch(() => popoverStore.currentData, (newData) => {
+  if (newData) {
+    loadData(newData)
+  }
+}, { immediate: true })
+
+// 暴露方法給父組件
+defineExpose({
+  loadData,
+  clearContent,
+  currentData
+})
+</script>
+
+<style scoped>
+.tool-content {
+  min-height: 100%;
+}
+
+.empty-state {
+  text-align: center;
+  color: #999;
+  padding: 40px 20px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-title {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.empty-subtitle {
+  font-size: 12px;
+}
+
+.content-loaded {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.content-header {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0f9ff, #e6f7ff);
+  border-radius: 8px;
+  border-left: 4px solid #1890ff;
+}
+
+.content-title {
+  margin: 0 0 8px 0;
+  color: #1890ff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.content-meta {
+  font-size: 13px;
+  color: #666;
+}
+
+.main-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  color: #333;
+  line-height: 1.8;
+  font-size: 15px;
+  min-height: 200px;
+  margin-bottom: 20px;
+}
+
+.action-area {
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 6px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: 1px solid;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  background: white;
+}
+
+.bookmark-btn {
+  border-color: #52c41a;
+  color: #52c41a;
+}
+
+.bookmark-btn:hover:not(:disabled) {
+  background: #f6ffed;
+}
+
+.bookmark-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.link-btn {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.link-btn:hover {
+  background: #f0f9ff;
+}
+
+.share-btn {
+  border-color: #722ed1;
+  color: #722ed1;
+}
+
+.share-btn:hover {
+  background: #f9f0ff;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 內容區域樣式 */
+:deep(.main-content) {
+  /* 確保法條高亮正常顯示 */
+}
+
+:deep(.main-content .citeright-link) {
+  /* 繼承全域高亮樣式 */
+}
+</style>

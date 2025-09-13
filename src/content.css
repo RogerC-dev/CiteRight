@@ -1,0 +1,221 @@
+/**
+ * CiteRight 台灣法源探測器樣式
+ * Chrome Extension Content Script 樣式
+ */
+
+/* 確保不干擾頁面佈局 */
+#citeright-vue-container {
+  all: initial;
+  position: relative !important;
+  z-index: 2147483647 !important;
+  pointer-events: none !important;
+  font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif !important;
+}
+
+/* 法條高亮樣式 */
+.citeright-link {
+  background: linear-gradient(120deg, #e6f7ff 0%, #f0f9ff 100%) !important;
+  border-bottom: 2px dotted #1890ff !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+  position: relative !important;
+  font-weight: 500 !important;
+  box-shadow: 0 1px 3px rgba(24, 144, 255, 0.1) !important;
+  pointer-events: auto !important;
+  display: inline !important;
+  text-decoration: none !important;
+  color: inherit !important;
+}
+
+.citeright-link:hover {
+  background: linear-gradient(120deg, #bae7ff 0%, #e6f7ff 100%) !important;
+  border-bottom: 2px solid #1890ff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* 不同類型的法條高亮 */
+.citeright-link[data-legal-type="law_article"] {
+  border-bottom-color: #52c41a !important;
+  background: linear-gradient(120deg, #f6ffed 0%, #f0f9ff 100%) !important;
+}
+
+.citeright-link[data-legal-type="interpretation"] {
+  border-bottom-color: #722ed1 !important;
+  background: linear-gradient(120deg, #f9f0ff 0%, #f0f9ff 100%) !important;
+}
+
+.citeright-link[data-legal-type="judgment"] {
+  border-bottom-color: #fa541c !important;
+  background: linear-gradient(120deg, #fff7e6 0%, #f0f9ff 100%) !important;
+}
+
+.citeright-link[data-legal-type="law_name_only"] {
+  border-bottom-color: #13c2c2 !important;
+  background: linear-gradient(120deg, #e6fffb 0%, #f0f9ff 100%) !important;
+}
+
+/* 懸停提示 */
+.citeright-link:hover::after {
+  content: attr(title) !important;
+  position: absolute !important;
+  bottom: 100% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+  color: white !important;
+  padding: 6px 10px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  z-index: 10000 !important;
+  pointer-events: none !important;
+  font-weight: normal !important;
+  backdrop-filter: blur(4px) !important;
+  font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif !important;
+}
+
+.citeright-link:hover::before {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 100% !important;
+  left: 50% !important;
+  transform: translateX(-50%) translateY(100%) !important;
+  border: 5px solid transparent !important;
+  border-top-color: rgba(0, 0, 0, 0.8) !important;
+  z-index: 10000 !important;
+  pointer-events: none !important;
+}
+
+/* 確保彈出元素有正確的指針事件 */
+#citeright-popover,
+#citeright-tool-panel,
+#citeright-sidebar-background {
+  pointer-events: auto !important;
+}
+
+/* 重置可能的干擾樣式 */
+.citeright-link * {
+  all: unset !important;
+}
+
+/* 高對比模式支援 */
+@media (prefers-contrast: high) {
+  .citeright-link {
+    border-bottom-width: 3px !important;
+    background: #ffffff !important;
+    border-bottom-color: #000000 !important;
+  }
+  
+  .citeright-link:hover {
+    background: #f0f0f0 !important;
+  }
+}
+
+/* 深色模式支援 */
+@media (prefers-color-scheme: dark) {
+  .citeright-link {
+    background: linear-gradient(120deg, rgba(24, 144, 255, 0.15) 0%, rgba(24, 144, 255, 0.1) 100%) !important;
+    border-bottom-color: #91d5ff !important;
+    color: inherit !important;
+  }
+  
+  .citeright-link:hover {
+    background: linear-gradient(120deg, rgba(24, 144, 255, 0.25) 0%, rgba(24, 144, 255, 0.15) 100%) !important;
+    border-bottom-color: #69c0ff !important;
+  }
+  
+  .citeright-link:hover::after {
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: #000000 !important;
+  }
+  
+  .citeright-link:hover::before {
+    border-top-color: rgba(255, 255, 255, 0.9) !important;
+  }
+}
+
+/* 減少動畫偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .citeright-link {
+    transition: none !important;
+  }
+  
+  .citeright-link:hover {
+    transform: none !important;
+  }
+}
+
+/* 確保在各種網站上都能正常顯示 */
+.citeright-link {
+  /* 重置可能的繼承樣式 */
+  line-height: normal !important;
+  letter-spacing: normal !important;
+  word-spacing: normal !important;
+  text-transform: none !important;
+  text-shadow: none !important;
+  font-style: normal !important;
+  font-variant: normal !important;
+  font-stretch: normal !important;
+  vertical-align: baseline !important;
+  
+  /* 確保可見性 */
+  opacity: 1 !important;
+  visibility: visible !important;
+  
+  /* 防止被其他樣式覆蓋 */
+  outline: none !important;
+  box-sizing: border-box !important;
+}
+
+/* 防止與常見 CSS 框架衝突 */
+.citeright-link.citeright-link {
+  /* 提高選擇器權重 */
+  margin: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: auto !important;
+  min-height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* 確保在 iframe 中也能正常工作 */
+iframe .citeright-link {
+  position: relative !important;
+  z-index: 999999 !important;
+}
+
+/* 針對特定網站的兼容性調整 */
+[class*="bootstrap"] .citeright-link,
+[class*="mui"] .citeright-link,
+[class*="ant"] .citeright-link {
+  box-sizing: border-box !important;
+  font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif !important;
+}
+
+/* 確保在表格中正常顯示 */
+table .citeright-link,
+td .citeright-link,
+th .citeright-link {
+  display: inline !important;
+  vertical-align: baseline !important;
+}
+
+/* 在 flex 容器中的調整 */
+.citeright-link {
+  flex: none !important;
+  align-self: auto !important;
+}
+
+/* 在 grid 容器中的調整 */
+.citeright-link {
+  grid-area: auto !important;
+  justify-self: auto !important;
+  align-self: auto !important;
+}
