@@ -40,18 +40,19 @@ function handleMouseOver(e) {
   if (e.target.classList && e.target.classList.contains('citeright-link')) {
     currentHoveredLaw = e.target
     
-    // 只有在按下 Ctrl 且擴充功能啟用且激活時才顯示彈出視窗
-    if (extensionStore.canShowPopover) {
+    // 檢查是否按下 Ctrl 鍵和擴充功能是否啟用
+    if (extensionStore.isCtrlPressed && extensionStore.isExtensionEnabled) {
+      // 如果還未激活，先激活
+      if (!extensionStore.isActivated) {
+        extensionStore.activate()
+      }
+      
       const lawKey = generateLawKey(e.target)
       
       // 防止重複彈出相同法條
       if (!popoverStore.isVisible || popoverStore.currentElement !== e.target) {
-        // 小延遲以防止快速觸發
-        setTimeout(() => {
-          if (currentHoveredLaw === e.target && extensionStore.isCtrlPressed) {
-            popoverStore.show(e.target, e)
-          }
-        }, 100)
+        // 立即顯示，無需延遲
+        popoverStore.show(e.target, e)
       }
     }
   }

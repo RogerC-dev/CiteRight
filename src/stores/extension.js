@@ -99,6 +99,11 @@ export const useExtensionStore = defineStore('extension', () => {
       case "setEnabledState":
         setEnabled(!!message.enabled)
         break
+        
+      case "openBookmarks":
+        openBookmarksPanel()
+        sendResponse({ success: true })
+        break
     }
   }
   
@@ -146,6 +151,23 @@ export const useExtensionStore = defineStore('extension', () => {
     }
   }
   
+  function openBookmarksPanel() {
+    console.log('📚 開啟書籤面板 - 來自擴充功能彈出視窗')
+    
+    // Get the stores - we need to import them dynamically
+    import('./sidebar.js').then(({ useSidebarStore }) => {
+      const sidebarStore = useSidebarStore()
+      
+      // Open sidebar and switch to bookmarks tab
+      sidebarStore.open()
+      sidebarStore.setCurrentTab('bookmarks')
+      
+      console.log('✅ 書籤面板已開啟')
+    }).catch(error => {
+      console.error('❌ 開啟書籤面板失敗:', error)
+    })
+  }
+  
   return {
     // 狀態
     isExtensionEnabled,
@@ -160,6 +182,7 @@ export const useExtensionStore = defineStore('extension', () => {
     cleanup,
     activate,
     deactivate,
-    setEnabled
+    setEnabled,
+    openBookmarksPanel
   }
 })

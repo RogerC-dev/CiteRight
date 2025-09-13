@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+/* Base styles for the enhanced sidebar */
+.tab-btn {
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    font-family: "Microsoft JhengHei", Arial, sans-serif;
+}
+.tab-btn:hover {
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-1px);
+}
+.tab-btn.active {
+    background: rgba(255,255,255,0.4);
+    font-weight: 600;
+}
+.tab-content {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+    background: #fafafa;
+}
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+}
+.tab-content-inner {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: white;
+    margin: 8px;
+    border-radius: 8px;
+    border: 1px solid #e8e8e8;
+}
+
+/* Dictionary specific styles */
+.dictionary-search-container {
+    background: linear-gradient(135deg, #f0f9ff, #e6f7ff);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    border: 1px solid #91d5ff;
+}
+
+.dictionary-search-box {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.dictionary-search-input {
+    width: 100%;
+    padding: 12px 48px 12px 16px;
+    border: 2px solid #1890ff;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: "Microsoft JhengHei";
+    transition: all 0.3s;
+    box-sizing: border-box;
+}
+
+.dictionary-search-input:focus {
+    outline: none;
+    border-color: #096dd9;
+    box-shadow: 0 0 0 3px rgba(24,144,255,0.1);
+}
+
+.dictionary-search-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #1890ff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.dictionary-search-btn:hover {
+    background: #096dd9;
+}
+
+.search-hint {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.6;
+    background: rgba(255,255,255,0.8);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+}
+
+.law-categories {
+    display: grid;
+    gap: 12px;
+}
+
+.category-section {
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid #e8e8e8;
+    transition: all 0.2s;
+}
+
+.category-section:hover {
+    border-color: #1890ff;
+    background: #f0f9ff;
+}
+
+.category-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1890ff;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.law-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.law-link {
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    color: #333;
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.law-link:hover {
+    border-color: #1890ff;
+    color: #1890ff;
+    background: #f0f9ff;
+    transform: translateY(-1px);
+}
+
+.quick-access-panel {
+    background: linear-gradient(135deg, #fff7e6, #fffbe6);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid #ffd591;
+}
+
+.quick-access-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fa8c16;
+    margin-bottom: 8px;
+}
+
+.recent-searches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.recent-search-tag {
+    padding: 4px 8px;
+    background: white;
+    border: 1px solid #ffd591;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #fa8c16;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.recent-search-tag:hover {
+    background: #fff7e6;
+}
+</style>
+</head>
+<body>
+
+<!-- Enhanced Tool Panel with Dictionary Tab -->
+<div id="citeright-tool-panel" style="position: fixed; top: 0; right: 0; width: 400px; height: 100vh; background: white; border-left: 3px solid #1890ff; z-index: 2147483647; font-family: 'Microsoft JhengHei', Arial, sans-serif; font-size: 14px; box-shadow: -6px 0 18px rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column;">
+    
+    <div id="resize-handle" style="position: absolute; left: -6px; top: 0; bottom: 0; width: 12px; background: linear-gradient(90deg, rgba(24,144,255,0.5), #1890ff); cursor: ew-resize; z-index: 10; opacity: 0.8; transition: all 0.2s; border-radius: 4px 0 0 4px; box-shadow: -2px 0 8px rgba(24,144,255,0.3);"></div>
+    
+    <!-- Header with Tab Navigation -->
+    <div style="background: linear-gradient(135deg, #1890ff, #096dd9); color: white; padding: 16px; flex-shrink: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 600;">CiteRight 工具面板</h2>
+            <button id="close-tool-panel" style="display:flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; padding: 8px; cursor: pointer; font-size: 18px; width: 36px; height: 36px;">&times;</button>
+        </div>
+        
+        <div class="tab-navigation" style="display: flex; gap: 8px;">
+            <button id="tab-tool" class="tab-btn active" data-tab="tool">
+                🔧 法律工具
+            </button>
+            <button id="tab-bookmarks" class="tab-btn" data-tab="bookmarks">
+                📚 我的書籤
+            </button>
+            <button id="tab-dictionary" class="tab-btn" data-tab="dictionary">
+                📖 法律辭典
+            </button>
+        </div>
+    </div>
+    
+    <!-- Tool Tab Content -->
+    <div id="tab-content-tool" class="tab-content active">
+        <div class="tab-content-inner">
+            <div id="tool-content">
+                <div style="text-align: center; color: #999; padding: 40px 20px;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">🔧</div>
+                    <div>請點擊法律條文來查看詳細資訊</div>
+                    <div style="font-size: 12px; margin-top: 8px;">按 Ctrl 啟動懸停模式</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bookmarks Tab Content -->
+    <div id="tab-content-bookmarks" class="tab-content">
+        <div class="tab-content-inner">
+            <div id="bookmarks-content">
+                <div style="text-align: center; color: #999; padding: 40px 20px;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
+                    <div>正在載入書籤...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dictionary Tab Content -->
+    <div id="tab-content-dictionary" class="tab-content">
+        <div class="tab-content-inner">
+            <div id="dictionary-content">
+                <!-- Search Section -->
+                <div class="dictionary-search-container">
+                    <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #096dd9;">
+                        🔍 法規智慧搜尋
+                    </h3>
+                    <div class="dictionary-search-box">
+                        <input type="text" 
+                               class="dictionary-search-input" 
+                               id="dictionary-search" 
+                               placeholder="輸入法規名稱或條文關鍵字...">
+                        <button class="dictionary-search-btn" id="dictionary-search-btn">搜尋</button>
+                    </div>
+                    <div class="search-hint">
+                        💡 <strong>搜尋提示：</strong>您可以搜尋完整法規名稱如「民法」，或使用關鍵字組合如「勞動基準法 加班」、「刑法 詐欺」來精準定位相關條文。
+                    </div>
+                </div>
+                
+                <!-- Quick Access Panel -->
+                <div class="quick-access-panel">
+                    <div class="quick-access-title">⚡ 快速查詢</div>
+                    <div class="recent-searches">
+                        <span class="recent-search-tag">民法總則</span>
+                        <span class="recent-search-tag">刑法總則</span>
+                        <span class="recent-search-tag">勞動基準法</span>
+                        <span class="recent-search-tag">公司法</span>
+                    </div>
+                </div>
+                
+                <!-- Law Categories -->
+                <div class="law-categories">
+                    <!-- Civil Law Category -->
+                    <div class="category-section">
+                        <div class="category-title">
+                            ⚖️ 民事法規
+                        </div>
+                        <div class="law-links">
+                            <a class="law-link" data-law="民法">民法</a>
+                            <a class="law-link" data-law="民事訴訟法">民事訴訟法</a>
+                            <a class="law-link" data-law="家事事件法">家事事件法</a>
+                            <a class="law-link" data-law="消費者保護法">消費者保護法</a>
+                            <a class="law-link" data-law="公寓大廈管理條例">公寓大廈管理條例</a>
+                        </div>
+                    </div>
+                    
+                    <!-- Criminal Law Category -->
+                    <div class="category-section">
+                        <div class="category-title">
+                            🚨 刑事法規
+                        </div>
+                        <div class="law-links">
+                            <a class="law-link" data-law="刑法">刑法</a>
+                            <a class="law-link" data-law="刑事訴訟法">刑事訴訟法</a>
+                            <a class="law-link" data-law="少年事件處理法">少年事件處理法</a>
+                            <a class="law-link" data-law="毒品危害防制條例">毒品危害防制條例</a>
+                        </div>
+                    </div>
+                    
+                    <!-- Administrative Law Category -->
+                    <div class="category-section">
+                        <div class="category-title">
+                            📋 行政法規
+                        </div>
+                        <div class="law-links">
+                            <a class="law-link" data-law="行政程序法">行政程序法</a>
+                            <a class="law-link" data-law="行政訴訟法">行政訴訟法</a>
+                            <a class="law-link" data-law="訴願法">訴願法</a>
+                            <a class="law-link" data-law="國家賠償法">國家賠償法</a>
+                        </div>
+                    </div>
+                    
+                    <!-- Commercial Law Category -->
+                    <div class="category-section">
+                        <div class="category-title">
+                            💼 商事法規
+                        </div>
+                        <div class="law-links">
+                            <a class="law-link" data-law="公司法">公司法</a>
+                            <a class="law-link" data-law="票據法">票據法</a>
+                            <a class="law-link" data-law="證券交易法">證券交易法</a>
+                            <a class="law-link" data-law="保險法">保險法</a>
+                            <a class="law-link" data-law="海商法">海商法</a>
+                        </div>
+                    </div>
+                    
+                    <!-- Labor Law Category -->
+                    <div class="category-section">
+                        <div class="category-title">
+                            👷 勞動法規
+                        </div>
+                        <div class="law-links">
+                            <a class="law-link" data-law="勞動基準法">勞動基準法</a>
+                            <a class="law-link" data-law="勞工保險條例">勞工保險條例</a>
+                            <a class="law-link" data-law="勞工退休金條例">勞工退休金條例</a>
+                            <a class="law-link" data-law="職業安全衛生法">職業安全衛生法</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Enhanced JavaScript for Dictionary Functionality
+function setupDictionaryTab() {
+    // Tab switching logic (enhanced)
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.dataset.tab;
+            
+            // Update button states
+            tabButtons.forEach(b => {
+                if (b.dataset.tab === targetTab) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
+            });
+            
+            // Update content visibility
+            tabContents.forEach(content => {
+                if (content.id === `tab-content-${targetTab}`) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+            
+            // Initialize dictionary if switching to dictionary tab
+            if (targetTab === 'dictionary') {
+                initializeDictionary();
+            }
+        });
+    });
+    
+    // Dictionary search functionality
+    const searchInput = document.getElementById('dictionary-search');
+    const searchBtn = document.getElementById('dictionary-search-btn');
+    
+    if (searchInput && searchBtn) {
+        // Search on button click
+        searchBtn.addEventListener('click', performDictionarySearch);
+        
+        // Search on Enter key
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performDictionarySearch();
+            }
+        });
+        
+        // Auto-suggest while typing (debounced)
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (e.target.value.length > 1) {
+                    showSearchSuggestions(e.target.value);
+                }
+            }, 300);
+        });
+    }
+    
+    // Quick search tags
+    document.querySelectorAll('.recent-search-tag').forEach(tag => {
+        tag.addEventListener('click', () => {
+            const searchTerm = tag.textContent;
+            if (searchInput) {
+                searchInput.value = searchTerm;
+                performDictionarySearch();
+            }
+        });
+    });
+    
+    // Law links click handler
+    document.querySelectorAll('.law-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const lawName = e.target.dataset.law;
+            loadLawContent(lawName);
+        });
+    });
+}
+
+// Perform dictionary search
+function performDictionarySearch() {
+    const searchInput = document.getElementById('dictionary-search');
+    const searchTerm = searchInput.value.trim();
+    
+    if (!searchTerm) {
+        showNotification('請輸入搜尋關鍵字', 'warning');
+        return;
+    }
+    
+    console.log('🔍 Searching for:', searchTerm);
+    
+    // Show loading state
+    showSearchLoading();
+    
+    // Send message to background script to search
+    chrome.runtime.sendMessage({
+        action: 'searchLawDictionary',
+        query: searchTerm
+    }, (response) => {
+        if (response && response.success) {
+            displaySearchResults(response.results);
+        } else {
+            showSearchError('搜尋失敗，請稍後再試');
+        }
+    });
+}
+
+// Load specific law content
+function loadLawContent(lawName) {
+    console.log('📖 Loading law:', lawName);
+    
+    // Update search input
+    const searchInput = document.getElementById('dictionary-search');
+    if (searchInput) {
+        searchInput.value = lawName;
+    }
+    
+    // Send message to fetch law content
+    chrome.runtime.sendMessage({
+        action: 'fetchLawContent',
+        lawName: lawName
+    }, (response) => {
+        if (response && response.success) {
+            displayLawContent(response.data);
+        } else {
+            showNotification('無法載入法規內容', 'error');
+        }
+    });
+}
+
+// Display search results
+function displaySearchResults(results) {
+    const dictionaryContent = document.getElementById('dictionary-content');
+    if (!dictionaryContent) return;
+    
+    // Create results container
+    const resultsHTML = `
+        <div class="search-results" style="margin-top: 16px;">
+            <h3 style="color: #1890ff; margin-bottom: 12px;">
+                搜尋結果 (${results.length} 筆)
+            </h3>
+            ${results.map(result => `
+                <div class="result-item" style="background: white; padding: 12px; margin-bottom: 8px; border: 1px solid #e8e8e8; border-radius: 6px; cursor: pointer;">
+                    <div style="font-weight: 600; color: #1890ff;">${result.title}</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 4px;">${result.description}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    // Insert results after search container
+    const searchContainer = dictionaryContent.querySelector('.dictionary-search-container');
+    const existingResults = dictionaryContent.querySelector('.search-results');
+    
+    if (existingResults) {
+        existingResults.remove();
+    }
+    
+    searchContainer.insertAdjacentHTML('afterend', resultsHTML);
+}
+
+// Initialize dictionary when tab is opened
+function initializeDictionary() {
+    console.log('📖 Dictionary tab initialized');
+    
+    // Load recent searches from localStorage
+    const recentSearches = localStorage.getItem('citeright_recent_searches');
+    if (recentSearches) {
+        updateRecentSearches(JSON.parse(recentSearches));
+    }
+}
+
+// Helper functions
+function showSearchLoading() {
+    const btn = document.getElementById('dictionary-search-btn');
+    if (btn) {
+        btn.textContent = '搜尋中...';
+        btn.disabled = true;
+    }
+}
+
+function showSearchError(message) {
+    console.error('Search error:', message);
+    const btn = document.getElementById('dictionary-search-btn');
+    if (btn) {
+        btn.textContent = '搜尋';
+        btn.disabled = false;
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Implementation for showing notifications
+    console.log(`[${type}] ${message}`);
+}
+
+function updateRecentSearches(searches) {
+    const container = document.querySelector('.recent-searches');
+    if (container && searches.length > 0) {
+        container.innerHTML = searches.slice(0, 4).map(term => 
+            `<span class="recent-search-tag">${term}</span>`
+        ).join('');
+    }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', setupDictionaryTab);
+</script>
+
+</body>
+</html>

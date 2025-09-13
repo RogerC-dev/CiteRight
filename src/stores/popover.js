@@ -45,9 +45,23 @@ export const usePopoverStore = defineStore('popover', () => {
     const popoverWidth = 480
     const popoverHeight = 300
 
-    // 檢查水平空間，若超出 viewport，向左調整
-    if (left + popoverWidth > window.innerWidth) {
-      left = Math.max(10, window.innerWidth - popoverWidth - 10)
+    // 檢查是否有側邊欄開啟，調整可用空間
+    const sidebarElement = document.getElementById('citeright-tool-panel')
+    let availableWidth = window.innerWidth
+    
+    if (sidebarElement) {
+      const sidebarRect = sidebarElement.getBoundingClientRect()
+      const sidebarWidth = sidebarRect.width
+      
+      // 如果側邊欄在右側，減少可用寬度
+      if (sidebarRect.left < window.innerWidth) {
+        availableWidth = Math.max(400, window.innerWidth - sidebarWidth - 20)
+      }
+    }
+
+    // 檢查水平空間，若超出可用範圍，向左調整
+    if (left + popoverWidth > availableWidth) {
+      left = Math.max(10, availableWidth - popoverWidth - 10)
     }
     if (left < 10) left = 10
 
@@ -98,6 +112,20 @@ export const usePopoverStore = defineStore('popover', () => {
   
   function updateData(data) {
     currentData.value = data
+  }
+  
+  function loadContent(type, data) {
+    console.log('📝 載入內容到工具分頁:', data.title)
+    
+    // 更新當前資料，讓 ToolContent 組件可以顯示
+    currentData.value = {
+      ...data,
+      type: type,
+      dateAdded: data.dateAdded || new Date().toISOString()
+    }
+    
+    // 觸發 ToolContent 組件的內容載入
+    // 這會通過響應式系統自動更新 UI
   }
   
   function generateLawKey(element) {
@@ -163,6 +191,7 @@ export const usePopoverStore = defineStore('popover', () => {
     hide,
     setLoading,
     updateData,
+    loadContent,
     extractDataFromElement
   }
 })

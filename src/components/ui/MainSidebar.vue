@@ -67,6 +67,20 @@
             <BookmarkContent />
           </div>
         </div>
+        
+        <!-- 法律辭典分頁 -->
+        <div
+          v-show="currentTab === 'dictionary'"
+          id="tab-content-dictionary"
+          class="tab-content"
+        >
+          <div class="tab-content-inner">
+            <DictionaryContent 
+              @result-selected="handleDictionaryResult"
+              @law-loaded="handleLawLoaded"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </Teleport>
@@ -76,6 +90,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import ToolContent from './ToolContent.vue'
 import BookmarkContent from './BookmarkContent.vue'
+import DictionaryContent from './DictionaryContent.vue'
 
 // Props
 const props = defineProps({
@@ -90,7 +105,7 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['close', 'resize', 'tab-change'])
+const emit = defineEmits(['close', 'resize', 'tab-change', 'dictionary-result', 'law-content'])
 
 // 引用
 const panelRef = ref(null)
@@ -105,7 +120,8 @@ const isHoveringHandle = ref(false)
 // 分頁配置
 const tabs = [
   { id: 'tool', label: '法律工具', icon: '🔧' },
-  { id: 'bookmarks', label: '我的書籤', icon: '📚' }
+  { id: 'bookmarks', label: '我的書籤', icon: '📚' },
+  { id: 'dictionary', label: '法律辭典', icon: '📖' }
 ]
 
 // 計算屬性
@@ -133,6 +149,36 @@ function switchTab(tabId) {
   if (tabId !== props.currentTab) {
     emit('tab-change', tabId)
   }
+}
+
+/**
+ * 處理法律辭典搜尋結果選擇
+ */
+function handleDictionaryResult(result) {
+  console.log('📚 辭典結果選擇:', result)
+  
+  // 切換到工具分頁顯示詳細內容
+  if (props.currentTab !== 'tool') {
+    emit('tab-change', 'tool')
+  }
+  
+  // 發送結果到父組件
+  emit('dictionary-result', result)
+}
+
+/**
+ * 處理法律內容載入
+ */
+function handleLawLoaded(lawData) {
+  console.log('📖 法律內容載入:', lawData)
+  
+  // 切換到工具分頁顯示內容
+  if (props.currentTab !== 'tool') {
+    emit('tab-change', 'tool')
+  }
+  
+  // 發送法律內容到父組件
+  emit('law-content', lawData)
 }
 
 /**

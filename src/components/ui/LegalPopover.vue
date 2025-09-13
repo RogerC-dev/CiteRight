@@ -71,6 +71,15 @@
               <strong>解釋文：</strong>
               <div class="info-content">{{ contentData.chinese.reasoning }}</div>
             </div>
+            <div class="info-section">
+              <strong>來源：</strong>
+              <div class="info-content">
+                <a :href="getInterpretationUrl(contentData.number)" target="_blank" rel="noreferrer">線上解釋來源</a>
+                <span v-if="contentData.source_url"> | 
+                  <a :href="contentData.source_url" target="_blank" rel="noreferrer">資料庫來源</a>
+                </span>
+              </div>
+            </div>
           </template>
 
           <!-- 法條內容 -->
@@ -239,9 +248,28 @@ async function loadContent(data) {
       const result = await fetchInterpretation(data.number)
       contentData.value = result
     } else if (caseType === '法律') {
-      // 載入法條內容
-      const result = await fetchLawInfo(data.lawName)
-      contentData.value = result
+      // 檢查是否已有預載入的內容
+      if (data.content && data.content !== `正在載入${data.lawName}的詳細內容...`) {
+        // 使用預載入的內容
+        contentData.value = {
+          type: '法律',
+          LawName: data.lawName || data.title,
+          LawUrl: data.officialUrl,
+          content: data.content,
+          ...data
+        }
+      } else if (data.lawName) {
+        // 載入法條內容
+        const result = await fetchLawInfo(data.lawName)
+        contentData.value = result
+      } else {
+        // 沒有法律名稱，使用原始資料
+        contentData.value = {
+          type: '法律',
+          LawName: data.title || '法律資訊',
+          ...data
+        }
+      }
     } else {
       // 使用原始資料
       contentData.value = {
@@ -311,6 +339,14 @@ function stopDrag() {
   isDragging.value = false
   document.removeEventListener('mousemove', handleDrag)
   document.removeEventListener('mouseup', stopDrag)
+}
+
+/**
+ * 產生大法官解釋 URL
+ */
+function getInterpretationUrl(number) {
+  if (!number) return '#'
+  return `https://cons.judicial.gov.tw/jcc/zh-tw/jep03/show?expno=${number}`
 }
 </script>
 

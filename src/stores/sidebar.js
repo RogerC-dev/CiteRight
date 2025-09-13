@@ -5,7 +5,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
   // 狀態
   const isOpen = ref(false)
   const width = ref(500) // 預設寬度
-  const currentTab = ref('tool') // 'tool' | 'bookmarks'
+  const currentTab = ref('tool') // 'tool' | 'bookmarks' | 'dictionary'
   const isFloating = ref(false)
   const isResizing = ref(false)
   
@@ -49,7 +49,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
   }
   
   function setCurrentTab(tab) {
-    if (['tool', 'bookmarks'].includes(tab)) {
+    if (['tool', 'bookmarks', 'dictionary'].includes(tab)) {
       currentTab.value = tab
       console.log('📑 切換到分頁:', tab)
     }

@@ -65,7 +65,8 @@ const popoverStore = usePopoverStore()
 
 // 狀態
 const isBookmarking = ref(false)
-const currentData = ref(null)
+// Use popover store's currentData directly
+const currentData = computed(() => popoverStore.currentData)
 
 // 計算屬性
 const hasCurrentData = computed(() => {
@@ -73,7 +74,14 @@ const hasCurrentData = computed(() => {
 })
 
 const displayData = computed(() => {
-  if (!currentData.value) return {}
+  if (!currentData.value) return {
+    title: '未命名項目',
+    type: '法律資訊',
+    number: '',
+    dateAdded: new Date().toISOString(),
+    officialUrl: '',
+    content: '無內容可顯示'
+  }
   console.log(currentData.value, '顯示數據');
 
   return {
@@ -88,7 +96,10 @@ const displayData = computed(() => {
 })
 
 const cleanContent = computed(() => {
-  if (!displayData.value.content) return document.querySelector("div.citeright-content").innerHTML
+  if (!displayData.value.content) {
+    const element = document.querySelector("div.citeright-content")
+    return element ? element.innerHTML : '無內容可顯示'
+  }
   
   // 清理和處理內容
   let content = displayData.value.content

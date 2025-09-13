@@ -347,10 +347,8 @@ function getPreviewText(bookmark) {
 
 // 監聽全域事件
 onMounted(() => {
-  // 監聽從工具分頁發送的書籤載入請求
-  window.addEventListener('citeright:load-bookmark', (event) => {
-    viewBookmark(event.detail)
-  })
+  // Note: Removed the citeright:load-bookmark listener to prevent infinite recursion
+  // The viewBookmark function already handles the bookmark loading directly
 })
 </script>
 
