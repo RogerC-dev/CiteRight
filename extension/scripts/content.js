@@ -860,8 +860,8 @@ function highlightCitationsInElement(element) {
             }
         }
 
-        // Allow overlapping matches - no filtering
-        const filteredMatches = allMatches;
+        // Apply overlap removal - longer/more specific matches win
+        const filteredMatches = removeOverlappingMatches(allMatches);
 
         if (filteredMatches.length === 0) return;
 
@@ -1791,13 +1791,13 @@ function loadBookmarkInToolTab(bookmark) {
             fullContent: bookmark.fullContent || bookmark.content
         };
         // Normalize type for interpretations (釋字)
-        if (caseType === '釋字') {
+        if (bookmark.caseType === '釋字' || bookmark.type === '釋字') {
             currentLawData.type = 'interpretation';
             if (currentLawData && (!currentLawData.id || /^law_/.test(currentLawData.id))) {
-                currentLawData.id = `interpretation_${number || Date.now()}`;
+                currentLawData.id = `interpretation_${bookmark.number || Date.now()}`;
             }
             if (!currentLawData.title || /臺灣法規資料|法規資料/i.test(currentLawData.title)) {
-                currentLawData.title = number ? `釋字第${number}號` : (currentLawData.title || '釋字');
+                currentLawData.title = bookmark.number ? `釋字第${bookmark.number}號` : (currentLawData.title || '釋字');
             }
         }
 
