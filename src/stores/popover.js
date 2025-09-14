@@ -77,20 +77,41 @@ export const usePopoverStore = defineStore('popover', () => {
     
     // 設定資料或從元素提取
     if (data) {
-      currentData.value = data
+      // 確保數據物件有所有必要的屬性
+      currentData.value = {
+        id: data.id || `law_${Date.now()}`,
+        title: data.title || '未命名項目',
+        type: data.type || data.caseType || '法律資訊',
+        lawName: data.lawName || '',
+        article: data.article || '',
+        paragraph: data.paragraph || '',
+        year: data.year || '',
+        number: data.number || '',
+        caseType: data.caseType || data.type || '',
+        legalType: data.legalType || '',
+        text: data.text || element?.textContent || '',
+        content: data.content || '',
+        fullContent: data.fullContent || data.content || '',
+        ...data // 覆蓋任何存在的值
+      }
     } else {
       currentData.value = extractDataFromElement(element)
     }
 
     // 如果是法律類型，自動載入法律內容
-    if (currentData.value && (currentData.value.caseType === '法律' || currentData.value.lawName)) {
+    if (currentData.value && (currentData.value.caseType === '法律' || (currentData.value.lawName && currentData.value.lawName.trim()))) {
       // 延遲載入法律內容，確保UI已更新
       setTimeout(async () => {
         await loadContent('law', currentData.value)
       }, 150)
     }
     // 如果是釋字類型，自動載入釋字內容
-    else if (currentData.value && currentData.value.caseType === '釋字') {
+    else if (currentData.value && (
+      currentData.value.caseType === '釋字' ||
+      currentData.value.type === '釋字' ||
+      (currentData.value.number && currentData.value.title && currentData.value.title.includes('釋字'))
+    )) {
+      console.log('📜 檢測到釋字類型，自動載入內容:', currentData.value)
       setTimeout(async () => {
         await loadContent('interpretation', currentData.value)
       }, 150)
@@ -129,34 +150,88 @@ export const usePopoverStore = defineStore('popover', () => {
   }
   
   async function loadContent(type, data) {
-    console.log('📝 載入內容到工具分頁:', data.title)
+    console.log('📝 載入內容到工具分頁:', data?.title, '類型:', type)
+    console.log('📝 原始數據:', data)
+
+    if (!data) {
+      console.warn('❌ loadContent: 沒有提供數據')
+      return
+    }
 
     // 針對不同類型的內容進行特殊處理
     let processedData = { ...data }
 
     // 處理釋字解釋內容
     if (type === 'interpretation' || data.caseType === '釋字' || data.type === '釋字') {
-      processedData = {
-        ...data,
-        type: 'interpretation',
-        content: extractInterpretationContent(data),
-        number: data.number || extractNumberFromTitle(data.title),
-        title: data.title || `釋字第${data.number || ''}號`
+      console.log('📜 處理釋字解釋內容')
+
+      // 首先嘗試從現有數據提取內容
+      let extractedContent = extractInterpretationContent(data)
+      console.log('📜 提取的釋字內容長度:', extractedContent?.length || 0)
+
+      // 如果沒有內容且有號碼，嘗試從 API 載入
+      if ((!extractedContent || extractedContent === '無法取得解釋內容') && (data.number || extractNumberFromTitle(data.title))) {
+        try {
+          console.log('🌍 嘗試從 API 載入釋字內容')
+          const { fetchInterpretation } = await import('../services/apiService.js')
+          const number = data.number || extractNumberFromTitle(data.title)
+          const interpretationData = await fetchInterpretation(number)
+
+          if (interpretationData) {
+            console.log('✅ API 返回釋字數據:', interpretationData)
+            // 重新提取內容，使用 API 返回的數據
+            extractedContent = extractInterpretationContent(interpretationData)
+
+            // 更新處理數據以包含 API 返回的完整資訊
+            processedData = {
+              ...data,
+              ...interpretationData, // 合併 API 數據
+              type: 'interpretation',
+              content: extractedContent,
+              number: number,
+              title: data.title || interpretationData.title || `釋字第${number}號`
+            }
+          }
+        } catch (apiError) {
+          console.warn('⚠️ API 載入釋字失敗:', apiError.message)
+          extractedContent = `<div class="error-message">無法載入釋字內容：${apiError.message}<br><br>可能原因：<ul><li>伺服器未運行或無法連接</li><li>釋字號碼不存在</li><li>網路連接問題</li></ul></div>`
+        }
+      }
+
+      // 如果還沒有設定 processedData，使用預設資料
+      if (!processedData.type) {
+        processedData = {
+          ...data,
+          type: 'interpretation',
+          content: extractedContent,
+          number: data.number || extractNumberFromTitle(data.title),
+          title: data.title || `釋字第${data.number || extractNumberFromTitle(data.title) || ''}號`
+        }
       }
     }
     // 處理法律內容
-    else if (type === 'law' || data.caseType === '法律' || data.type === '法律' || data.lawName) {
+    else if (type === 'law' || data.caseType === '法律' || data.type === '法律' || (data.lawName && data.lawName.trim())) {
       try {
-        const lawContent = await fetchLawContentFromAPI(data.lawName || data.title)
-        if (lawContent) {
+        const lawName = data.lawName || data.title || ''
+        if (!lawName.trim()) {
+          console.warn('無效的法律名稱:', data)
           processedData = {
             ...data,
             type: 'law',
-            content: formatLawContent(lawContent),
-            lawName: lawContent.lawName || data.lawName || data.title,
-            title: lawContent.title || data.title,
-            officialUrl: lawContent.officialUrl,
-            lastAmended: lawContent.lastAmended
+            content: '<div class="error-message">無效的法律名稱</div>'
+          }
+        } else {
+          const lawContent = await fetchLawContentFromAPI(lawName)
+          if (lawContent) {
+            processedData = {
+              ...data,
+              type: 'law',
+              content: formatLawContent(lawContent),
+              lawName: lawContent.lawName || lawName,
+              title: lawContent.title || data.title || lawName,
+              officialUrl: lawContent.officialUrl,
+              lastAmended: lawContent.lastAmended
+            }
           }
         }
       } catch (error) {
@@ -171,14 +246,18 @@ export const usePopoverStore = defineStore('popover', () => {
     }
 
     // 更新當前資料，讓 ToolContent 組件可以顯示
-    currentData.value = {
+    const finalData = {
       ...processedData,
       type: type,
       dateAdded: data.dateAdded || new Date().toISOString()
     }
 
+    console.log('🔄 更新 currentData 為:', finalData)
+    currentData.value = finalData
+
     // 觸發 ToolContent 組件的內容載入
     // 這會通過響應式系統自動更新 UI
+    console.log('✅ 內容載入完成，標題:', finalData.title, '內容長度:', finalData.content?.length || 0)
   }
 
   async function fetchLawContentFromAPI(lawName) {
@@ -227,6 +306,8 @@ export const usePopoverStore = defineStore('popover', () => {
   }
 
   function extractInterpretationContent(data) {
+    console.log('🔍 提取釋字內容，數據:', data)
+
     // 提取釋字解釋的主要內容
     let content = data.content || data.fullContent || ''
 
@@ -234,31 +315,38 @@ export const usePopoverStore = defineStore('popover', () => {
     if (!content || content === '無內容可顯示') {
       const parts = []
 
-      if (data.issue) {
-        parts.push(`<div class="interpretation-section"><h4>爭點</h4><p>${data.issue}</p></div>`)
-      }
+      // 嘗試多種數據源
+      const sources = [
+        { field: data.issue, label: '爭點' },
+        { field: data.description, label: '解釋文' },
+        { field: data.reasoning, label: '理由書' },
+        { field: data.chinese?.description, label: '解釋內容' },
+        { field: data.chinese?.issue, label: '爭議問題' },
+        { field: data.chinese?.reasoning, label: '解釋理由' },
+        { field: data.english?.description, label: 'English Description' },
+        { field: data.english?.issue, label: 'English Issue' },
+        { field: data.english?.reasoning, label: 'English Reasoning' }
+      ]
 
-      if (data.description) {
-        parts.push(`<div class="interpretation-section"><h4>解釋文</h4><p>${data.description}</p></div>`)
-      }
+      sources.forEach(({ field, label }) => {
+        if (field && field.trim()) {
+          parts.push(`<div class="interpretation-section"><h4>${label}</h4><p>${field.trim()}</p></div>`)
+        }
+      })
 
-      if (data.reasoning) {
-        parts.push(`<div class="interpretation-section"><h4>理由書</h4><p>${data.reasoning}</p></div>`)
-      }
-
-      if (data.chinese && data.chinese.description) {
-        parts.push(`<div class="interpretation-section"><h4>解釋內容</h4><p>${data.chinese.description}</p></div>`)
-      }
-
-      if (data.chinese && data.chinese.issue) {
-        parts.push(`<div class="interpretation-section"><h4>爭議問題</h4><p>${data.chinese.issue}</p></div>`)
-      }
-
-      if (data.chinese && data.chinese.reasoning) {
-        parts.push(`<div class="interpretation-section"><h4>解釋理由</h4><p>${data.chinese.reasoning}</p></div>`)
+      // 如果還是沒有內容，嘗試從 raw 數據中找
+      if (parts.length === 0 && data.raw) {
+        console.log('🔍 嘗試從 raw 數據中提取內容')
+        Object.keys(data.raw).forEach(key => {
+          const value = data.raw[key]
+          if (typeof value === 'string' && value.length > 10 && !key.includes('id') && !key.includes('url')) {
+            parts.push(`<div class="interpretation-section"><h4>${key}</h4><p>${value}</p></div>`)
+          }
+        })
       }
 
       content = parts.length > 0 ? parts.join('') : '無法取得解釋內容'
+      console.log('🔍 組合後的內容長度:', content.length, '段落數:', parts.length)
     }
 
     return content
@@ -284,8 +372,8 @@ export const usePopoverStore = defineStore('popover', () => {
   }
   
   function extractDataFromElement(element) {
-    const dataset = element.dataset
-    
+    const dataset = element.dataset || {}
+
     return {
       id: `law_${Date.now()}`,
       title: generateTitle(dataset),
@@ -297,20 +385,22 @@ export const usePopoverStore = defineStore('popover', () => {
       number: dataset.number || '',
       caseType: dataset.caseType || '',
       legalType: dataset.legalType || '',
-      text: element.textContent,
+      text: element.textContent || '',
       content: '',
       fullContent: ''
     }
   }
   
   function generateTitle(dataset) {
-    const { caseType, number, lawName, article, paragraph } = dataset
-    
-    if (caseType === '釋字') {
+    const { caseType, number, lawName, article, paragraph } = dataset || {}
+
+    if (caseType === '釋字' && number) {
       return `釋字第 ${number} 號`
     } else if (caseType === '法條' && lawName && article) {
       return `${lawName} 第 ${article} 條${paragraph ? ` ${paragraph.replace('-', ' 第')} 項` : ''}`
     } else if (caseType === '法律' && lawName) {
+      return lawName
+    } else if (lawName) {
       return lawName
     } else {
       return '台灣法源資訊'

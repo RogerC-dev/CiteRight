@@ -84,15 +84,24 @@ const displayData = computed(() => {
   }
   console.log(currentData.value, '顯示數據');
 
-  return {
+  // 安全地合併數據，避免 undefined 覆蓋預設值
+  const safeData = {
     title: currentData.value.title || '未命名項目',
     type: currentData.value.type || '法律資訊',
     number: currentData.value.number || '',
     dateAdded: currentData.value.dateAdded || new Date().toISOString(),
     officialUrl: currentData.value.officialUrl || '',
-    content: currentData.value.content || '無內容可顯示',
-    ...currentData.value
+    content: currentData.value.content || '無內容可顯示'
   }
+
+  // 只添加有值的額外屬性
+  Object.keys(currentData.value).forEach(key => {
+    if (currentData.value[key] !== undefined && currentData.value[key] !== null && !(key in safeData)) {
+      safeData[key] = currentData.value[key]
+    }
+  })
+
+  return safeData
 })
 
 const cleanContent = computed(() => {

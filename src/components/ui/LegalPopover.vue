@@ -119,11 +119,11 @@
             </div>
             <div class="debug-info">
               類型: {{ contentData.type || '未知' }}<br>
-              <template v-if="contentData.value.lawName">法律: {{ contentData.value.lawName }}<br></template>
-              <template v-if="contentData.value.article">條文: {{ contentData.value.article }}<br></template>
-              <template v-if="contentData.value.paragraph">項款目: {{ contentData.value.paragraph }}<br></template>
-              <template v-if="contentData.value.year">年度: {{ contentData.value.year }}<br></template>
-              <template v-if="contentData.value.number">字號: {{ contentData.value.number }}<br></template>
+              <template v-if="contentData && contentData.lawName">法律: {{ contentData.lawName }}<br></template>
+              <template v-if="contentData && contentData.article">條文: {{ contentData.article }}<br></template>
+              <template v-if="contentData && contentData.paragraph">項款目: {{ contentData.paragraph }}<br></template>
+              <template v-if="contentData && contentData.year">年度: {{ contentData.year }}<br></template>
+              <template v-if="contentData && contentData.number">字號: {{ contentData.number }}<br></template>
             </div>
           </template>
         </div>
@@ -178,9 +178,11 @@ const dragOffset = ref({ x: 0, y: 0 })
 
 // 計算屬性
 const displayTitle = computed(() => {
+  if (!contentData.value) return '無標題'
+
   switch (contentData.value.type) {
     case '釋字':
-      return `釋字第 ${contentData.value.number} 號`
+      return `釋字第 ${contentData.value.number || ''} 號`
     case '法律':
       return contentData.value.LawName || '法律內容'
     default:
@@ -234,22 +236,32 @@ watch(() => props.show, (show) => {
  * 載入內容
  */
 async function loadContent(data) {
-  if (!data) return
+  if (!data || typeof data !== 'object') {
+    console.warn('無效的數據傳入 loadContent:', data)
+    return
+  }
 
   loading.value = true
   error.value = ''
 
   try {
-    const caseType = data.type
+    const caseType = data.type || ''
     console.log('載入內容:', caseType, data);
 
     if (caseType === '釋字') {
       // 載入釋字內容
+      if (!data.number) {
+        throw new Error('缺少釋字號碼')
+      }
       const result = await fetchInterpretation(data.number)
-      contentData.value = result
+      if (result) {
+        contentData.value = result
+      } else {
+        throw new Error('無法載入釋字內容')
+      }
     } else if (caseType === '法律') {
       // 檢查是否已有預載入的內容
-      if (data.content && data.content !== `正在載入${data.lawName}的詳細內容...`) {
+      if (data && data.content && data.content !== `正在載入${data.lawName || ''}的詳細內容...`) {
         // 使用預載入的內容
         contentData.value = {
           type: '法律',
@@ -258,7 +270,7 @@ async function loadContent(data) {
           content: data.content,
           ...data
         }
-      } else if (data.lawName) {
+      } else if (data && data.lawName) {
         // 載入法條內容
         const result = await fetchLawInfo(data.lawName)
         contentData.value = result
