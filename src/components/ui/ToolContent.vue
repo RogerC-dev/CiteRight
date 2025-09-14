@@ -11,7 +11,7 @@
       <div class="content-header">
         <h3 class="content-title">{{ displayData.title }}</h3>
         <div class="content-meta">
-          📝 {{ displayData.type }} 
+          📝 {{ displayData.type }}
           <span v-if="displayData.number">
             · 第{{ displayData.number }}{{ displayData.type === '釋字' ? '號' : '條' }}
           </span>
@@ -19,6 +19,25 @@
             · {{ formatDate(displayData.dateAdded) }}
           </span>
         </div>
+      </div>
+
+      <!-- 頂部操作按鈕區域 -->
+      <div class="top-actions">
+        <button
+          class="action-btn bookmark-btn top-bookmark-btn"
+          @click="handleBookmark"
+          :disabled="isBookmarking"
+        >
+          📚 {{ isAlreadyBookmarked ? '已收藏' : '加入書籤' }}
+        </button>
+
+        <button
+          v-if="hasEnglishContent"
+          class="action-btn translate-btn"
+          @click="toggleTranslation"
+        >
+          {{ showEnglish ? '🇨🇳 中文' : '🇬🇧 English' }}
+        </button>
       </div>
       
       <!-- 主要內容區域 -->
@@ -65,6 +84,7 @@ const popoverStore = usePopoverStore()
 
 // 狀態
 const isBookmarking = ref(false)
+const showEnglish = ref(false) // 控制是否顯示英文內容
 // Use popover store's currentData directly
 const currentData = computed(() => popoverStore.currentData)
 
@@ -113,6 +133,11 @@ const cleanContent = computed(() => {
   // 清理和處理內容
   let content = displayData.value.content
 
+  // 如果是釋字類型，根據翻譯狀態處理內容
+  if (displayData.value.type === 'interpretation' && currentData.value) {
+    content = formatInterpretationContent(currentData.value, showEnglish.value)
+  }
+
   // 移除 script 標籤
   content = content.replace(/<script[^>]*>.*?<\/script>/gi, '')
 
@@ -142,6 +167,11 @@ const isAlreadyBookmarked = computed(() => {
     bookmark.id === currentData.value.id ||
     (bookmark.type === currentData.value.type && bookmark.number === currentData.value.number)
   )
+})
+
+const hasEnglishContent = computed(() => {
+  if (!currentData.value) return false
+  return !!(currentData.value.english?.issue || currentData.value.english?.description || currentData.value.english?.reasoning)
 })
 
 /**
@@ -268,13 +298,59 @@ function shareContent() {
  */
 function formatDate(dateStr) {
   if (!dateStr) return '未知日期'
-  
+
   try {
     const date = new Date(dateStr)
     return date.toLocaleDateString('zh-TW')
   } catch {
     return '未知日期'
   }
+}
+
+/**
+ * 切換翻譯顯示
+ */
+function toggleTranslation() {
+  showEnglish.value = !showEnglish.value
+}
+
+/**
+ * 格式化釋字內容（中/英文切換）
+ */
+function formatInterpretationContent(data, showEnglishContent = false) {
+  if (!data) return '無內容可顯示'
+
+  const sections = []
+
+  if (showEnglishContent && data.english) {
+    // 顯示英文內容
+    if (data.english.issue) {
+      sections.push(`<div class="interpretation-section english-section"><h4>Issue:</h4><p>${data.english.issue}</p></div>`)
+    }
+    if (data.english.description) {
+      sections.push(`<div class="interpretation-section english-section"><h4>Description:</h4><p>${data.english.description}</p></div>`)
+    }
+    if (data.english.reasoning) {
+      sections.push(`<div class="interpretation-section english-section"><h4>Reasoning:</h4><p>${data.english.reasoning}</p></div>`)
+    }
+  } else {
+    // 顯示中文內容（預設）
+    const issue = data.chinese?.issue || data.issue || ''
+    const description = data.chinese?.description || data.description || ''
+    const reasoning = data.chinese?.reasoning || data.reasoning || ''
+
+    if (issue) {
+      sections.push(`<div class="interpretation-section highlight-section"><h4>解釋爭點：</h4><p>${issue}</p></div>`)
+    }
+    if (description) {
+      sections.push(`<div class="interpretation-section"><h4>解釋文：</h4><p>${description}</p></div>`)
+    }
+    if (reasoning) {
+      sections.push(`<div class="interpretation-section"><h4>理由書：</h4><p>${reasoning}</p></div>`)
+    }
+  }
+
+  return sections.length > 0 ? sections.join('') : '無法取得解釋內容'
 }
 
 /**
@@ -519,5 +595,67 @@ defineExpose({
 
 :deep(.error-message li) {
   margin-bottom: 4px;
+}
+
+/* 頂部操作按鈕 */
+.top-actions {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.top-bookmark-btn {
+  background: linear-gradient(135deg, #52c41a, #389e0d);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 4px rgba(82, 196, 26, 0.3);
+}
+
+.top-bookmark-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(82, 196, 26, 0.4);
+}
+
+.translate-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.translate-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* 英文內容樣式 */
+:deep(.english-section) {
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  border-left: 4px solid #2196f3;
+}
+
+:deep(.english-section h4) {
+  color: #1976d2 !important;
+  font-style: italic;
+}
+
+:deep(.english-section p) {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 高亮區域樣式 */
+:deep(.highlight-section) {
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  border-left: 4px solid #f39c12;
+}
+
+:deep(.highlight-section h4) {
+  color: #d68910 !important;
 }
 </style>

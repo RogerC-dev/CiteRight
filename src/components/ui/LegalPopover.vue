@@ -15,7 +15,14 @@
           <span class="title">{{ displayTitle }}</span>
         </div>
         <div class="header-right">
-          <button class="action-btn bookmark-btn" @click="$emit('bookmark')" title="加入書籤">📚 書籤</button>
+          <button
+            class="action-btn bookmark-btn"
+            @click="handleBookmark"
+            :disabled="isBookmarking"
+            title="加入書籤"
+          >
+            📚 {{ isAlreadyBookmarked ? '已收藏' : '加入書籤' }}
+          </button>
           <button class="action-btn expand-btn" @click="$emit('expand')" title="展開至側邊面板">📖 展開</button>
           <button class="action-btn close-btn" @click="$emit('close')" title="關閉">&times;</button>
         </div>
@@ -44,12 +51,18 @@
               <strong>解釋公布院令：</strong>
               <div class="info-content">{{ new Date(contentData.date).toLocaleDateString() }}</div>
             </div>
-            <div v-if="contentData.chinese?.issue || contentData.issue" class="info-section">
+            <div v-if="contentData.chinese?.issue || contentData.issue" class="info-section highlight-section">
               <strong>解釋爭點：</strong>
               <div class="info-content">{{ contentData.chinese?.issue || contentData.issue }}</div>
             </div>
-            <div v-if="contentData.chinese?.reasoning || contentData.reasoning" class="info-section">
+
+            <div v-if="contentData.chinese?.description || contentData.description" class="info-section">
               <strong>解釋文：</strong>
+              <div class="info-content">{{ contentData.chinese?.description || contentData.description }}</div>
+            </div>
+
+            <div v-if="contentData.chinese?.reasoning || contentData.reasoning" class="info-section">
+              <strong>理由書：</strong>
               <div class="info-content">{{ contentData.chinese?.reasoning || contentData.reasoning }}</div>
             </div>
             <div class="info-section">
@@ -114,6 +127,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import { fetchInterpretation, fetchLawInfo } from '../../services/apiService.js'
+import { useBookmarkStore } from '../../stores/bookmark.js'
 
 // Props
 const props = defineProps({
@@ -128,12 +142,14 @@ const props = defineProps({
 const emit = defineEmits(['close', 'bookmark', 'expand'])
 
 // State
+const bookmarkStore = useBookmarkStore()
 const popoverRef = ref(null)
 const contentData = ref(null)
 const loading = ref(false)
 const error = ref('')
 const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
+const isBookmarking = ref(false)
 
 // Normalized helpers for mixed shapes
 const lawName = computed(() => props.data?.lawName ?? props.data?.value?.lawName)
@@ -175,6 +191,17 @@ const popoverStyle = computed(() => ({
   top: `${props.position.y}px`,
   zIndex: 2147483650
 }))
+
+const isAlreadyBookmarked = computed(() => {
+  if (!contentData.value && !props.data) return false
+
+  const dataToCheck = contentData.value || props.data
+  return bookmarkStore.bookmarks.some(bookmark =>
+    bookmark.id === dataToCheck.id ||
+    (bookmark.type === dataToCheck.type && bookmark.number === dataToCheck.number) ||
+    (bookmark.title === dataToCheck.title)
+  )
+})
 
 // Watch data -> load content
 watch(
@@ -275,6 +302,51 @@ function stopDrag() {
 
 function getInterpretationUrl(number) {
   return `https://cons.judicial.gov.tw/docdata.aspx?fid=100&type=JY&RD=${number}`
+}
+
+/**
+ * 處理書籤操作
+ */
+async function handleBookmark() {
+  const dataToBookmark = contentData.value || props.data
+
+  if (!dataToBookmark || isBookmarking.value) {
+    console.log('❌ 無法加入書籤：沒有法律資料')
+    return
+  }
+
+  isBookmarking.value = true
+
+  try {
+    // 準備書籤數據
+    const bookmarkData = {
+      ...dataToBookmark,
+      id: dataToBookmark.id || `${dataToBookmark.type || 'law'}_${Date.now()}`,
+      title: dataToBookmark.title || displayTitle.value,
+      type: dataToBookmark.type || 'law',
+      dateAdded: new Date().toISOString()
+    }
+
+    if (isAlreadyBookmarked.value) {
+      // 移除書籤
+      const success = bookmarkStore.removeBookmark(bookmarkData.id)
+      if (success) {
+        console.log('✅ 已移除書籤:', bookmarkData.title)
+      }
+    } else {
+      // 加入書籤
+      const success = bookmarkStore.addBookmark(bookmarkData)
+      if (success) {
+        console.log('✅ 已加入書籤:', bookmarkData.title)
+      } else {
+        console.log('⚠️ 書籤已存在:', bookmarkData.title)
+      }
+    }
+  } catch (error) {
+    console.error('書籤操作失敗:', error)
+  } finally {
+    isBookmarking.value = false
+  }
 }
 </script>
 

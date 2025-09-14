@@ -224,7 +224,7 @@ function handleResize(e) {
   const maxWidth = window.innerWidth * 0.8
   newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth))
   
-  emit('resize', { type: 'resize', width: newWidth })
+  emit('resize', newWidth)
   
   console.log('🔄 調整面板寬度:', newWidth + 'px')
 }
@@ -244,7 +244,7 @@ function stopResize() {
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
   
-  emit('resize', { type: 'end', width: props.width })
+  emit('resize', props.width)
   
   console.log('✅ 完成面板大小調整')
 }
