@@ -35,6 +35,12 @@ export const useSidebarStore = defineStore('sidebar', () => {
   }
   
   function setWidth(newWidth) {
+    // 檢查輸入值是否為數字
+    if (isNaN(newWidth) || typeof newWidth !== 'number') {
+      console.warn('⚠️ 無效的寬度值:', newWidth, '使用預設值')
+      newWidth = 500 // 使用預設寬度
+    }
+
     // 限制寬度範圍
     const constrainedWidth = Math.max(minWidth.value, Math.min(newWidth, maxWidth.value))
     width.value = constrainedWidth

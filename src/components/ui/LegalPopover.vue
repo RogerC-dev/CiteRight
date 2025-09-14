@@ -15,27 +15,9 @@
           <span class="title">{{ displayTitle }}</span>
         </div>
         <div class="header-right">
-          <button
-            class="action-btn bookmark-btn"
-            @click="$emit('bookmark')"
-            title="加入書籤"
-          >
-            📚 書籤
-          </button>
-          <button
-            class="action-btn expand-btn"
-            @click="$emit('expand')"
-            title="展開至側邊面板"
-          >
-            📖 展開
-          </button>
-          <button
-            class="action-btn close-btn"
-            @click="$emit('close')"
-            title="關閉"
-          >
-            &times;
-          </button>
+          <button class="action-btn bookmark-btn" @click="$emit('bookmark')" title="加入書籤">📚 書籤</button>
+          <button class="action-btn expand-btn" @click="$emit('expand')" title="展開至側邊面板">📖 展開</button>
+          <button class="action-btn close-btn" @click="$emit('close')" title="關閉">&times;</button>
         </div>
       </div>
 
@@ -45,16 +27,15 @@
           <div class="spinner"></div>
           <div class="loading-text">🔍 正在載入{{ loadingMessage }}...</div>
         </div>
-        
+
         <div v-else-if="error" class="error-state">
           <div class="error-icon">❌</div>
           <div class="error-text">{{ error }}</div>
         </div>
-        
+
         <div v-else-if="contentData" class="content-loaded">
-          <!-- 釋字內容 -->
-          <template v-if="contentData.type === '釋字'">
-            {{ console.log(contentData) }}
+          <!-- 釋字內容 / Interpretation -->
+          <template v-if="kind === 'interpretation'">
             <div class="info-section">
               <strong>解釋字號：</strong>
               <div class="info-content">釋字第 {{ contentData.number }} 號</div>
@@ -63,13 +44,13 @@
               <strong>解釋公布院令：</strong>
               <div class="info-content">{{ new Date(contentData.date).toLocaleDateString() }}</div>
             </div>
-            <div v-if="contentData.chinese.issue" class="info-section">
+            <div v-if="contentData.chinese?.issue || contentData.issue" class="info-section">
               <strong>解釋爭點：</strong>
-              <div class="info-content">{{ contentData.chinese.issue }}</div>
+              <div class="info-content">{{ contentData.chinese?.issue || contentData.issue }}</div>
             </div>
-            <div v-if="contentData.chinese.reasoning" class="info-section">
+            <div v-if="contentData.chinese?.reasoning || contentData.reasoning" class="info-section">
               <strong>解釋文：</strong>
-              <div class="info-content">{{ contentData.chinese.reasoning }}</div>
+              <div class="info-content">{{ contentData.chinese?.reasoning || contentData.reasoning }}</div>
             </div>
             <div class="info-section">
               <strong>來源：</strong>
@@ -82,23 +63,17 @@
             </div>
           </template>
 
-          <!-- 法條內容 -->
-          <template v-else-if="contentData.type === '法律'">
-            {{ console.log(contentData) }}
+          <!-- 法律 / Law -->
+          <template v-else-if="kind === 'law'">
             <div class="info-section">
-              <strong>法規類別: </strong>
-              <div class="info-content" v-if="contentData.LawLevel === contentData.LawCategory">{{ contentData.LawLevel || '' }}</div>
-              <div class="info-content" v-else>{{ contentData.LawLevel || '' }} | {{ contentData.LawCategory || '' }}</div>
+              <strong>法規名稱：</strong>
+              <div class="info-content">{{ contentData?.LawName || contentData?.title || lawName || props.data?.title || '' }}</div>
             </div>
-            <div class="info-section">
-              <strong>法律沿革: </strong>
-              <div class="info-content">{{ contentData.LawHistories || '' }}</div>
+            <div v-if="contentData.LawModifiedDate" class="info-section">
+              <strong>修訂日期：</strong>
+              <div class="info-content">{{ new Date(contentData.LawModifiedDate).toLocaleDateString() }}</div>
             </div>
-            <div class="info-section">
-              <strong>修訂日期: </strong>
-              <div class="info-content">{{ new Date(contentData.LawModifiedDate).toLocaleDateString() || '' }}</div>
-            </div>
-            <div class="info-section">
+            <div v-if="Array.isArray(contentData.Articles) && contentData.Articles.length" class="info-section">
               <strong>條文內容：</strong>
               <div class="info-content" v-for="(article, index) in contentData.Articles" :key="index">
                 <strong>{{ article.CaptionTitle }} {{ article.ArticleNo }}</strong>
@@ -111,26 +86,25 @@
             </div>
           </template>
 
-          <!-- 通用內容 -->
+          <!-- 通用內容 / Fallback -->
           <template v-else>
-            {{ console.log(contentData) }}
             <div class="info-section">
               <strong>識別內容：</strong> {{ contentData.text || data?.text || '未知內容' }}
             </div>
             <div class="debug-info">
               類型: {{ contentData.type || '未知' }}<br>
-              <template v-if="contentData && contentData.lawName">法律: {{ contentData.lawName }}<br></template>
-              <template v-if="contentData && contentData.article">條文: {{ contentData.article }}<br></template>
-              <template v-if="contentData && contentData.paragraph">項款目: {{ contentData.paragraph }}<br></template>
-              <template v-if="contentData && contentData.year">年度: {{ contentData.year }}<br></template>
-              <template v-if="contentData && contentData.number">字號: {{ contentData.number }}<br></template>
+              <template v-if="lawName">法律: {{ lawName }}<br></template>
+              <template v-if="article">條文: {{ article }}<br></template>
+              <template v-if="paragraph">條款: {{ paragraph }}<br></template>
+              <template v-if="year">年度: {{ year }}<br></template>
+              <template v-if="number">字號: {{ number }}<br></template>
             </div>
           </template>
         </div>
-        
+
         <div v-else class="no-data">
-          <div class="no-data-icon">📋</div>
-          <div class="no-data-text">暫無資料</div>
+          <div class="no-data-icon">🗂️</div>
+          <div class="no-data-text">尚無資料</div>
         </div>
       </div>
     </div>
@@ -138,37 +112,22 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
-import {
-  fetchInterpretation,
-  fetchLawArticle,
-  fetchLawInfo
-} from '../../services/apiService.js'
+import { ref, computed, watch, nextTick } from 'vue'
+import { fetchInterpretation, fetchLawInfo } from '../../services/apiService.js'
 
 // Props
 const props = defineProps({
-  show: {
-    type: Boolean,
-    default: false
-  },
-  position: {
-    type: Object,
-    default: () => ({ x: 0, y: 0 })
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  },
-  data: {
-    type: Object,
-    default: null
-  }
+  show: { type: Boolean, default: false },
+  position: { type: Object, default: () => ({ x: 0, y: 0 }) },
+  loading: { type: Boolean, default: false },
+  data: { type: Object, default: null },
+  error: { type: String, default: '' }
 })
 
 // Emits
 const emit = defineEmits(['close', 'bookmark', 'expand'])
 
-// 狀態
+// State
 const popoverRef = ref(null)
 const contentData = ref(null)
 const loading = ref(false)
@@ -176,33 +135,38 @@ const error = ref('')
 const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
 
-// 計算屬性
-const displayTitle = computed(() => {
-  if (!contentData.value) return '無標題'
+// Normalized helpers for mixed shapes
+const lawName = computed(() => props.data?.lawName ?? props.data?.value?.lawName)
+const article = computed(() => props.data?.article ?? props.data?.value?.article)
+const paragraph = computed(() => props.data?.paragraph ?? props.data?.value?.paragraph)
+const year = computed(() => props.data?.year ?? props.data?.value?.year)
+const number = computed(() => props.data?.number ?? props.data?.value?.number)
 
-  switch (contentData.value.type) {
-    case '釋字':
-      return `釋字第 ${contentData.value.number || ''} 號`
-    case '法律':
-      return contentData.value.LawName || '法律內容'
+const kind = computed(() => {
+  const t = (contentData.value?.type || props.data?.type || '').toString().toLowerCase()
+  if (t === '法律' || t === 'law') return 'law'
+  if (t === '釋字' || t === 'interpretation') return 'interpretation'
+  return 'other'
+})
+
+const displayTitle = computed(() => {
+  const cd = contentData.value
+  if (!cd) return props.data?.title || '法律資訊'
+  switch (kind.value) {
+    case 'interpretation':
+      return `釋字第 ${cd?.number ?? ''} 號`
+    case 'law':
+      return cd?.LawName || props.data?.title || lawName.value || '法律內容'
     default:
-      break
+      return props.data?.title || '臺灣法律資訊'
   }
-  if (props.data?.title) return props.data.title
-  return '台灣法源資訊'
 })
 
 const loadingMessage = computed(() => {
-  if (!props.data) return '內容'
-  
-  switch (props.data.type || props.data.caseType) {
-    case '釋字':
-      return '釋字內容'
-    case '法律':
-      return '法律內容'
-    default:
-      return '法律內容'
-  }
+  const t = (props.data?.type || '').toString().toLowerCase()
+  if (t === '釋字' || t === 'interpretation') return '釋字內容'
+  if (t === '法律' || t === 'law') return '法律內容'
+  return '內容'
 })
 
 const popoverStyle = computed(() => ({
@@ -212,57 +176,43 @@ const popoverStyle = computed(() => ({
   zIndex: 2147483650
 }))
 
-// 監聽 data 變化，自動載入內容
-watch(() => props.data, async (newData) => {
-  if (!newData) {
-    contentData.value = null
-    error.value = ''
-    return
+// Watch data -> load content
+watch(
+  () => props.data,
+  async (newData) => {
+    if (!newData) {
+      contentData.value = null
+      error.value = ''
+      return
+    }
+    await loadContent(newData)
+  },
+  { immediate: true }
+)
+
+// ESC to close when showing
+watch(
+  () => props.show,
+  (show) => {
+    if (show) {
+      document.addEventListener('keydown', handleKeyDown)
+    } else {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }
+)
 
-  await loadContent(newData)
-}, { immediate: true })
-
-// 監聽顯示狀態，處理 ESC 鍵
-watch(() => props.show, (show) => {
-  if (show) {
-    document.addEventListener('keydown', handleKeyDown)
-  } else {
-    document.removeEventListener('keydown', handleKeyDown)
-  }
-})
-
-/**
- * 載入內容
- */
 async function loadContent(data) {
-  if (!data || typeof data !== 'object') {
-    console.warn('無效的數據傳入 loadContent:', data)
-    return
-  }
-
+  if (!data) return
   loading.value = true
   error.value = ''
-
   try {
-    const caseType = data.type || ''
-    console.log('載入內容:', caseType, data);
-
-    if (caseType === '釋字') {
-      // 載入釋字內容
-      if (!data.number) {
-        throw new Error('缺少釋字號碼')
-      }
+    const caseType = (data.type || '').toString().toLowerCase()
+    if (caseType === '釋字' || caseType === 'interpretation') {
       const result = await fetchInterpretation(data.number)
-      if (result) {
-        contentData.value = result
-      } else {
-        throw new Error('無法載入釋字內容')
-      }
-    } else if (caseType === '法律') {
-      // 檢查是否已有預載入的內容
-      if (data && data.content && data.content !== `正在載入${data.lawName || ''}的詳細內容...`) {
-        // 使用預載入的內容
+      contentData.value = result
+    } else if (caseType === '法律' || caseType === 'law') {
+      if (data.content && data.content !== `正在載入${data.lawName}的詳細內容..`) {
         contentData.value = {
           type: '法律',
           LawName: data.lawName || data.title,
@@ -270,12 +220,10 @@ async function loadContent(data) {
           content: data.content,
           ...data
         }
-      } else if (data && data.lawName) {
-        // 載入法條內容
+      } else if (data.lawName) {
         const result = await fetchLawInfo(data.lawName)
         contentData.value = result
       } else {
-        // 沒有法律名稱，使用原始資料
         contentData.value = {
           type: '法律',
           LawName: data.title || '法律資訊',
@@ -283,82 +231,50 @@ async function loadContent(data) {
         }
       }
     } else {
-      // 使用原始資料
-      contentData.value = {
-        type: caseType || '法律資訊',
-        title: data.title || '台灣法源資訊',
-        ...data
-      }
+      contentData.value = { type: caseType || '其他', title: data.title || '臺灣法律資訊', ...data }
     }
   } catch (err) {
     console.error('載入內容失敗:', err)
-    error.value = err.message || '載入內容時發生錯誤'
+    error.value = err?.message || '載入內容發生錯誤'
     contentData.value = null
   } finally {
     loading.value = false
   }
 }
 
-/**
- * 處理鍵盤事件
- */
 function handleKeyDown(e) {
-  if (e.key === 'Escape') {
-    emit('close')
-  }
+  if (e.key === 'Escape') emit('close')
 }
 
-/**
- * 開始拖拽
- */
 function startDrag(e) {
-  if (e.target.classList.contains('action-btn')) return
-  
+  if (e.target.classList?.contains('action-btn')) return
   isDragging.value = true
   const rect = popoverRef.value.getBoundingClientRect()
-  dragOffset.value = {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
-  }
-  
+  dragOffset.value = { x: e.clientX - rect.left, y: e.clientY - rect.top }
   document.addEventListener('mousemove', handleDrag)
   document.addEventListener('mouseup', stopDrag)
   e.preventDefault()
 }
 
-/**
- * 處理拖拽
- */
 function handleDrag(e) {
   if (!isDragging.value || !popoverRef.value) return
-  
   let left = e.clientX - dragOffset.value.x
   let top = e.clientY - dragOffset.value.y
-  
-  // 限制在視窗範圍內
   const popoverRect = popoverRef.value.getBoundingClientRect()
   left = Math.max(0, Math.min(left, window.innerWidth - popoverRect.width))
   top = Math.max(0, Math.min(top, window.innerHeight - 50))
-  
   popoverRef.value.style.left = left + 'px'
   popoverRef.value.style.top = top + 'px'
 }
 
-/**
- * 停止拖拽
- */
 function stopDrag() {
   isDragging.value = false
   document.removeEventListener('mousemove', handleDrag)
   document.removeEventListener('mouseup', stopDrag)
 }
 
-/**
- * 產生大法官解釋 URL
- */
 function getInterpretationUrl(number) {
-  if (!number) return '#'
-  return `https://cons.judicial.gov.tw/jcc/zh-tw/jep03/show?expno=${number}`
+  return `https://cons.judicial.gov.tw/docdata.aspx?fid=100&type=JY&RD=${number}`
 }
 </script>
 
@@ -389,159 +305,33 @@ function getInterpretationUrl(number) {
   align-items: center;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.header-left { display: flex; align-items: center; gap: 8px; }
+.icon { font-size: 18px; }
+.title { font-weight: 600; font-size: 16px; color: #f0f8ff; text-shadow: 1px 1px 3px rgba(0,0,0,.5); opacity: .95; }
+.header-right { display: flex; align-items: center; gap: 8px; }
+.action-btn { background: rgba(255,255,255,.2); border: none; color: white; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; transition: all .2s; }
+.action-btn:hover { background: rgba(255,255,255,.3); transform: scale(1.05); }
+.close-btn { border-radius: 50%; padding: 6px; font-size: 16px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
 
-.icon {
-  font-size: 18px;
-}
+.citeright-content { padding: 18px; max-height: 320px; overflow-y: auto; background: white; border-radius: 0 0 10px 10px; line-height: 1.6; }
+.citeright-content::-webkit-scrollbar { width: 6px; }
+.citeright-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+.citeright-content::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+.citeright-content::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
 
-.title {
-  font-weight: 600;
-  font-size: 16px;
-  color: #f0f8ff;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
-  opacity: 0.95;
-}
+.loading-state, .error-state, .no-data { text-align: center; padding: 20px; }
+.spinner { width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.loading-text { color: #666; font-size: 13px; }
+.error-icon, .no-data-icon { font-size: 24px; margin-bottom: 8px; }
+.error-text, .no-data-text { color: #666; font-size: 13px; }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.info-section { margin-bottom: 12px; }
+.info-section strong { color: #1890ff; display: block; margin-bottom: 4px; }
+.info-content { line-height: 1.6; color: #333; }
 
-.action-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  border-radius: 6px;
-  padding: 6px 10px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.2s;
-}
+.debug-info { font-size: 12px; color: #666; line-height: 1.4; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0f0f0; }
 
-.action-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.05);
-}
-
-.close-btn {
-  border-radius: 50%;
-  padding: 6px;
-  font-size: 16px;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.citeright-content {
-  padding: 18px;
-  max-height: 320px;
-  overflow-y: auto;
-  background: white;
-  border-radius: 0 0 10px 10px;
-  line-height: 1.6;
-}
-
-.citeright-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.citeright-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.citeright-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.citeright-content::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
-}
-
-.loading-state,
-.error-state,
-.no-data {
-  text-align: center;
-  padding: 20px;
-}
-
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #1890ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 12px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.loading-text {
-  color: #666;
-  font-size: 13px;
-}
-
-.error-icon,
-.no-data-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-
-.error-text,
-.no-data-text {
-  color: #666;
-  font-size: 13px;
-}
-
-.info-section {
-  margin-bottom: 12px;
-}
-
-.info-section strong {
-  color: #1890ff;
-  display: block;
-  margin-bottom: 4px;
-}
-
-.info-content {
-  line-height: 1.6;
-  color: #333;
-}
-
-.debug-info {
-  font-size: 12px;
-  color: #666;
-  line-height: 1.4;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.content-loaded {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+.content-loaded { animation: fadeIn .3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
