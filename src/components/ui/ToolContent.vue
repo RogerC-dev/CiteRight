@@ -9,7 +9,26 @@
     <div v-else class="content-loaded">
       <!-- 標題區域 -->
       <div class="content-header">
-        <h3 class="content-title">{{ displayData.title }}</h3>
+        <div class="title-row">
+          <h3 class="content-title">{{ displayData.title }}</h3>
+          <button
+            v-if="hasEnglishContent"
+            class="en-btn compact-en-btn"
+            @click="toggleTranslation"
+            :title="showEnglish ? '切換到中文' : '切換到英文'"
+          >
+            En
+          </button>
+          <div class="spacer"></div>
+          <button
+            class="action-btn bookmark-btn compact-bookmark-btn"
+            @click="handleBookmark"
+            :disabled="isBookmarking"
+            title="加入書籤"
+          >
+            📚 {{ isAlreadyBookmarked ? '已收藏' : '加入書籤' }}
+          </button>
+        </div>
         <div class="content-meta">
           📝 {{ displayData.type }}
           <span v-if="displayData.number">
@@ -21,24 +40,6 @@
         </div>
       </div>
 
-      <!-- 頂部操作按鈕區域 -->
-      <div class="top-actions">
-        <button
-          class="action-btn bookmark-btn top-bookmark-btn"
-          @click="handleBookmark"
-          :disabled="isBookmarking"
-        >
-          📚 {{ isAlreadyBookmarked ? '已收藏' : '加入書籤' }}
-        </button>
-
-        <button
-          v-if="hasEnglishContent"
-          class="action-btn translate-btn"
-          @click="toggleTranslation"
-        >
-          {{ showEnglish ? '🇨🇳 中文' : '🇬🇧 English' }}
-        </button>
-      </div>
       
       <!-- 主要內容區域 -->
       <div id="tool-main-content" class="main-content" v-html="cleanContent"></div>
@@ -163,10 +164,27 @@ const cleanContent = computed(() => {
 const isAlreadyBookmarked = computed(() => {
   if (!currentData.value) return false
 
-  return bookmarkStore.bookmarks.some(bookmark =>
-    bookmark.id === currentData.value.id ||
-    (bookmark.type === currentData.value.type && bookmark.number === currentData.value.number)
-  )
+  return bookmarkStore.bookmarks.some(bookmark => {
+    // 精確 ID 匹配
+    if (bookmark.id === currentData.value.id) return true
+
+    // 釋字匹配：類型和號碼都要相同
+    if (bookmark.type === 'interpretation' && currentData.value.type === 'interpretation') {
+      return bookmark.number === currentData.value.number
+    }
+
+    // 法律匹配：法律名稱要相同
+    if (bookmark.type === 'law' && currentData.value.type === 'law') {
+      return bookmark.lawName === currentData.value.lawName || bookmark.title === currentData.value.title
+    }
+
+    // 條文匹配：法律名稱和條文號要都相同
+    if (bookmark.lawName && currentData.value.lawName && bookmark.article && currentData.value.article) {
+      return bookmark.lawName === currentData.value.lawName && bookmark.article === currentData.value.article
+    }
+
+    return false
+  })
 })
 
 const hasEnglishContent = computed(() => {
@@ -412,11 +430,23 @@ defineExpose({
   border-left: 4px solid #1890ff;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .content-title {
-  margin: 0 0 8px 0;
+  margin: 0;
   color: #1890ff;
   font-size: 18px;
   font-weight: 600;
+  flex-shrink: 0;
+}
+
+.spacer {
+  flex: 1;
 }
 
 .content-meta {
@@ -510,6 +540,16 @@ defineExpose({
   /* 繼承全域高亮樣式 */
 }
 
+/* 取消 tab-content-inner 的高亮效果，提供更好的閱讀體驗 */
+:deep(.tab-content-inner .citeright-link) {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  color: inherit !important;
+  text-decoration: none !important;
+  cursor: default !important;
+}
+
 /* 解釋內容區塊樣式 */
 :deep(.interpretation-section) {
   margin-bottom: 24px;
@@ -597,41 +637,66 @@ defineExpose({
   margin-bottom: 4px;
 }
 
-/* 頂部操作按鈕 */
-.top-actions {
-  margin-bottom: 16px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.top-bookmark-btn {
-  background: linear-gradient(135deg, #52c41a, #389e0d);
-  color: white;
+/* 緊湊型書籤按鈕 */
+.compact-bookmark-btn {
+  background: linear-gradient(135deg, #95de64, #73d13d);
+  color: #237804;
   border: none;
-  box-shadow: 0 2px 4px rgba(82, 196, 26, 0.3);
-}
-
-.top-bookmark-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(82, 196, 26, 0.4);
-}
-
-.translate-btn {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 20px;
-  padding: 8px 16px;
-  font-size: 12px;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(115, 209, 61, 0.15);
 }
 
-.translate-btn:hover {
+.compact-bookmark-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #73d13d, #52c41a);
+  color: white;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 6px rgba(115, 209, 61, 0.25);
+}
+
+.compact-bookmark-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(82, 196, 26, 0.2);
+}
+
+.compact-bookmark-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 緊湊型英文按鈕 */
+.compact-en-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1890ff, #096dd9);
+  color: white;
+  border: none;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(24, 144, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.compact-en-btn:hover {
+  background: linear-gradient(135deg, #096dd9, #0050b3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.35);
+}
+
+.compact-en-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(24, 144, 255, 0.2);
 }
 
 /* 英文內容樣式 */

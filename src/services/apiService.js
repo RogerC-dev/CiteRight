@@ -185,14 +185,75 @@ export async function fetchJudgment(year, caseType, number) {
  */
 export async function searchLegalData(query, options = {}) {
   try {
-    const params = new URLSearchParams({
-      q: query,
-      ...options
-    })
-    
-    const response = await apiRequest(`${API_BASE_URL}/api/search?${params.toString()}`)
-    
-    return response.results || []
+    // 先嘗試載入法律名稱列表進行模糊搜尋
+    const lawNames = await loadLegalNames()
+
+    // 過濾包含關鍵字的法律
+    const matchedLaws = lawNames.filter(law =>
+      law.LawName && law.LawName.includes(query)
+    )
+
+    // 如果找到匹配的法律，為每個法律創建結果
+    if (matchedLaws.length > 0) {
+      const results = []
+
+      for (const law of matchedLaws.slice(0, 5)) { // 限制最多5個結果
+        try {
+          // 載入法律內容
+          const lawContent = await fetchLawInfo(law.LawName)
+
+          if (lawContent && lawContent.Articles) {
+            // 搜尋包含關鍵字的條文
+            const matchedArticles = lawContent.Articles.filter(article =>
+              article.Article && article.Article.includes(query)
+            ).slice(0, 3) // 每個法律最多顯示3條相關條文
+
+            if (matchedArticles.length > 0) {
+              // 為每個匹配的條文創建結果
+              matchedArticles.forEach(article => {
+                results.push({
+                  LawName: law.LawName,
+                  title: `${law.LawName} ${article.ArticleNo}`,
+                  ArticleNo: article.ArticleNo,
+                  Article: article.Article,
+                  CaptionTitle: article.CaptionTitle,
+                  description: `${article.Article.substring(0, 100)}...`,
+                  LawUrl: law.LawUrl,
+                  lawName: law.LawName,
+                  article: article.ArticleNo?.replace(/[^0-9]/g, ''), // 提取數字
+                  type: 'law'
+                })
+              })
+            } else {
+              // 如果沒找到特定條文，返回整部法律
+              results.push({
+                LawName: law.LawName,
+                title: `${law.LawName} - ${query}相關法規`,
+                description: `${law.LawName}中關於「${query}」的相關規定`,
+                LawUrl: law.LawUrl,
+                lawName: law.LawName,
+                type: 'law'
+              })
+            }
+          }
+        } catch (lawError) {
+          console.warn(`載入法律 ${law.LawName} 失敗:`, lawError)
+          // 即使載入失敗，也提供基本資訊
+          results.push({
+            LawName: law.LawName,
+            title: `${law.LawName} - ${query}相關法規`,
+            description: `${law.LawName}中關於「${query}」的相關規定`,
+            LawUrl: law.LawUrl,
+            lawName: law.LawName,
+            type: 'law'
+          })
+        }
+      }
+
+      return results
+    }
+
+    return []
   } catch (error) {
     console.error('搜尋法律資料失敗:', error)
     throw new Error('搜尋功能暫時無法使用')

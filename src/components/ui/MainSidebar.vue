@@ -495,13 +495,42 @@ watch(() => props.width, (newWidth) => {
   }
 }
 
+/* 禁用字典和書籤區域的高亮 */
+#tab-content-dictionary :deep(.citeright-link),
+#tab-content-bookmarks :deep(.citeright-link),
+.bookmark-preview :deep(.citeright-link),
+.search-hint :deep(.citeright-link),
+.result-title :deep(.citeright-link),
+.law-links :deep(.citeright-link) {
+  background: none !important;
+  border: none !important;
+  color: inherit !important;
+  text-decoration: none !important;
+  cursor: default !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+#tab-content-dictionary :deep(.citeright-link:hover),
+#tab-content-bookmarks :deep(.citeright-link:hover),
+.bookmark-preview :deep(.citeright-link:hover),
+.search-hint :deep(.citeright-link:hover),
+.result-title :deep(.citeright-link:hover),
+.law-links :deep(.citeright-link:hover) {
+  background: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 /* 無障礙設計 */
 @media (prefers-reduced-motion: reduce) {
   .tool-panel,
   .tab-btn {
     transition: none;
   }
-  
+
   @keyframes slideIn {
     from, to {
       transform: translateX(0);

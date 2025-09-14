@@ -210,7 +210,7 @@ export const usePopoverStore = defineStore('popover', () => {
       }
     }
     // 處理法律內容
-    else if (type === 'law' || data.caseType === '法律' || data.type === '法律' || (data.lawName && data.lawName.trim())) {
+    else if (type === 'law' || data.caseType === '法律' || data.type === '法律' || data.type === '法律資訊' || (data.lawName && data.lawName.trim())) {
       try {
         const lawName = data.lawName || data.title || ''
         if (!lawName.trim()) {
@@ -221,16 +221,17 @@ export const usePopoverStore = defineStore('popover', () => {
             content: '<div class="error-message">無效的法律名稱</div>'
           }
         } else {
+          console.log('🔍 載入法律內容:', lawName)
           const lawContent = await fetchLawContentFromAPI(lawName)
           if (lawContent) {
+            console.log('✅ 成功載入法律內容:', lawContent.LawName, '條文數量:', lawContent.Articles?.length)
             processedData = {
               ...data,
+              ...lawContent, // 直接合併所有 API 返回數據
               type: 'law',
               content: formatLawContent(lawContent),
               lawName: lawContent.lawName || lawName,
-              title: lawContent.title || data.title || lawName,
-              officialUrl: lawContent.officialUrl,
-              lastAmended: lawContent.lastAmended
+              title: lawContent.title || data.title || lawName
             }
           }
         }
@@ -269,9 +270,12 @@ export const usePopoverStore = defineStore('popover', () => {
       return {
         lawName: lawData.LawName || lawName,
         title: lawData.LawName || lawName,
-        officialUrl: lawData.LawUrl,
-        lastAmended: lawData.LawModifiedDate,
-        articles: lawData.Articles
+        LawName: lawData.LawName || lawName,
+        LawUrl: lawData.LawUrl,
+        LawModifiedDate: lawData.LawModifiedDate,
+        type: '法律',
+        Articles: lawData.Articles, // Keep capital A to match template
+        articles: lawData.Articles  // Also keep lowercase for backwards compatibility
       }
     }
 
@@ -373,19 +377,26 @@ export const usePopoverStore = defineStore('popover', () => {
   
   function extractDataFromElement(element) {
     const dataset = element.dataset || {}
+    const textContent = element.textContent || ''
+
+    // 判斷是否為法律名稱（如果沒有明確的 caseType，但有 lawName 或看起來像法律名稱）
+    let inferredType = dataset.caseType || '法律資訊'
+    if (!dataset.caseType && (dataset.lawName || textContent.endsWith('法'))) {
+      inferredType = '法律'
+    }
 
     return {
       id: `law_${Date.now()}`,
-      title: generateTitle(dataset),
-      type: dataset.caseType || '法律資訊',
-      lawName: dataset.lawName || '',
+      title: generateTitle(dataset) || textContent,
+      type: inferredType,
+      lawName: dataset.lawName || textContent,
       article: dataset.article || '',
       paragraph: dataset.paragraph || '',
       year: dataset.year || '',
       number: dataset.number || '',
-      caseType: dataset.caseType || '',
+      caseType: dataset.caseType || inferredType,
       legalType: dataset.legalType || '',
-      text: element.textContent || '',
+      text: textContent,
       content: '',
       fullContent: ''
     }

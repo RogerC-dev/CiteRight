@@ -199,20 +199,31 @@ onMounted(() => {
 
 function handleBookmarkLoad(event) {
   const bookmark = event.detail
-  console.log('📚 App - Loading bookmark:', bookmark.title)
-  
+  console.log('📚 App - Loading bookmark:', bookmark.title, 'Type:', bookmark.type)
+
   // 載入書籤內容到工具分頁
   if (bookmark) {
-    popoverStore.loadContent(bookmark.type || '法律', {
+    // 傳遞完整的書籤數據，特別是釋字數據中的重要字段
+    const bookmarkData = {
+      ...bookmark, // 保留所有原始數據
       id: bookmark.id,
       title: bookmark.title,
       type: bookmark.type || '法律',
       content: bookmark.content || bookmark.fullContent || '無內容可顯示',
+      fullContent: bookmark.fullContent || bookmark.content || '無內容可顯示',
       number: bookmark.number || '',
       officialUrl: bookmark.officialUrl || '',
       dateAdded: bookmark.dateAdded || new Date().toISOString(),
-      source: bookmark.source || '書籤'
-    })
+      source: bookmark.source || '書籤',
+      // 確保釋字相關數據被傳遞
+      issue: bookmark.issue || (bookmark.raw?.issue),
+      description: bookmark.description || (bookmark.raw?.description),
+      reasoning: bookmark.reasoning || (bookmark.raw?.reasoning),
+      chinese: bookmark.chinese || bookmark.raw?.chinese,
+      lawName: bookmark.lawName || bookmark.raw?.lawName
+    }
+
+    popoverStore.loadContent(bookmark.type || '法律', bookmarkData)
   }
 }
 

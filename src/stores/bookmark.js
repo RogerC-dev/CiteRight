@@ -100,10 +100,10 @@ export const useBookmarkStore = defineStore('bookmark', () => {
     const d = data || {}
     
     const isTypeInterpretation = typeof d.type === 'string' && (
-      /interpret/i.test(d.type) || d.type === '釋字'
+      /interpret/i.test(d.type) || d.type === '釋字' || d.caseType === '釋字'
     )
     const looksLikeInterpretation = (
-      isTypeInterpretation || !!d.issue || !!d.description
+      isTypeInterpretation || !!d.issue || !!d.description || !!d.chinese?.issue || !!d.chinese?.description
     )
     
     const derivedNumber = d.number || d.articleNumber || d.ArticleNo || ''
@@ -117,10 +117,27 @@ export const useBookmarkStore = defineStore('bookmark', () => {
     let derivedPreview = d.content || ''
     
     if (looksLikeInterpretation) {
-      const desc = d.description || ''
-      const issue = d.issue || ''
-      derivedFull = desc || derivedFull || issue
-      derivedPreview = desc || issue || derivedPreview
+      // 提取釋字內容，優先使用中文數據
+      const chineseDesc = d.chinese?.description || ''
+      const chineseIssue = d.chinese?.issue || ''
+      const chineseReasoning = d.chinese?.reasoning || ''
+      const desc = d.description || chineseDesc || ''
+      const issue = d.issue || chineseIssue || ''
+      const reasoning = d.reasoning || chineseReasoning || ''
+
+      // 組合完整內容
+      const fullParts = []
+      if (issue) fullParts.push(`解釋爭點：${issue}`)
+      if (desc) fullParts.push(`解釋文：${desc}`)
+      if (reasoning) fullParts.push(`理由書：${reasoning}`)
+
+      derivedFull = fullParts.length > 0 ? fullParts.join('\n\n') : derivedFull
+      derivedPreview = issue || desc || reasoning || derivedPreview
+
+      // 如果還是沒有內容，嘗試從其他欄位取得
+      if (!derivedPreview || derivedPreview === '無內容可顯示') {
+        derivedPreview = d.content || d.fullContent || `釋字第${derivedNumber}號解釋`
+      }
     } else {
       const articleText = (d.articleData && d.articleData.Article) || d.Article || ''
       if (!derivedFull) derivedFull = articleText
@@ -128,9 +145,7 @@ export const useBookmarkStore = defineStore('bookmark', () => {
     }
     
     const derivedUrl = d.officialUrl || d.url || d.link || ''
-    const derivedType = (d.type === '釋字')
-      ? 'interpretation'
-      : (d.type || (looksLikeInterpretation ? 'interpretation' : 'law'))
+    const derivedType = looksLikeInterpretation ? 'interpretation' : (d.type || 'law')
     const derivedId = d.id || `${derivedType}_${derivedNumber || Date.now()}`
     
     return {
@@ -145,6 +160,13 @@ export const useBookmarkStore = defineStore('bookmark', () => {
       articleData: d.articleData,
       date: d.date || d.dateAdded || undefined,
       dateAdded: new Date().toISOString(),
+      // 保留釋字相關的重要字段
+      issue: d.issue,
+      description: d.description,
+      reasoning: d.reasoning,
+      chinese: d.chinese,
+      english: d.english, // 保留英文內容以顯示 En 按鈕
+      lawName: d.lawName,
       raw: d
     }
   }

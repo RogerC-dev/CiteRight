@@ -60,12 +60,14 @@ export const useDictionaryStore = defineStore('dictionary', () => {
         if (results && results.length > 0) {
           // 轉換 API 結果為字典格式
           searchResults.value = results.map(result => ({
-            title: result.LawName || result.title || query,
-            lawName: result.LawName || result.title,
-            article: result.ArticleNo || '',
-            preview: result.Article || result.description || `${result.LawName || query}相關法規內容`,
+            title: result.title || `${result.LawName || query} ${result.ArticleNo || ''}`.trim(),
+            lawName: result.LawName || result.lawName,
+            article: result.article || result.ArticleNo?.replace(/[^0-9]/g, '') || '',
+            preview: result.description || (result.Article ? `${result.Article.substring(0, 100)}...` : `${result.LawName || query}相關法規內容`),
             source: '臺灣法規資料庫',
-            officialUrl: result.LawUrl || ''
+            officialUrl: result.LawUrl || '',
+            // 保留原始數據以便後續使用
+            rawData: result
           }))
           console.log('✅ API 搜尋完成:', searchResults.value.length, '筆結果')
           return

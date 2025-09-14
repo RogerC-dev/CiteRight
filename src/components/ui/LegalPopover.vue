@@ -88,9 +88,18 @@
             </div>
             <div v-if="Array.isArray(contentData.Articles) && contentData.Articles.length" class="info-section">
               <strong>條文內容：</strong>
-              <div class="info-content" v-for="(article, index) in contentData.Articles" :key="index">
-                <strong>{{ article.CaptionTitle }} {{ article.ArticleNo }}</strong>
-                <span>{{ article.Article }}</span>
+              <div class="law-articles-container">
+                <div
+                  v-for="(article, index) in contentData.Articles"
+                  :key="index"
+                  class="law-article-item"
+                >
+                  <div class="article-header">
+                    <span class="article-number">{{ article.ArticleNo }}</span>
+                    <span v-if="article.CaptionTitle" class="article-caption">{{ article.CaptionTitle }}</span>
+                  </div>
+                  <div class="article-content">{{ article.Article }}</div>
+                </div>
               </div>
             </div>
             <div v-if="contentData.LawUrl" class="info-section">
@@ -196,11 +205,34 @@ const isAlreadyBookmarked = computed(() => {
   if (!contentData.value && !props.data) return false
 
   const dataToCheck = contentData.value || props.data
-  return bookmarkStore.bookmarks.some(bookmark =>
-    bookmark.id === dataToCheck.id ||
-    (bookmark.type === dataToCheck.type && bookmark.number === dataToCheck.number) ||
-    (bookmark.title === dataToCheck.title)
-  )
+  return bookmarkStore.bookmarks.some(bookmark => {
+    // 精確 ID 匹配
+    if (bookmark.id === dataToCheck.id) return true
+
+    // 釋字匹配：類型和號碼都要相同
+    if (bookmark.type === 'interpretation' && dataToCheck.type === 'interpretation') {
+      return bookmark.number === dataToCheck.number
+    }
+
+    // 法律匹配：法律名稱要相同
+    if (bookmark.type === 'law' && dataToCheck.type === 'law') {
+      return bookmark.lawName === dataToCheck.lawName ||
+             bookmark.LawName === dataToCheck.LawName ||
+             bookmark.title === dataToCheck.title
+    }
+
+    // 條文匹配：法律名稱和條文號要都相同
+    if (bookmark.lawName && dataToCheck.lawName && bookmark.article && dataToCheck.article) {
+      return bookmark.lawName === dataToCheck.lawName && bookmark.article === dataToCheck.article
+    }
+
+    // 標題完全匹配（備用方案）
+    if (bookmark.title === dataToCheck.title && bookmark.title.length > 5) {
+      return true
+    }
+
+    return false
+  })
 })
 
 // Watch data -> load content
@@ -236,8 +268,21 @@ async function loadContent(data) {
   try {
     const caseType = (data.type || '').toString().toLowerCase()
     if (caseType === '釋字' || caseType === 'interpretation') {
-      const result = await fetchInterpretation(data.number)
-      contentData.value = result
+      // 如果已經有完整的釋字數據（如來自書籤），直接使用
+      if (data.issue || data.description || data.reasoning || data.chinese?.issue || data.chinese?.description) {
+        console.log('🔖 使用現有釋字數據:', data.title)
+        contentData.value = {
+          type: 'interpretation',
+          number: data.number,
+          title: data.title,
+          ...data
+        }
+      } else {
+        // 否則從 API 載入
+        console.log('🌐 從 API 載入釋字數據:', data.number)
+        const result = await fetchInterpretation(data.number)
+        contentData.value = result
+      }
     } else if (caseType === '法律' || caseType === 'law') {
       if (data.content && data.content !== `正在載入${data.lawName}的詳細內容..`) {
         contentData.value = {
@@ -406,4 +451,70 @@ async function handleBookmark() {
 
 .content-loaded { animation: fadeIn .3s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 法律條文顯示樣式 */
+.law-articles-container {
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.law-articles-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.law-articles-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.law-articles-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.law-articles-container::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.law-article-item {
+  padding: 12px;
+  border-bottom: 1px solid #e8e8e8;
+  background: white;
+}
+
+.law-article-item:last-child {
+  border-bottom: none;
+}
+
+.article-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.article-number {
+  background: linear-gradient(135deg, #52c41a, #389e0d);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.article-caption {
+  color: #1890ff;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.article-content {
+  color: #333;
+  line-height: 1.6;
+  font-size: 13px;
+}
 </style>

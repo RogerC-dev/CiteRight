@@ -219,3 +219,40 @@ th .citeright-link {
   justify-self: auto !important;
   align-self: auto !important;
 }
+
+/* 禁用特定區域的法條高亮 - 供閱讀和搜尋使用，不需高亮功能 */
+#tab-content-dictionary .citeright-link,
+#tab-content-bookmarks .citeright-link,
+.bookmark-preview .citeright-link,
+.search-hint .citeright-link,
+.result-title .citeright-link,
+.law-links .citeright-link,
+.dictionary-search-result .citeright-link,
+.bookmark-item-content .citeright-link {
+  background: none !important;
+  border: none !important;
+  color: inherit !important;
+  text-decoration: none !important;
+  cursor: default !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  transform: none !important;
+  font-weight: inherit !important;
+  pointer-events: none !important;
+}
+
+#tab-content-dictionary .citeright-link:hover,
+#tab-content-bookmarks .citeright-link:hover,
+.bookmark-preview .citeright-link:hover,
+.search-hint .citeright-link:hover,
+.result-title .citeright-link:hover,
+.law-links .citeright-link:hover,
+.dictionary-search-result .citeright-link:hover,
+.bookmark-item-content .citeright-link:hover {
+  background: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
