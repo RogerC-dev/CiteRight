@@ -116,16 +116,74 @@ export const usePopoverStore = defineStore('popover', () => {
   
   function loadContent(type, data) {
     console.log('📝 載入內容到工具分頁:', data.title)
-    
+
+    // 針對不同類型的內容進行特殊處理
+    let processedData = { ...data }
+
+    // 處理釋字解釋內容
+    if (type === 'interpretation' || data.caseType === '釋字' || data.type === '釋字') {
+      processedData = {
+        ...data,
+        type: 'interpretation',
+        content: extractInterpretationContent(data),
+        number: data.number || extractNumberFromTitle(data.title),
+        title: data.title || `釋字第${data.number || ''}號`
+      }
+    }
+
     // 更新當前資料，讓 ToolContent 組件可以顯示
     currentData.value = {
-      ...data,
+      ...processedData,
       type: type,
       dateAdded: data.dateAdded || new Date().toISOString()
     }
-    
+
     // 觸發 ToolContent 組件的內容載入
     // 這會通過響應式系統自動更新 UI
+  }
+
+  function extractInterpretationContent(data) {
+    // 提取釋字解釋的主要內容
+    let content = data.content || data.fullContent || ''
+
+    // 如果沒有內容，嘗試從其他欄位組合
+    if (!content || content === '無內容可顯示') {
+      const parts = []
+
+      if (data.issue) {
+        parts.push(`<div class="interpretation-section"><h4>爭點</h4><p>${data.issue}</p></div>`)
+      }
+
+      if (data.description) {
+        parts.push(`<div class="interpretation-section"><h4>解釋文</h4><p>${data.description}</p></div>`)
+      }
+
+      if (data.reasoning) {
+        parts.push(`<div class="interpretation-section"><h4>理由書</h4><p>${data.reasoning}</p></div>`)
+      }
+
+      if (data.chinese && data.chinese.description) {
+        parts.push(`<div class="interpretation-section"><h4>解釋內容</h4><p>${data.chinese.description}</p></div>`)
+      }
+
+      if (data.chinese && data.chinese.issue) {
+        parts.push(`<div class="interpretation-section"><h4>爭議問題</h4><p>${data.chinese.issue}</p></div>`)
+      }
+
+      if (data.chinese && data.chinese.reasoning) {
+        parts.push(`<div class="interpretation-section"><h4>解釋理由</h4><p>${data.chinese.reasoning}</p></div>`)
+      }
+
+      content = parts.length > 0 ? parts.join('') : '無法取得解釋內容'
+    }
+
+    return content
+  }
+
+  function extractNumberFromTitle(title) {
+    if (!title) return ''
+    const match = title.match(/第?(\d+)號/)
+    return match ? match[1] : ''
   }
   
   function generateLawKey(element) {

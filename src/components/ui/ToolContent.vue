@@ -96,22 +96,33 @@ const displayData = computed(() => {
 })
 
 const cleanContent = computed(() => {
-  if (!displayData.value.content) {
+  if (!displayData.value.content || displayData.value.content === '無內容可顯示') {
     const element = document.querySelector("div.citeright-content")
     return element ? element.innerHTML : '無內容可顯示'
   }
-  
+
   // 清理和處理內容
   let content = displayData.value.content
-  
+
   // 移除 script 標籤
   content = content.replace(/<script[^>]*>.*?<\/script>/gi, '')
-  
+
   // 確保內容安全
   content = content.replace(/<iframe[^>]*>/gi, '')
   content = content.replace(/<object[^>]*>/gi, '')
   content = content.replace(/<embed[^>]*>/gi, '')
-  
+
+  // 移除已存在的高亮標記，防止重複處理
+  content = content.replace(/<span class="citeright-link"[^>]*>(.*?)<\/span>/gi, '$1')
+
+  // 清理重複的字符（如第第，條條）
+  content = content.replace(/第第/g, '第')
+  content = content.replace(/條條/g, '條')
+  content = content.replace(/號號/g, '號')
+  content = content.replace(/項項/g, '項')
+  content = content.replace(/款款/g, '款')
+  content = content.replace(/目目/g, '目')
+
   return content
 })
 
@@ -412,5 +423,27 @@ defineExpose({
 
 :deep(.main-content .citeright-link) {
   /* 繼承全域高亮樣式 */
+}
+
+/* 解釋內容區塊樣式 */
+:deep(.interpretation-section) {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 6px;
+  border-left: 4px solid #722ed1;
+}
+
+:deep(.interpretation-section h4) {
+  margin: 0 0 12px 0;
+  color: #722ed1;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+:deep(.interpretation-section p) {
+  margin: 0;
+  line-height: 1.8;
+  color: #333;
 }
 </style>
