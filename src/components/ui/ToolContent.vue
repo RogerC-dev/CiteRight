@@ -446,4 +446,69 @@ defineExpose({
   line-height: 1.8;
   color: #333;
 }
+
+/* 法律內容區塊樣式 */
+:deep(.law-header) {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0f9ff, #e6f7ff);
+  border-radius: 8px;
+  border-left: 4px solid #1890ff;
+}
+
+:deep(.law-header h3) {
+  margin: 0 0 8px 0;
+  color: #1890ff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+:deep(.last-amended) {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+:deep(.law-article) {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 6px;
+  border-left: 4px solid #52c41a;
+}
+
+:deep(.article-number) {
+  font-weight: 600;
+  color: #52c41a;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+:deep(.article-caption) {
+  font-weight: 600;
+  color: #1890ff;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+
+:deep(.article-content) {
+  line-height: 1.8;
+  color: #333;
+}
+
+:deep(.error-message) {
+  padding: 16px;
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 6px;
+  color: #cf1322;
+}
+
+:deep(.error-message ul) {
+  margin: 12px 0 0 16px;
+}
+
+:deep(.error-message li) {
+  margin-bottom: 4px;
+}
 </style>

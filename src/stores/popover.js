@@ -81,6 +81,20 @@ export const usePopoverStore = defineStore('popover', () => {
     } else {
       currentData.value = extractDataFromElement(element)
     }
+
+    // 如果是法律類型，自動載入法律內容
+    if (currentData.value && (currentData.value.caseType === '法律' || currentData.value.lawName)) {
+      // 延遲載入法律內容，確保UI已更新
+      setTimeout(async () => {
+        await loadContent('law', currentData.value)
+      }, 150)
+    }
+    // 如果是釋字類型，自動載入釋字內容
+    else if (currentData.value && currentData.value.caseType === '釋字') {
+      setTimeout(async () => {
+        await loadContent('interpretation', currentData.value)
+      }, 150)
+    }
     
     // 小延遲後顯示，防止快速觸發
     showTimeout.value = setTimeout(() => {
@@ -114,7 +128,7 @@ export const usePopoverStore = defineStore('popover', () => {
     currentData.value = data
   }
   
-  function loadContent(type, data) {
+  async function loadContent(type, data) {
     console.log('📝 載入內容到工具分頁:', data.title)
 
     // 針對不同類型的內容進行特殊處理
@@ -130,6 +144,31 @@ export const usePopoverStore = defineStore('popover', () => {
         title: data.title || `釋字第${data.number || ''}號`
       }
     }
+    // 處理法律內容
+    else if (type === 'law' || data.caseType === '法律' || data.type === '法律' || data.lawName) {
+      try {
+        const lawContent = await fetchLawContentFromAPI(data.lawName || data.title)
+        if (lawContent) {
+          processedData = {
+            ...data,
+            type: 'law',
+            content: formatLawContent(lawContent),
+            lawName: lawContent.lawName || data.lawName || data.title,
+            title: lawContent.title || data.title,
+            officialUrl: lawContent.officialUrl,
+            lastAmended: lawContent.lastAmended
+          }
+        }
+      } catch (error) {
+        console.warn('載入法律內容失敗:', error)
+        // 使用原有數據
+        processedData = {
+          ...data,
+          type: 'law',
+          content: `<div class="error-message">無法載入法律內容：${error.message}<br><br>可能原因：<ul><li>伺服器未運行或無法連接</li><li>法律名稱不存在</li><li>網路連接問題</li></ul></div>`
+        }
+      }
+    }
 
     // 更新當前資料，讓 ToolContent 組件可以顯示
     currentData.value = {
@@ -140,6 +179,51 @@ export const usePopoverStore = defineStore('popover', () => {
 
     // 觸發 ToolContent 組件的內容載入
     // 這會通過響應式系統自動更新 UI
+  }
+
+  async function fetchLawContentFromAPI(lawName) {
+    // 動態導入 API 服務
+    const { fetchLawInfo } = await import('../services/apiService.js')
+    const lawData = await fetchLawInfo(lawName)
+
+    if (lawData && lawData.Articles) {
+      return {
+        lawName: lawData.LawName || lawName,
+        title: lawData.LawName || lawName,
+        officialUrl: lawData.LawUrl,
+        lastAmended: lawData.LawModifiedDate,
+        articles: lawData.Articles
+      }
+    }
+
+    return null
+  }
+
+  function formatLawContent(lawContent) {
+    if (!lawContent.articles || lawContent.articles.length === 0) {
+      return '<div class="law-content">此法規暫無條文內容</div>'
+    }
+
+    const sections = []
+
+    // 添加法規標題
+    sections.push(`<div class="law-header">
+      <h3>${lawContent.title}</h3>
+      ${lawContent.lastAmended ? `<p class="last-amended">最後修訂：${new Date(lawContent.lastAmended).toLocaleDateString('zh-TW')}</p>` : ''}
+    </div>`)
+
+    // 添加條文內容
+    lawContent.articles.forEach(article => {
+      if (article.Article) {
+        sections.push(`<div class="law-article">
+          <div class="article-number">${article.ArticleNo || ''}</div>
+          ${article.CaptionTitle ? `<div class="article-caption">${article.CaptionTitle}</div>` : ''}
+          <div class="article-content">${article.Article}</div>
+        </div>`)
+      }
+    })
+
+    return sections.join('')
   }
 
   function extractInterpretationContent(data) {
