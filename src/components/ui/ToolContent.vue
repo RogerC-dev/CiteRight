@@ -56,7 +56,7 @@
           </button>
           
           <button
-            v-if="displayData.officialUrl"
+            v-if="hasOfficialUrl"
             class="action-btn link-btn"
             @click="openOfficialLink"
           >
@@ -111,7 +111,7 @@ const displayData = computed(() => {
     type: currentData.value.type || '法律資訊',
     number: currentData.value.number || '',
     dateAdded: currentData.value.dateAdded || new Date().toISOString(),
-    officialUrl: currentData.value.officialUrl || '',
+    officialUrl: currentData.value.officialUrl || currentData.value.LawUrl || currentData.value.source_url || '',
     content: currentData.value.content || '無內容可顯示'
   }
 
@@ -190,6 +190,23 @@ const isAlreadyBookmarked = computed(() => {
 const hasEnglishContent = computed(() => {
   if (!currentData.value) return false
   return !!(currentData.value.english?.issue || currentData.value.english?.description || currentData.value.english?.reasoning)
+})
+
+const hasOfficialUrl = computed(() => {
+  if (!currentData.value) return false
+
+  // For interpretations, we can always provide URL from database or generate one
+  if (currentData.value.type === 'interpretation' && currentData.value.number) {
+    return true
+  }
+
+  // For laws, check if LawUrl exists in database
+  if (currentData.value.LawUrl) {
+    return true
+  }
+
+  // Fallback to displayData officialUrl
+  return !!displayData.value.officialUrl
 })
 
 /**
@@ -277,8 +294,24 @@ async function handleBookmark() {
  * 開啟官方連結
  */
 function openOfficialLink() {
-  if (displayData.value.officialUrl) {
-    window.open(displayData.value.officialUrl, '_blank')
+  let url = null
+
+  // For interpretations, use database URL or generate one
+  if (currentData.value?.type === 'interpretation' && currentData.value?.number) {
+    url = currentData.value.url || currentData.value.source_url ||
+          `https://cons.judicial.gov.tw/docdata.aspx?fid=100&type=JY&RD=${currentData.value.number}`
+  }
+  // For laws, use LawUrl from database
+  else if (currentData.value?.LawUrl) {
+    url = currentData.value.LawUrl
+  }
+  // Fallback to officialUrl
+  else if (displayData.value.officialUrl) {
+    url = displayData.value.officialUrl
+  }
+
+  if (url) {
+    window.open(url, '_blank')
   }
 }
 
@@ -288,10 +321,21 @@ function openOfficialLink() {
 function shareContent() {
   if (!currentData.value) return
 
+  // Use the same URL logic as openOfficialLink
+  let url = null
+  if (currentData.value?.type === 'interpretation' && currentData.value?.number) {
+    url = currentData.value.url || currentData.value.source_url ||
+          `https://cons.judicial.gov.tw/docdata.aspx?fid=100&type=JY&RD=${currentData.value.number}`
+  } else if (currentData.value?.LawUrl) {
+    url = currentData.value.LawUrl
+  } else if (displayData.value.officialUrl) {
+    url = displayData.value.officialUrl
+  }
+
   const shareData = {
     title: displayData.value.title,
     text: `${displayData.value.title} - 來自 CiteRight 台灣法源探測器`,
-    url: displayData.value.officialUrl || window.location.href
+    url: url || window.location.href
   }
 
   if (navigator.share) {
@@ -324,6 +368,7 @@ function formatDate(dateStr) {
     return '未知日期'
   }
 }
+
 
 /**
  * 切換翻譯顯示

@@ -189,7 +189,8 @@ export const usePopoverStore = defineStore('popover', () => {
               type: 'interpretation',
               content: extractedContent,
               number: number,
-              title: data.title || interpretationData.title || `釋字第${number}號`
+              title: data.title || interpretationData.title || `釋字第${number}號`,
+              officialUrl: interpretationData.url || interpretationData.officialUrl || data.officialUrl
             }
           }
         } catch (apiError) {
@@ -205,7 +206,8 @@ export const usePopoverStore = defineStore('popover', () => {
           type: 'interpretation',
           content: extractedContent,
           number: data.number || extractNumberFromTitle(data.title),
-          title: data.title || `釋字第${data.number || extractNumberFromTitle(data.title) || ''}號`
+          title: data.title || `釋字第${data.number || extractNumberFromTitle(data.title) || ''}號`,
+          officialUrl: data.url || data.officialUrl || data.source_url
         }
       }
     }
@@ -379,21 +381,36 @@ export const usePopoverStore = defineStore('popover', () => {
     const dataset = element.dataset || {}
     const textContent = element.textContent || ''
 
-    // 判斷是否為法律名稱（如果沒有明確的 caseType，但有 lawName 或看起來像法律名稱）
+    // 判斷元素類型（釋字、法律、法條等）
     let inferredType = dataset.caseType || '法律資訊'
-    if (!dataset.caseType && (dataset.lawName || textContent.endsWith('法'))) {
-      inferredType = '法律'
+
+    if (!dataset.caseType) {
+      // 根據文本內容推斷類型
+      if (/釋字第\d+號|釋字\d+/.test(textContent)) {
+        inferredType = '釋字'
+      } else if (dataset.lawName || textContent.endsWith('法')) {
+        inferredType = '法律'
+      }
+    }
+
+    // 提取釋字號碼
+    let extractedNumber = dataset.number || ''
+    if (inferredType === '釋字' && !extractedNumber) {
+      const numberMatch = textContent.match(/釋字第?(\d+)號?/)
+      if (numberMatch) {
+        extractedNumber = numberMatch[1]
+      }
     }
 
     return {
-      id: `law_${Date.now()}`,
+      id: inferredType === '釋字' ? `interpretation_${extractedNumber || Date.now()}` : `law_${Date.now()}`,
       title: generateTitle(dataset) || textContent,
       type: inferredType,
-      lawName: dataset.lawName || textContent,
+      lawName: dataset.lawName || (inferredType !== '釋字' ? textContent : ''),
       article: dataset.article || '',
       paragraph: dataset.paragraph || '',
       year: dataset.year || '',
-      number: dataset.number || '',
+      number: extractedNumber,
       caseType: dataset.caseType || inferredType,
       legalType: dataset.legalType || '',
       text: textContent,

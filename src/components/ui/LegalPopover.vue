@@ -68,8 +68,8 @@
             <div class="info-section">
               <strong>來源：</strong>
               <div class="info-content">
-                <a :href="getInterpretationUrl(contentData.number)" target="_blank" rel="noreferrer">線上解釋來源</a>
-                <span v-if="contentData.source_url"> | 
+                <a :href="contentData.url || getInterpretationUrl(contentData.number)" target="_blank" rel="noreferrer">線上解釋來源</a>
+                <span v-if="contentData.source_url"> |
                   <a :href="contentData.source_url" target="_blank" rel="noreferrer">資料庫來源</a>
                 </span>
               </div>
