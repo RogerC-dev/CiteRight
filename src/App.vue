@@ -1,10 +1,10 @@
 <template>
   <div id="citeright-app">
     <!-- 法律彈出視窗組件 -->
-    <LegalPopover 
-      v-if="extensionStore.isExtensionEnabled" 
+    <LegalPopover
+      v-if="extensionStore.isExtensionEnabled"
       :show="popoverStore.isVisible"
-      :position="popoverStore.position"
+      :trigger-element="popoverStore.triggerElement"
       :loading="popoverStore.isLoading"
       :data="popoverStore.currentData"
       @close="popoverStore.hide"

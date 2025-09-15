@@ -50,9 +50,9 @@ function handleMouseOver(e) {
       const lawKey = generateLawKey(e.target)
       
       // 防止重複彈出相同法條
-      if (!popoverStore.isVisible || popoverStore.currentElement !== e.target) {
-        // 立即顯示，無需延遲
-        popoverStore.show(e.target, e)
+      if (!popoverStore.isVisible) {
+        // 立即顯示，無需延遲 - 現在先傳 data，再傳 element
+        popoverStore.show(null, e.target)
       }
     }
   }

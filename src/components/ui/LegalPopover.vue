@@ -133,7 +133,7 @@ import { useBookmarkStore } from '../../stores/bookmark.js'
 // Props
 const props = defineProps({
   show: { type: Boolean, default: false },
-  position: { type: Object, default: () => ({ x: 0, y: 0 }) },
+  triggerElement: { type: Object, default: null },
   loading: { type: Boolean, default: false },
   data: { type: Object, default: null },
   error: { type: String, default: '' }
@@ -186,12 +186,59 @@ const loadingMessage = computed(() => {
   return '內容'
 })
 
-const popoverStyle = computed(() => ({
-  position: 'fixed',
-  left: `${props.position.x}px`,
-  top: `${props.position.y}px`,
-  zIndex: 2147483650
-}))
+const popoverStyle = computed(() => {
+  if (!props.triggerElement) {
+    return {
+      position: 'fixed',
+      left: '100px',
+      top: '100px',
+      zIndex: 2147483650
+    }
+  }
+
+  // 計算位置（使用 viewport 座標，不要混用 scrollX/scrollY）
+  const rect = props.triggerElement.getBoundingClientRect()
+  let left = rect.left
+  let top = rect.bottom + 5
+
+  // 預設彈窗大小（與 UI 元件的 max-width / width 保持一致）
+  const popoverWidth = 480
+  const popoverHeight = 300
+
+  // 檢查是否有側邊欄開啟，調整可用空間
+  const sidebarElement = document.getElementById('citeright-tool-panel')
+  let availableWidth = window.innerWidth
+
+  if (sidebarElement) {
+    const sidebarRect = sidebarElement.getBoundingClientRect()
+    const sidebarWidth = sidebarRect.width
+
+    // 如果側邊欄在右側，減少可用寬度
+    if (sidebarRect.left < window.innerWidth) {
+      availableWidth = Math.max(400, window.innerWidth - sidebarWidth - 20)
+    }
+  }
+
+  // 檢查水平空間，若超出可用範圍，向左調整
+  if (left + popoverWidth > availableWidth) {
+    left = Math.max(10, availableWidth - popoverWidth - 10)
+  }
+  if (left < 10) left = 10
+
+  // 檢查垂直空間，若超出 viewport 底部則改為顯示在元素上方
+  if (top + popoverHeight > window.innerHeight) {
+    top = rect.top - popoverHeight - 5
+    // 若仍然超出（極高彈窗或靠近頁面頂端），則至少保持在 10px
+    if (top < 10) top = 10
+  }
+
+  return {
+    position: 'fixed',
+    left: `${left}px`,
+    top: `${top}px`,
+    zIndex: 2147483650
+  }
+})
 
 const isAlreadyBookmarked = computed(() => {
   if (!contentData.value && !props.data) return false
