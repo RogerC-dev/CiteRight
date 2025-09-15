@@ -43,10 +43,26 @@ export const useBookmarkStore = defineStore('bookmark', () => {
     const normalizedBookmark = normalizeBookmarkItem(lawData)
     
     // 檢查是否已存在
-    const exists = bookmarks.value.find(item =>
-      item.id === normalizedBookmark.id ||
-      (item.type === normalizedBookmark.type && item.number === normalizedBookmark.number)
-    )
+    const exists = bookmarks.value.find(item => {
+      // 首先檢查 ID 是否相同
+      if (item.id === normalizedBookmark.id) {
+        return true
+      }
+
+      // 對於法律條文，需要檢查法律名稱和條文號碼都相同才算重複
+      if (item.type === 'law' && normalizedBookmark.type === 'law') {
+        return item.lawName === normalizedBookmark.lawName &&
+               item.number === normalizedBookmark.number
+      }
+
+      // 對於釋字，只需要檢查類型和號碼
+      if (item.type === 'interpretation' && normalizedBookmark.type === 'interpretation') {
+        return item.number === normalizedBookmark.number
+      }
+
+      // 其他情況，檢查類型和號碼
+      return item.type === normalizedBookmark.type && item.number === normalizedBookmark.number
+    })
     
     if (exists) {
       console.log('⚠️ 書籤已存在:', exists.title)

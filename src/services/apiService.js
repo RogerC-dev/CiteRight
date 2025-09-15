@@ -135,10 +135,30 @@ export async function fetchLawArticle(lawName, article, paragraph = '') {
  * @param {string} lawName - 法律名稱
  * @returns {Promise<Object>} - 法律資訊
  */
+/**
+ * 正規化法律名稱，處理不同變體的法律名稱映射
+ * @param {string} lawName - 原始法律名稱
+ * @returns {string} - 正規化後的法律名稱
+ */
+function normalizeLawName(lawName) {
+  // 法律名稱映射表 - 將不同變體映射到數據庫中的標準名稱
+  const lawNameMap = {
+    '刑法': '中華民國刑法', // 映射到數據庫中的完整名稱
+    '民法': '民法', // 民法保持不變
+    '中華民國憲法': '中華民國憲法', // 憲法保持完整名稱
+    // 可以繼續添加其他映射
+  }
+
+  return lawNameMap[lawName] || lawName
+}
+
 export async function fetchLawInfo(lawName) {
   try {
+    // 正規化法律名稱
+    const normalizedLawName = normalizeLawName(lawName)
+    console.log('🔄 正規化法律名稱:', lawName, '->', normalizedLawName)
 
-    const response = await apiRequest(`${API_BASE_URL}/api/laws/${encodeURIComponent(lawName)}`)
+    const response = await apiRequest(`${API_BASE_URL}/api/laws/${encodeURIComponent(normalizedLawName)}`)
 
     return response
   } catch (error) {
