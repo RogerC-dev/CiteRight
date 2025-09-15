@@ -91,6 +91,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import ToolContent from './ToolContent.vue'
 import BookmarkContent from './BookmarkContent.vue'
 import DictionaryContent from './DictionaryContent.vue'
+import { useSidebarStore } from '../../stores/sidebar'
 
 // Props
 const props = defineProps({
@@ -106,6 +107,9 @@ const props = defineProps({
 
 // Emits
 const emit = defineEmits(['close', 'resize', 'tab-change', 'dictionary-result', 'law-content'])
+
+// Store
+const sidebarStore = useSidebarStore()
 
 // 引用
 const panelRef = ref(null)
@@ -257,7 +261,7 @@ function handleKeyDown(e) {
   if (e.key === 'Escape') {
     emit('close')
   }
-  
+
   // Tab 鍵切換分頁
   if (e.key === 'Tab' && e.ctrlKey) {
     e.preventDefault()
@@ -267,13 +271,50 @@ function handleKeyDown(e) {
   }
 }
 
+/**
+ * 調整網頁內容以適應側邊欄
+ */
+function adjustWebContentForSidebar() {
+  if (!isFloating.value && sidebarStore.isOpen) {
+    const adjustWidth = Math.min(props.width, sidebarBoundary.value)
+    document.body.style.width = `calc(100vw - ${adjustWidth}px)`
+    document.body.style.maxWidth = `calc(100vw - ${adjustWidth}px)`
+    document.body.style.transition = 'width 0.3s ease'
+    console.log('✅ 頁面分割: 左側內容，右側側邊欄')
+  }
+}
+
+/**
+ * 恢復網頁內容為全寬
+ */
+function restoreWebContent() {
+  document.body.style.width = ''
+  document.body.style.maxWidth = ''
+  document.body.style.transition = ''
+  console.log('✅ 恢復全頁面寬度')
+}
+
+/**
+ * 更新側邊欄佈局
+ */
+function updateSidebarLayout() {
+  if (sidebarStore.isOpen && !isFloating.value) {
+    adjustWebContentForSidebar()
+  } else {
+    restoreWebContent()
+  }
+}
+
 // 生命週期
 onMounted(() => {
   console.log('📱 MainSidebar 組件已掛載')
-  
+
   // 添加鍵盤事件監聽
   document.addEventListener('keydown', handleKeyDown)
-  
+
+  // 初始化佈局
+  updateSidebarLayout()
+
   // 確保面板可見
   nextTick(() => {
     if (panelRef.value) {
@@ -284,20 +325,29 @@ onMounted(() => {
 
 onUnmounted(() => {
   console.log('📱 MainSidebar 組件即將卸載')
-  
+
   // 清理事件監聽
   document.removeEventListener('keydown', handleKeyDown)
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
-  
+
   // 重置 body 樣式
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
+
+  // 恢復網頁內容樣式
+  restoreWebContent()
 })
 
-// 監聽寬度變化，更新調整大小狀態
+// 監聽寬度變化，更新調整大小狀態和佈局
 watch(() => props.width, (newWidth) => {
   console.log('📏 面板寬度更新:', newWidth + 'px')
+  updateSidebarLayout()
+})
+
+// 監聽浮動狀態變化，更新佈局
+watch(() => isFloating.value, () => {
+  updateSidebarLayout()
 })
 </script>
 
