@@ -43,10 +43,6 @@
         <div v-else-if="contentData" class="content-loaded">
           <!-- 釋字內容 / Interpretation -->
           <template v-if="kind === 'interpretation'">
-            <div class="info-section">
-              <strong>解釋字號：</strong>
-              <div class="info-content">釋字第 {{ contentData.number }} 號</div>
-            </div>
             <div v-if="contentData.date" class="info-section">
               <strong>解釋公布院令：</strong>
               <div class="info-content">{{ new Date(contentData.date).toLocaleDateString() }}</div>
@@ -78,10 +74,6 @@
 
           <!-- 法律 / Law -->
           <template v-else-if="kind === 'law'">
-            <div class="info-section">
-              <strong>法規名稱：</strong>
-              <div class="info-content">{{ contentData?.LawName || contentData?.title || lawName || props.data?.title || '' }}</div>
-            </div>
             <div v-if="contentData.LawModifiedDate" class="info-section">
               <strong>修訂日期：</strong>
               <div class="info-content">{{ new Date(contentData.LawModifiedDate).toLocaleDateString() }}</div>

@@ -291,11 +291,14 @@ export const usePopoverStore = defineStore('popover', () => {
 
     const sections = []
 
-    // 添加法規標題
-    sections.push(`<div class="law-header">
-      <h3>${lawContent.title}</h3>
-      ${lawContent.lastAmended ? `<p class="last-amended">最後修訂：${new Date(lawContent.lastAmended).toLocaleDateString('zh-TW')}</p>` : ''}
-    </div>`)
+    // 而外法規資訊
+      if (lawContent.lastAmended) {
+          sections.push(`
+            <div class="law-header">
+              <p class="last-amended">最後修訂：${new Date(lawContent.lastAmended).toLocaleDateString('zh-TW')}</p>
+            </div>`
+          )
+      }
 
     // 添加條文內容
     lawContent.articles.forEach(article => {
