@@ -45,12 +45,14 @@ import { useExtensionStore } from './stores/extension'
 import { usePopoverStore } from './stores/popover'
 import { useSidebarStore } from './stores/sidebar'
 import { useBookmarkStore } from './stores/bookmark'
+import { useFlashcardStore } from './stores/flashcard'
 
 // 使用 stores
 const extensionStore = useExtensionStore()
 const popoverStore = usePopoverStore()
 const sidebarStore = useSidebarStore()
 const bookmarkStore = useBookmarkStore()
+const flashcardStore = useFlashcardStore()
 
 // Dictionary event handlers
 async function handleDictionaryResult(result) {
@@ -189,10 +191,11 @@ onMounted(() => {
   // 初始化擴充功能
   extensionStore.initialize()
   bookmarkStore.loadBookmarks()
-  
+  flashcardStore.loadDecks()
+
   // 監聽書籤載入事件
   window.addEventListener('citeright:load-bookmark', handleBookmarkLoad)
-  
+
   // 監聽分頁切換事件
   window.addEventListener('citeright:switch-tab', handleTabSwitch)
 })

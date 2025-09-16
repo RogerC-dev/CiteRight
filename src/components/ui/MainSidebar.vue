@@ -75,10 +75,71 @@
           class="tab-content"
         >
           <div class="tab-content-inner">
-            <DictionaryContent 
+            <DictionaryContent
               @result-selected="handleDictionaryResult"
               @law-loaded="handleLawLoaded"
             />
+          </div>
+        </div>
+
+        <!-- 記憶卡片分頁 -->
+        <div
+          v-show="currentTab === 'flashcard'"
+          id="tab-content-flashcard"
+          class="tab-content"
+          style="background: white; min-height: 400px;"
+        >
+          <div class="tab-content-inner flashcard-content" style="background: #f5f5f5; position: relative;">
+            <div style="padding: 20px; background: white; margin: 8px; border-radius: 8px; min-height: 300px;">
+              <h3>🃏 記憶卡片功能</h3>
+              <p><strong>Current tab:</strong> {{ currentTab }}</p>
+              <p><strong>Show study mode:</strong> {{ showStudyMode }}</p>
+              <p><strong>Debug:</strong> Tab content should be visible</p>
+
+              <!-- 模式切換按鈕 -->
+              <div style="position: absolute; top: 16px; right: 16px; display: flex; background: rgba(255, 255, 255, 0.9); border-radius: 8px; padding: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); z-index: 10;">
+                <button
+                  @click="showStudyMode = false"
+                  :style="{
+                    padding: '8px 12px',
+                    border: 'none',
+                    background: showStudyMode ? 'transparent' : '#667eea',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    color: showStudyMode ? '#666' : 'white'
+                  }"
+                >
+                  🛠️ 管理模式
+                </button>
+                <button
+                  @click="showStudyMode = true"
+                  :style="{
+                    padding: '8px 12px',
+                    border: 'none',
+                    background: showStudyMode ? '#667eea' : 'transparent',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    color: showStudyMode ? 'white' : '#666'
+                  }"
+                >
+                  🎓 學習模式
+                </button>
+              </div>
+
+              <!-- 學習模式 -->
+              <div v-if="showStudyMode" style="margin-top: 60px;">
+                <h4>🎓 學習模式</h4>
+                <StudySession @create-deck="handleCreateDeck" />
+              </div>
+
+              <!-- 管理模式 -->
+              <div v-else style="margin-top: 60px;">
+                <h4>🛠️ 管理模式</h4>
+                <FlashcardManager @start-study="handleStartStudy" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -91,6 +152,8 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import ToolContent from './ToolContent.vue'
 import BookmarkContent from './BookmarkContent.vue'
 import DictionaryContent from './DictionaryContent.vue'
+import FlashcardManager from './FlashcardManager.vue'
+import StudySession from './StudySession.vue'
 import { useSidebarStore } from '../../stores/sidebar'
 
 // Props
@@ -125,8 +188,12 @@ const isHoveringHandle = ref(false)
 const tabs = [
   { id: 'tool', label: '法律工具', icon: '🔧' },
   { id: 'bookmarks', label: '我的書籤', icon: '📚' },
-  { id: 'dictionary', label: '法律辭典', icon: '📖' }
+  { id: 'dictionary', label: '法律辭典', icon: '📖' },
+  { id: 'flashcard', label: '記憶卡片', icon: '🃏' }
 ]
+
+// 記憶卡片狀態
+const showStudyMode = ref(false)
 
 // 計算屬性
 const sidebarBoundary = computed(() => Math.floor(window.innerWidth / 3))
@@ -150,6 +217,7 @@ const panelStyle = computed(() => ({
  * 切換分頁
  */
 function switchTab(tabId) {
+  console.log('🔄 Switching to tab:', tabId, 'Current:', props.currentTab)
   if (tabId !== props.currentTab) {
     emit('tab-change', tabId)
   }
@@ -175,14 +243,30 @@ function handleDictionaryResult(result) {
  */
 function handleLawLoaded(lawData) {
   console.log('📖 法律內容載入:', lawData)
-  
+
   // 切換到工具分頁顯示內容
   if (props.currentTab !== 'tool') {
     emit('tab-change', 'tool')
   }
-  
+
   // 發送法律內容到父組件
   emit('law-content', lawData)
+}
+
+/**
+ * 處理開始學習
+ */
+function handleStartStudy(deck) {
+  console.log('🎓 開始學習牌組:', deck.name)
+  showStudyMode.value = true
+}
+
+/**
+ * 處理建立牌組
+ */
+function handleCreateDeck() {
+  console.log('🃏 切換到管理模式建立牌組')
+  showStudyMode.value = false
 }
 
 /**
@@ -308,6 +392,7 @@ function updateSidebarLayout() {
 // 生命週期
 onMounted(() => {
   console.log('📱 MainSidebar 組件已掛載')
+  console.log('📱 Current tab on mount:', props.currentTab)
 
   // 添加鍵盤事件監聽
   document.addEventListener('keydown', handleKeyDown)
@@ -348,6 +433,11 @@ watch(() => props.width, (newWidth) => {
 // 監聽浮動狀態變化，更新佈局
 watch(() => isFloating.value, () => {
   updateSidebarLayout()
+})
+
+// 監聽當前分頁變化
+watch(() => props.currentTab, (newTab, oldTab) => {
+  console.log('📱 Tab changed from', oldTab, 'to', newTab)
 })
 </script>
 
@@ -574,10 +664,52 @@ watch(() => isFloating.value, () => {
   box-shadow: none !important;
 }
 
+/* 記憶卡片樣式 */
+.flashcard-content {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mode-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.mode-btn {
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.mode-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.mode-btn.active {
+  background: #667eea;
+  color: white;
+}
+
 /* 無障礙設計 */
 @media (prefers-reduced-motion: reduce) {
   .tool-panel,
-  .tab-btn {
+  .tab-btn,
+  .mode-btn {
     transition: none;
   }
 
