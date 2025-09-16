@@ -250,6 +250,30 @@
             box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
         }
 
+        .page-link-button {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+
+        .page-link-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+        }
+
         .icon {
             font-size: 16px;
         }
@@ -293,10 +317,15 @@
         </div>
 
         <div class="button-group">
-            <button class="action-button" id="settingsButton">
-                <span class="icon">⚙️</span>
-                擴充功能設定
-            </button>
+            <a href="index.html" class="page-link-button" target="_blank">
+                <span class="icon">🏠</span>
+                產品介紹頁面
+            </a>
+
+            <a href="ai-legal-interface.html" class="action-button" target="_blank">
+                <span class="icon">🤖</span>
+                啟動 AI 法律助手
+            </a>
 
             <button class="action-button secondary" id="bookmarksButton">
                 <span class="icon">📚</span>
