@@ -834,6 +834,218 @@
         .plan-btn.secondary:hover {
             background: var(--hover-bg);
         }
+
+        /* PDF Upload Styles */
+        .pdf-upload-area {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pdf-upload-area.active {
+            display: flex;
+        }
+
+        .pdf-upload-modal {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .pdf-upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 40px 20px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--background-gray);
+        }
+
+        .pdf-upload-zone:hover,
+        .pdf-upload-zone.dragover {
+            border-color: var(--primary-blue);
+            background: var(--light-sage);
+        }
+
+        .pdf-upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+        }
+
+        .pdf-upload-text {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .pdf-upload-hint {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .pdf-progress {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .pdf-progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--background-gray);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .pdf-progress-fill {
+            height: 100%;
+            background: var(--primary-blue);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .pdf-progress-text {
+            margin-top: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .pdf-url-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            margin: 16px 0;
+        }
+
+        .pdf-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 24px;
+        }
+
+        .pdf-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pdf-btn.primary {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .pdf-btn.primary:hover {
+            background: var(--dark-blue);
+        }
+
+        .pdf-btn.secondary {
+            background: var(--background-gray);
+            color: var(--text-primary);
+        }
+
+        .pdf-btn.secondary:hover {
+            background: var(--hover-bg);
+        }
+
+        /* PDF Document Cards in Sources */
+        .pdf-document-card {
+            background: linear-gradient(135deg, #ff6b6b22, #4ecdc422);
+            border-left: 4px solid #ff6b6b;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .pdf-document-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            cursor: pointer;
+        }
+
+        .pdf-document-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pdf-document-icon {
+            width: 32px;
+            height: 32px;
+            background: #ff6b6b;
+            color: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .pdf-document-details {
+            flex: 1;
+        }
+
+        .pdf-document-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .pdf-document-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .pdf-document-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pdf-action-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 4px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .pdf-action-btn:hover {
+            background: rgba(0,0,0,0.1);
+            color: var(--text-primary);
+        }
+
+        .pdf-document-content {
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0 12px 12px;
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--text-secondary);
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -852,8 +1064,8 @@
             </div>
         </div>
         <div class="header-actions">
-            <button class="header-btn settings-btn" onclick="openSettings()">⚙️ Settings</button>
-            <button class="header-btn upgrade-btn" onclick="openSettings()">✨ Upgrade to Pro</button>
+            <button class="header-btn settings-btn" id="openSettingsBtn">⚙️ Settings</button>
+            <button class="header-btn upgrade-btn" id="upgradeBtn">✨ Upgrade to Pro</button>
         </div>
     </div>
 
@@ -982,9 +1194,10 @@
                             rows="1"
                         ></textarea>
                         <div class="input-actions">
-                            <button class="input-btn" title="Upload Document (Pro only)" disabled style="opacity: 0.5;">📎</button>
+                            <button class="input-btn" id="pdfUploadBtn" title="Upload PDF Document">📄</button>
+                            <button class="input-btn" id="urlPdfBtn" title="Process PDF from URL">🌐</button>
                             <button class="input-btn" title="Voice Input (Pro only)" disabled style="opacity: 0.5;">🎤</button>
-                            <button class="input-btn send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+                            <button class="input-btn send-btn" id="sendBtn">➤</button>
                         </div>
                     </div>
                 </div>
@@ -1074,7 +1287,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title">Settings & Billing</h2>
-                <button class="close-modal" onclick="closeSettings()">×</button>
+                <button class="close-modal" id="closeSettingsBtn">×</button>
             </div>
             <div class="modal-body">
                 <div class="settings-group">
@@ -1191,156 +1404,58 @@
         </div>
     </div>
 
-    <script>
-        // Auto-resize textarea
-        const messageInput = document.getElementById('messageInput');
-        messageInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-        });
+    <!-- PDF Upload Modal -->
+    <div class="pdf-upload-area" id="pdfUploadArea">
+        <div class="pdf-upload-modal">
+            <h3 style="margin-bottom: 16px;">Upload PDF Document</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">Upload a legal document, court judgment, or any PDF for AI analysis</p>
 
-        // Enable send button when there's text
-        messageInput.addEventListener('input', function() {
-            const sendBtn = document.getElementById('sendBtn');
-            sendBtn.disabled = this.value.trim() === '';
-        });
+            <div class="pdf-upload-zone" id="pdfUploadZone">
+                <div class="pdf-upload-icon">📄</div>
+                <div class="pdf-upload-text">Click to select PDF or drag & drop</div>
+                <div class="pdf-upload-hint">Maximum file size: 50MB</div>
+            </div>
 
-        // Send message on Enter (without Shift)
-        messageInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
+            <input type="file" id="pdfFileInput" accept=".pdf" style="display: none;">
 
-        // Demo query counter
-        let demoQueriesUsed = 0;
-        const demoQueryLimit = 5;
-
-        // Send message function
-        function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const message = input.value.trim();
-
-            if (message === '') return;
-
-            // Check demo limit
-            if (demoQueriesUsed >= demoQueryLimit) {
-                alert('Demo limit reached! You\'ve used all 5 free queries. Please upgrade to Pro for unlimited access.');
-                return;
-            }
-
-            demoQueriesUsed++;
-
-            // Remove welcome message if exists
-            const welcomeMsg = document.querySelector('.welcome-message');
-            if (welcomeMsg) {
-                welcomeMsg.style.display = 'none';
-            }
-
-            // Add user message
-            addMessage(message, 'user');
-
-            // Clear input
-            input.value = '';
-            input.style.height = 'auto';
-
-            // Update demo status
-            updateDemoStatus();
-
-            // Simulate AI response
-            setTimeout(() => {
-                const response = generateAIResponse(message);
-                addMessage(response, 'assistant');
-            }, 1000);
-        }
-
-        function updateDemoStatus() {
-            const remaining = demoQueryLimit - demoQueriesUsed;
-            if (remaining <= 0) {
-                const input = document.getElementById('messageInput');
-                input.placeholder = 'Demo limit reached. Upgrade to Pro for unlimited queries.';
-                input.disabled = true;
-                document.getElementById('sendBtn').disabled = true;
-            } else {
-                const input = document.getElementById('messageInput');
-                input.placeholder = `Demo: ${remaining} queries remaining. Ask about Taiwan law...`;
-            }
-        }
-
-        // Send prompt from quick actions
-        function sendPrompt(prompt) {
-            document.getElementById('messageInput').value = prompt;
-            sendMessage();
-        }
-
-        // Add message to chat
-        function addMessage(text, sender) {
-            const chatMessages = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}`;
-            
-            let header = '';
-            if (sender === 'assistant') {
-                header = '<div class="message-header">🤖 CiteRight AI (GPT-4 + Legal DB)</div>';
-            }
-            
-            messageDiv.innerHTML = `
-                <div class="message-content">
-                    ${header}
-                    <div class="message-text">${text}</div>
-                    ${sender === 'assistant' && text.includes('民法') ? `
-                        <div class="cited-sources">
-                            <span class="cited-source">📚 民法第965條</span>
-                            <span class="cited-source">⚖️ 司法院釋字第123號</span>
-                        </div>
-                    ` : ''}
+            <div class="pdf-progress" id="pdfProgress">
+                <div class="pdf-progress-bar">
+                    <div class="pdf-progress-fill" id="pdfProgressFill"></div>
                 </div>
-            `;
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
+                <div class="pdf-progress-text" id="pdfProgressText">Processing...</div>
+            </div>
 
-        // Generate AI response (mock)
-        function generateAIResponse(message) {
-            const responses = {
-                '分析民法第965條的繼承權規定': '根據民法第965條規定，繼承人有數人時，在分割遺產前，各繼承人對於遺產全部為公同共有。這意味著所有繼承人共同擁有遺產的所有權，任何一位繼承人都不能單獨處分遺產。\n\n此條文確立了「公同共有」的原則，保護所有繼承人的權益，確保遺產分配的公平性。實務上常見的爭議包括...',
-                '搜尋最近的智慧財產權判決': '為您找到最近的智慧財產權相關判決：\n\n1. 最高法院112年度台上字第2345號判決 - 商標侵權案\n2. 智慧財產法院111年度民專訴字第89號 - 專利無效案\n3. 台北地方法院112年度智字第156號 - 著作權爭議\n\n需要詳細分析哪個判決嗎？'
-            };
-            
-            return responses[message] || `我理解您的問題關於「${message}」。讓我為您查詢相關的法律資料庫...\n\n根據台灣現行法律，這個問題涉及多個層面。首先...`;
-        }
+            <div class="pdf-actions">
+                <button class="pdf-btn secondary" id="closePdfUploadBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
 
-        // Model selection
-        document.querySelectorAll('.model-card').forEach(card => {
-            card.addEventListener('click', function() {
-                document.querySelectorAll('.model-card').forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-                
-                const modelName = this.querySelector('.model-name').textContent;
-                document.getElementById('currentModel').textContent = modelName + ' + Legal DB';
-            });
-        });
+    <!-- PDF URL Modal -->
+    <div class="pdf-upload-area" id="pdfUrlArea">
+        <div class="pdf-upload-modal">
+            <h3 style="margin-bottom: 16px;">Process PDF from URL</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">Enter a direct link to a PDF document (e.g., court judgments, legal papers)</p>
 
-        // Settings modal
-        function openSettings() {
-            document.getElementById('settingsModal').classList.add('active');
-        }
+            <input type="url" id="pdfUrlInput" class="pdf-url-input" placeholder="https://example.com/document.pdf">
 
-        function closeSettings() {
-            document.getElementById('settingsModal').classList.remove('active');
-        }
+            <div class="pdf-progress" id="pdfUrlProgress">
+                <div class="pdf-progress-bar">
+                    <div class="pdf-progress-fill" id="pdfUrlProgressFill"></div>
+                </div>
+                <div class="pdf-progress-text" id="pdfUrlProgressText">Processing...</div>
+            </div>
 
-        // Close modal when clicking outside
-        document.getElementById('settingsModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeSettings();
-            }
-        });
+            <div class="pdf-actions">
+                <button class="pdf-btn secondary" id="closePdfUrlBtn">Cancel</button>
+                <button class="pdf-btn primary" id="processPdfUrlBtn">Process PDF</button>
+            </div>
+        </div>
+    </div>
 
-        // Initialize
-        document.getElementById('sendBtn').disabled = true;
-    </script>
+    <!-- Hidden file input for PDF upload -->
+    <div id="pdfDocuments" style="display: none;"></div>
+
+    <script src="ai-legal-interface.js"></script>
 </body>
 </html>
