@@ -447,7 +447,7 @@ export function useHighlight() {
    * 創建高亮標記的 HTML span 元素
    */
   function makeSpan(match, key, groups) {
-    let year = '', caseType = '', number = '', lawName = '', article = '', paragraph = ''
+    let caseType = '', number = '', lawName = ''
     
     if (key === 'interpretation') {
       caseType = '釋字'
@@ -457,66 +457,63 @@ export function useHighlight() {
       lawName = findStandardLawName(inputLawName, legalNames.value)
       lastLawName.value = lawName
       caseType = '法律'
-      article = ''
-      paragraph = ''
     } else if (key === 'dynamic_law_articles') {
       const inputLawName = groups[0]
       lawName = findStandardLawName(inputLawName, legalNames.value)
       lastLawName.value = lawName
-      article = chineseToArabic(toHalfWidthDigits(groups[1]))
-      
-      // 構建項款目
+      const article = chineseToArabic(toHalfWidthDigits(groups[1]))
+
+      // 構建項款目並合併到 number
       let paragraphParts = []
       if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2])))
       if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3])))
       if (groups[4]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[4])))
-      paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : ''
+      const paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : ''
+
+      number = article + paragraph
       caseType = '法條'
     } else if (key === 'simple_law_articles') {
       const inputLawName = groups[0]
       lawName = findStandardLawName(inputLawName, legalNames.value)
       lastLawName.value = lawName
-      article = chineseToArabic(toHalfWidthDigits(groups[1]))
-      paragraph = ''
+      number = chineseToArabic(toHalfWidthDigits(groups[1]))
       caseType = '法條'
     } else if (key === 'subarticle_pattern') {
       lawName = lastLawName.value || ''
       const mainArticle = chineseToArabic(toHalfWidthDigits(groups[0]))
       const subArticle = chineseToArabic(toHalfWidthDigits(groups[1]))
-      article = `${mainArticle}-${subArticle}`
-      
+      const article = `${mainArticle}-${subArticle}`
+
       let paragraphParts = []
       if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2])))
       if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3])))
       if (groups[4]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[4])))
-      paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : ''
+      const paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : ''
+
+      number = article + paragraph
       caseType = '法條'
     } else if (key === 'universal_legal_pattern') {
       lawName = lastLawName.value || ''
-      
+
       if (groups[0]) {
-        article = chineseToArabic(toHalfWidthDigits(groups[0]))
+        const article = chineseToArabic(toHalfWidthDigits(groups[0]))
         let paragraphParts = []
         if (groups[1]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[1])))
         if (groups[2]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[2])))
         if (groups[3]) paragraphParts.push(chineseToArabic(toHalfWidthDigits(groups[3])))
-        paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : ''
+        const paragraph = paragraphParts.length > 0 ? '-' + paragraphParts.join('-') : ''
+        number = article + paragraph
       } else if (groups[4] && groups[5]) {
-        article = ''
         const subsectionNum = chineseToArabic(toHalfWidthDigits(groups[4]))
-        paragraph = `-${subsectionNum}`
+        number = `-${subsectionNum}`
       }
       caseType = '法條'
     }
     
-    const result = `<span class="citeright-link" 
-              data-year="${escapeHtml(year)}" 
-              data-case-type="${escapeHtml(caseType)}" 
-              data-number="${escapeHtml(number)}"
+    const result = `<span class="citeright-link"
+              data-case-type="${escapeHtml(caseType)}"
               data-law-name="${escapeHtml(lawName)}"
-              data-article="${escapeHtml(article)}"
-              data-paragraph="${escapeHtml(paragraph)}"
-              data-legal-type="${escapeHtml(key)}"
+              data-number="${escapeHtml(number)}"
               style="background-color: rgba(24, 144, 255, 0.08) !important; border-bottom: 1px solid rgba(24, 144, 255, 0.3) !important; padding: 1px 2px !important; border-radius: 2px !important; cursor: pointer !important;"
               title="按住 Ctrl 並懸停查看詳情">${escapeHtml(match)}</span>`
     

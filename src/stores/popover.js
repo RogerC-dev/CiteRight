@@ -372,12 +372,8 @@ export const usePopoverStore = defineStore('popover', () => {
       title: generateTitle(dataset) || textContent,
       type: inferredType,
       lawName: dataset.lawName || (inferredType !== '釋字' ? textContent : ''),
-      article: dataset.article || '',
-      paragraph: dataset.paragraph || '',
-      year: dataset.year || '',
-      number: extractedNumber,
+      number: extractedNumber || dataset.number || '',
       caseType: dataset.caseType || inferredType,
-      legalType: dataset.legalType || '',
       text: textContent,
       content: '',
       fullContent: ''
@@ -385,12 +381,21 @@ export const usePopoverStore = defineStore('popover', () => {
   }
   
   function generateTitle(dataset) {
-    const { caseType, number, lawName, article, paragraph } = dataset || {}
+    const { caseType, number, lawName } = dataset || {}
 
     if (caseType === '釋字' && number) {
       return `釋字第 ${number} 號`
-    } else if (caseType === '法條' && lawName && article) {
-      return `${lawName} 第 ${article} 條${paragraph ? ` ${paragraph.replace('-', ' 第')} 項` : ''}`
+    } else if (caseType === '法條' && lawName && number) {
+      // number 現在包含完整的條文編號資訊
+      const parts = number.split('-')
+      const article = parts[0]
+      const paragraphParts = parts.slice(1)
+
+      let title = `${lawName} 第 ${article} 條`
+      if (paragraphParts.length > 0) {
+        title += ` 第${paragraphParts.join(' 第')} 項`
+      }
+      return title
     } else if (caseType === '法律' && lawName) {
       return lawName
     } else if (lawName) {

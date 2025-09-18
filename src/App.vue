@@ -278,12 +278,12 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2) !important;
 }
 
-:global(.citeright-link[data-legal-type="law_article"]) {
+:global(.citeright-link[data-case-type="法條"]) {
   border-bottom-color: #52c41a !important;
   background: linear-gradient(120deg, #f6ffed 0%, #f0f9ff 100%) !important;
 }
 
-:global(.citeright-link[data-legal-type="interpretation"]) {
+:global(.citeright-link[data-case-type="釋字"]) {
   border-bottom-color: #722ed1 !important;
   background: linear-gradient(120deg, #f9f0ff 0%, #f0f9ff 100%) !important;
 }

@@ -37,22 +37,17 @@
 }
 
 /* 不同類型的法條高亮 */
-.citeright-link[data-legal-type="law_article"] {
+.citeright-link[data-case-type="法條"] {
   border-bottom-color: #52c41a !important;
   background: linear-gradient(120deg, #f6ffed 0%, #f0f9ff 100%) !important;
 }
 
-.citeright-link[data-legal-type="interpretation"] {
+.citeright-link[data-case-type="釋字"] {
   border-bottom-color: #722ed1 !important;
   background: linear-gradient(120deg, #f9f0ff 0%, #f0f9ff 100%) !important;
 }
 
-.citeright-link[data-legal-type="judgment"] {
-  border-bottom-color: #fa541c !important;
-  background: linear-gradient(120deg, #fff7e6 0%, #f0f9ff 100%) !important;
-}
-
-.citeright-link[data-legal-type="law_name_only"] {
+.citeright-link[data-case-type="法律"] {
   border-bottom-color: #13c2c2 !important;
   background: linear-gradient(120deg, #e6fffb 0%, #f0f9ff 100%) !important;
 }
