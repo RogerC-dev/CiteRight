@@ -1,4 +1,4 @@
-const mysql = require('mysql2/promise');
+const sql = require('mssql');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -9,41 +9,40 @@ class Database {
 
     async initialize() {
         const config = {
-            host: process.env.DB_HOST,
-            port: process.env.DB_PORT,
+            server: process.env.DB_HOST,
+            port: parseInt(process.env.DB_PORT),
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,
             database: process.env.DB_DATABASE,
-            charset: 'utf8mb4',
-            connectionLimit: 10,
-            queueLimit: 0,
-            acquireTimeout: 60000,
-            timeout: 60000,
-            reconnect: true,
-            multipleStatements: true
+            options: {
+                encrypt: false,
+                trustServerCertificate: true
+            },
+            pool: {
+                max: 10,
+                min: 0,
+                idleTimeoutMillis: 30000
+            }
         };
 
         try {
-            console.log('🚀 Connecting to MariaDB database...');
-            this.pool = mysql.createPool(config);
+            console.log('🚀 Connecting to SQL Server database...');
+            this.pool = new sql.ConnectionPool(config);
+            await this.pool.connect();
             
-            // Test basic connection first
-            const connection = await this.pool.getConnection();
-
             // Check if tables exist, if not create them
-            await this.ensureTablesExist(connection);
+            await this.ensureTablesExist();
 
             // Test connection and get counts
-            const [lawsResult] = await connection.execute('SELECT COUNT(*) as count FROM Law');
-            const [articlesResult] = await connection.execute('SELECT COUNT(*) as count FROM LawArticle');
-            const [captionsResult] = await connection.execute('SELECT COUNT(*) as count FROM LawCaption');
-            connection.release();
-            
+            const lawsResult = await this.pool.request().query('SELECT COUNT(*) as count FROM Law');
+            const articlesResult = await this.pool.request().query('SELECT COUNT(*) as count FROM LawArticle');
+            const captionsResult = await this.pool.request().query('SELECT COUNT(*) as count FROM LawCaption');
+
             console.log(`✅ Connected to database successfully`);
             console.log(`📚 Available data:`);
-            console.log(`  • ${lawsResult[0].count} laws`);
-            console.log(`  • ${articlesResult[0].count} articles`);
-            console.log(`  • ${captionsResult[0].count} captions`);
+            console.log(`  • ${lawsResult.recordset[0].count} laws`);
+            console.log(`  • ${articlesResult.recordset[0].count} articles`);
+            console.log(`  • ${captionsResult.recordset[0].count} captions`);
             
             return true;
         } catch (error) {
@@ -52,16 +51,16 @@ class Database {
         }
     }
 
-    async ensureTablesExist(connection) {
+    async ensureTablesExist() {
         try {
             // Check if Law table exists
-            const [tables] = await connection.execute(`
-                SELECT COUNT(*) as count 
-                FROM information_schema.tables 
-                WHERE table_schema = ? AND table_name = 'Law'
-            `, [process.env.DB_DATABASE]);
+            const tablesResult = await this.pool.request().query(`
+                SELECT COUNT(*) as count
+                FROM INFORMATION_SCHEMA.TABLES
+                WHERE TABLE_CATALOG = '${process.env.DB_DATABASE}' AND TABLE_NAME = 'Law'
+            `);
 
-            if (tables[0].count === 0) {
+            if (tablesResult.recordset[0].count === 0) {
                 console.log('📋 Tables not found, creating database schema...');
 
                 // Read and execute schema file
@@ -73,7 +72,7 @@ class Database {
 
                 for (const statement of statements) {
                     if (statement.trim()) {
-                        await connection.execute(statement.trim());
+                        await this.pool.request().query(statement.trim());
                     }
                 }
 
@@ -87,23 +86,32 @@ class Database {
         }
     }
 
-    async query(sql, params = []) {
+    async query(sqlQuery, params = []) {
         if (!this.pool) {
             throw new Error('Database not initialized');
         }
-        return await this.pool.execute(sql, params);
+        const request = this.pool.request();
+
+        // Add parameters if provided
+        if (params.length > 0) {
+            params.forEach((param, index) => {
+                request.input(`param${index}`, param);
+            });
+        }
+
+        return await request.query(sqlQuery);
     }
 
-    async getConnection() {
+    getRequest() {
         if (!this.pool) {
             throw new Error('Database not initialized');
         }
-        return await this.pool.getConnection();
+        return this.pool.request();
     }
 
     async close() {
         if (this.pool) {
-            await this.pool.end();
+            await this.pool.close();
             this.pool = null;
         }
     }

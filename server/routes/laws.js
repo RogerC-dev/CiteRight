@@ -28,12 +28,13 @@ router.get('/', asyncHandler(async (req, res) => {
     if (!database.isConnected()) {
         throw new ApiError(503, 'Database not connected');
     }
-    const [rows] = await database.query(`
+    const result = await database.query(`
         SELECT DISTINCT LawName FROM Law ORDER BY LawName
     `);
+    console.log(result);
     res.json({
         success: true,
-        data: rows.map(row => row.LawName)
+        data: result.recordset.map(row => row.LawName)
     });
 }));
 
@@ -122,32 +123,32 @@ router.get('/:lawName', asyncHandler(async (req, res) => {
     console.log(`🔍 Getting law details for: ${decodeURIComponent(lawName)}`);
 
     // Get law details
-    const [lawRows] = await database.query(
-        `SELECT * FROM Law WHERE LawName = ?`,
+    const lawResult = await database.query(
+        `SELECT * FROM Law WHERE LawName = @param0`,
         [decodeURIComponent(lawName)]
     );
 
-    if (lawRows.length === 0) {
+    if (lawResult.recordset.length === 0) {
         throw new ApiError(404, 'Law not found');
     }
 
     // Get captions and articles for this law
-    const [[articles]] = await database.query(
-        `SELECT JSON_ARRAYAGG(
-                JSON_OBJECT(
-                    'CaptionTitle', c.CaptionTitle,
-                    'ArticleNo', a.ArticleNo,
-                    'Article', a.ArticleContent
-                )
-            ) AS Articles FROM LawArticle a
-                    LEFT JOIN LawCaption c ON c.Id = a.CaptionId
-                WHERE a.LawName = ?
-            `,
+    const articlesResult = await database.query(
+        `SELECT
+            c.CaptionTitle,
+            a.ArticleNo,
+            a.ArticleContent as Article
+         FROM LawArticle a
+         LEFT JOIN LawCaption c ON c.Id = a.CaptionId
+         WHERE a.LawName = @param0
+         ORDER BY a.ArticleNo`,
         [decodeURIComponent(lawName)]
     );
-    lawRows[0].Articles = JSON.parse(articles.Articles)
-    lawRows[0].type = '法律';
-    res.json(lawRows[0]);
+
+    const law = lawResult.recordset[0];
+    law.Articles = articlesResult.recordset;
+    law.type = '法律';
+    res.json(law);
 }));
 
 
@@ -203,33 +204,33 @@ router.get('/:lawLevel/:lawName', asyncHandler(async (req, res) => {
     console.log(`🔍 Getting law details for: ${lawLevel} - ${decodeURIComponent(lawName)}`);
     
     // Get law details
-    const [lawRows] = await database.query(
-        `SELECT * FROM Law WHERE LawLevel = ? AND LawName = ?`,
+    const lawResult = await database.query(
+        `SELECT * FROM Law WHERE LawLevel = @param0 AND LawName = @param1`,
         [lawLevel, decodeURIComponent(lawName)]
     );
-    
-    if (lawRows.length === 0) {
+
+    if (lawResult.recordset.length === 0) {
         throw new ApiError(404, 'Law not found');
     }
-    
+
     // Get captions and articles for this law
-    const [[articles]] = await database.query(
-        `SELECT JSON_ARRAYAGG(
-                JSON_OBJECT(
-                    'CaptionTitle', c.CaptionTitle,
-                    'ArticleNo', a.ArticleNo,
-                    'Article', a.ArticleContent
-                ) 
-            ) AS Articles FROM LawArticle a 
-                    LEFT JOIN LawCaption c ON c.Id = a.CaptionId
-                WHERE a.LawLevel = ? 
-                  AND a.LawName = ?
-            `,
+    const articlesResult = await database.query(
+        `SELECT
+            c.CaptionTitle,
+            a.ArticleNo,
+            a.ArticleContent as Article
+         FROM LawArticle a
+         LEFT JOIN LawCaption c ON c.Id = a.CaptionId
+         WHERE a.LawLevel = @param0
+           AND a.LawName = @param1
+         ORDER BY a.ArticleNo`,
         [lawLevel, decodeURIComponent(lawName)]
     );
-    lawRows[0].Articles = JSON.parse(articles.Articles)
-    lawRows[0].type = '法條';
-    res.json(lawRows[0]);
+
+    const law = lawResult.recordset[0];
+    law.Articles = articlesResult.recordset;
+    law.type = '法條';
+    res.json(law);
 }));
 
 
@@ -290,27 +291,26 @@ router.get('/search', asyncHandler(async (req, res) => {
     
     console.log(`🔍 Searching laws for: "${query}"`);
     
-    const [rows] = await database.query(
-        `SELECT LawLevel, LawName, EngLawName, LawCategory, LawURL
-         FROM Law 
-         WHERE LawName LIKE ? OR EngLawName LIKE ?
-         ORDER BY 
-            CASE 
-                WHEN LawName LIKE ? THEN 1 
-                WHEN LawName LIKE ? THEN 2
-                ELSE 3 
-            END, LawName
-         LIMIT ?`,
+    const result = await database.query(
+        `SELECT TOP (@param4) LawLevel, LawName, EngLawName, LawCategory, LawURL
+         FROM Law
+         WHERE LawName LIKE @param0 OR EngLawName LIKE @param1
+         ORDER BY
+            CASE
+                WHEN LawName LIKE @param2 THEN 1
+                WHEN LawName LIKE @param3 THEN 2
+                ELSE 3
+            END, LawName`,
         [`%${query}%`, `%${query}%`, `${query}%`, `%${query}%`, parseInt(limit)]
     );
-    
-    console.log(`✅ Found ${rows.length} matching laws`);
-    
+
+    console.log(`✅ Found ${result.recordset.length} matching laws`);
+
     res.json({
         success: true,
         query: query,
-        results: rows,
-        total: rows.length
+        results: result.recordset,
+        total: result.recordset.length
     });
 }));
 
@@ -366,32 +366,32 @@ router.get('/:lawLevel/:lawName', asyncHandler(async (req, res) => {
     console.log(`🔍 Getting law details for: ${lawLevel} - ${decodeURIComponent(lawName)}`);
     
     // Get law details
-    const [lawRows] = await database.query(
-        `SELECT * FROM Law WHERE LawLevel = ? AND LawName = ?`,
+    const [lawResult] = await database.query(
+        `SELECT * FROM Law WHERE LawLevel = @param0 AND LawName = @param1`,
         [lawLevel, decodeURIComponent(lawName)]
     );
-    
-    if (lawRows.length === 0) {
+
+    if (lawResult.recordset.length === 0) {
         throw new ApiError(404, 'Law not found');
     }
-    
+
     // Get captions and articles for this law
-    const [[articles]] = await database.query(
-        `SELECT JSON_ARRAYAGG(
-                JSON_OBJECT(
-                    'CaptionTitle', c.CaptionTitle,
-                    'ArticleNo', a.ArticleNo,
-                    'Article', a.ArticleContent
-                ) 
-            ) AS Articles FROM LawArticle a 
-                    LEFT JOIN LawCaption c ON c.Id = a.CaptionId
-                WHERE a.LawLevel = ? 
-                  AND a.LawName = ?
-            `,
+    const articlesResult = await database.query(
+        `SELECT
+            c.CaptionTitle,
+            a.ArticleNo,
+            a.ArticleContent as Article
+         FROM LawArticle a
+         LEFT JOIN LawCaption c ON c.Id = a.CaptionId
+         WHERE a.LawLevel = @param0
+           AND a.LawName = @param1
+         ORDER BY a.ArticleNo`,
         [lawLevel, decodeURIComponent(lawName)]
     );
-    lawRows[0].Articles = JSON.parse(articles.Articles)
-    res.json(lawRows[0]);
+
+    const law = lawResult.recordset[0];
+    law.Articles = articlesResult.recordset;
+    res.json(law);
 }));
 
 module.exports = router;
