@@ -405,6 +405,803 @@
             transform: translateY(-3px);
         }
 
+        /* Quiz Bank Styles */
+        .quiz-bank {
+            padding: 100px 0;
+            background: white;
+        }
+
+        .quiz-bank h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .quiz-subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #6c757d;
+            margin-bottom: 60px;
+        }
+
+        /* Tab Navigation */
+        .quiz-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .quiz-tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #6c757d;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quiz-tab:hover {
+            color: #007bff;
+        }
+
+        .quiz-tab.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+
+        .quiz-tab-content {
+            display: none;
+        }
+
+        .quiz-tab-content.active {
+            display: block;
+        }
+
+        /* Filters */
+        .quiz-filters {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group.search-group {
+            flex: 2;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .filter-group select,
+        .filter-group input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-group select:focus,
+        .filter-group input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        /* Buttons */
+        .btn-primary, .btn-secondary, .btn-mode, .btn-review, .btn-retry {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        /* Practice Modes */
+        .practice-modes {
+            margin-bottom: 40px;
+        }
+
+        .practice-modes h3 {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .mode-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .mode-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .mode-card:hover {
+            border-color: #007bff;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,123,255,0.2);
+        }
+
+        .mode-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .mode-card h4 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .mode-card p {
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+
+        .btn-mode {
+            background: #007bff;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-mode:hover {
+            background: #0056b3;
+        }
+
+        /* Quiz Stats */
+        .quiz-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        /* Flashcards */
+        .flashcard-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .flashcard-header h3 {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .flashcard-schedule {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .schedule-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .schedule-card:hover {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transform: translateY(-3px);
+        }
+
+        .schedule-card.urgent {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .schedule-card.soon {
+            border-color: #ffc107;
+            background: #fffbf0;
+        }
+
+        .schedule-card.normal {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .schedule-icon {
+            font-size: 2rem;
+        }
+
+        .schedule-info {
+            flex: 1;
+        }
+
+        .schedule-info h4 {
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+
+        .schedule-count {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .btn-review {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-review:hover {
+            background: #0056b3;
+        }
+
+        /* Flashcard Manager */
+        .flashcard-manager {
+            margin-top: 40px;
+        }
+
+        .flashcard-manager h3 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .flashcard-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .flashcard-controls select {
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .flashcard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .flashcard-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .flashcard-item:hover {
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border-color: #007bff;
+        }
+
+        .flashcard-question {
+            font-size: 1.1rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .flashcard-meta {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .flashcard-tag {
+            background: #e7f3ff;
+            color: #007bff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .flashcard-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .flashcard-status.learning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .flashcard-next {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .flashcard-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-icon:hover {
+            transform: scale(1.2);
+        }
+
+        /* Progress Tracking */
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .progress-header h3 {
+            font-size: 1.8rem;
+            color: #2c3e50;
+        }
+
+        .date-range select {
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .progress-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .progress-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        .progress-card h4 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .progress-bar-container {
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 30px;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            transition: width 0.5s ease;
+        }
+
+        .trend-chart {
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-placeholder {
+            font-size: 1.5rem;
+            color: #6c757d;
+        }
+
+        /* Subject Breakdown */
+        .subject-breakdown {
+            margin-bottom: 40px;
+        }
+
+        .subject-breakdown h3 {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .subject-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .subject-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .subject-card:hover {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transform: translateY(-3px);
+        }
+
+        .subject-card h4 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .subject-stats {
+            margin-bottom: 15px;
+        }
+
+        .subject-stats div {
+            padding: 5px 0;
+            color: #6c757d;
+        }
+
+        .progress-mini {
+            background: #e9ecef;
+            border-radius: 5px;
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .progress-mini-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        /* Wrong Questions */
+        .wrong-questions {
+            margin-top: 40px;
+        }
+
+        .wrong-questions h3 {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .wrong-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .wrong-item {
+            background: #fff5f5;
+            border: 1px solid #fee;
+            border-left: 4px solid #dc3545;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .wrong-question {
+            font-size: 1.1rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .wrong-details {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .wrong-subject {
+            background: #dc3545;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .wrong-date {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .btn-retry {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-retry:hover {
+            background: #c82333;
+        }
+
+        /* Admin Styles */
+        .admin-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .admin-header h3 {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .import-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+
+        .import-section h4 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .import-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 12px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .upload-hint {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .import-progress {
+            padding: 20px;
+        }
+
+        .import-status {
+            text-align: center;
+            margin-top: 15px;
+            color: #6c757d;
+        }
+
+        /* Question Management */
+        .question-management {
+            margin-bottom: 40px;
+        }
+
+        .question-management h4 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .admin-filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .admin-filters input,
+        .admin-filters select {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .admin-table {
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+        }
+
+        .admin-table thead {
+            background: #f8f9fa;
+        }
+
+        .admin-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .admin-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .admin-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .admin-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-badge.published {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.draft {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.archived {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        /* Audit Section */
+        .audit-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+        }
+
+        .audit-section h4 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .audit-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .audit-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .audit-icon {
+            font-size: 1.5rem;
+        }
+
+        .audit-action {
+            font-size: 1.1rem;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .audit-meta {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .hero h1 {
@@ -431,6 +1228,48 @@
 
             .container {
                 padding: 0 15px;
+            }
+
+            .quiz-tabs {
+                flex-wrap: wrap;
+            }
+
+            .quiz-tab {
+                font-size: 0.95rem;
+                padding: 12px 20px;
+            }
+
+            .filter-row {
+                flex-direction: column;
+            }
+
+            .mode-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .quiz-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .flashcard-schedule {
+                grid-template-columns: 1fr;
+            }
+
+            .progress-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .subject-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-table {
+                font-size: 0.85rem;
+            }
+
+            .admin-table th,
+            .admin-table td {
+                padding: 10px;
             }
         }
     </style>
@@ -498,6 +1337,395 @@
     </div>
 </section>
 
+<!-- Quiz Bank Section -->
+<section class="quiz-bank">
+    <div class="container">
+        <h2>司律考題練習題庫系統</h2>
+        <p class="quiz-subtitle">整合歷屆司法官／律師考題，提供智慧複習、學習追蹤與快閃卡管理</p>
+
+        <!-- Tab Navigation -->
+        <div class="quiz-tabs">
+            <button class="quiz-tab active" data-tab="practice">練習模式</button>
+            <button class="quiz-tab" data-tab="flashcards">快閃卡</button>
+            <button class="quiz-tab" data-tab="progress">學習追蹤</button>
+            <button class="quiz-tab" data-tab="admin">題庫管理</button>
+        </div>
+
+        <!-- Practice Mode Tab -->
+        <div class="quiz-tab-content active" id="practice-tab">
+            <div class="quiz-filters">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>考試別</label>
+                        <select id="exam-type">
+                            <option value="">全部</option>
+                            <option value="judicial">司法官</option>
+                            <option value="lawyer">律師</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>年度</label>
+                        <select id="exam-year">
+                            <option value="">全部</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                            <option value="2022">2022</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>科目</label>
+                        <select id="subject">
+                            <option value="">全部</option>
+                            <option value="civil">民法</option>
+                            <option value="criminal">刑法</option>
+                            <option value="administrative">行政法</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>題型</label>
+                        <select id="question-type">
+                            <option value="">全部</option>
+                            <option value="choice">選擇題</option>
+                            <option value="essay">申論題</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-row">
+                    <div class="filter-group search-group">
+                        <label>關鍵字搜尋</label>
+                        <input type="text" id="keyword-search" placeholder="輸入關鍵字...">
+                    </div>
+                    <button class="btn-primary" id="apply-filters">套用篩選</button>
+                    <button class="btn-secondary" id="reset-filters">重置</button>
+                </div>
+            </div>
+
+            <div class="practice-modes">
+                <h3>選擇練習模式</h3>
+                <div class="mode-cards">
+                    <div class="mode-card" data-mode="historical">
+                        <div class="mode-icon">📚</div>
+                        <h4>歷屆考題</h4>
+                        <p>按年度練習歷屆考題</p>
+                        <button class="btn-mode">開始練習</button>
+                    </div>
+                    <div class="mode-card" data-mode="simulation">
+                        <div class="mode-icon">📝</div>
+                        <h4>模擬考試</h4>
+                        <p>模擬真實考試情境</p>
+                        <button class="btn-mode">開始測驗</button>
+                    </div>
+                    <div class="mode-card" data-mode="mixed">
+                        <div class="mode-icon">🔀</div>
+                        <h4>混合練習</h4>
+                        <p>隨機混合不同年度題目</p>
+                        <button class="btn-mode">隨機練習</button>
+                    </div>
+                    <div class="mode-card" data-mode="favorites">
+                        <div class="mode-icon">⭐</div>
+                        <h4>收藏題庫</h4>
+                        <p>複習已收藏的題目</p>
+                        <button class="btn-mode">檢視收藏</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quiz-stats">
+                <div class="stat-card">
+                    <div class="stat-number">3,247</div>
+                    <div class="stat-label">總題數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">1,582</div>
+                    <div class="stat-label">已練習</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">73%</div>
+                    <div class="stat-label">正確率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">156</div>
+                    <div class="stat-label">待複習</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flashcards Tab -->
+        <div class="quiz-tab-content" id="flashcards-tab">
+            <div class="flashcard-header">
+                <h3>快閃卡複習系統</h3>
+                <p>使用間隔重複演算法，提升記憶效果</p>
+            </div>
+
+            <div class="flashcard-schedule">
+                <div class="schedule-card urgent">
+                    <div class="schedule-icon">🔴</div>
+                    <div class="schedule-info">
+                        <h4>今日待複習</h4>
+                        <div class="schedule-count">24 張卡片</div>
+                    </div>
+                    <button class="btn-review">立即複習</button>
+                </div>
+                <div class="schedule-card soon">
+                    <div class="schedule-icon">🟡</div>
+                    <div class="schedule-info">
+                        <h4>明日預定</h4>
+                        <div class="schedule-count">18 張卡片</div>
+                    </div>
+                    <button class="btn-review">查看詳情</button>
+                </div>
+                <div class="schedule-card normal">
+                    <div class="schedule-icon">🟢</div>
+                    <div class="schedule-info">
+                        <h4>本週預定</h4>
+                        <div class="schedule-count">67 張卡片</div>
+                    </div>
+                    <button class="btn-review">查看詳情</button>
+                </div>
+            </div>
+
+            <div class="flashcard-manager">
+                <h3>快閃卡管理</h3>
+                <div class="flashcard-controls">
+                    <button class="btn-primary" id="create-flashcard">建立新卡片</button>
+                    <button class="btn-secondary" id="import-flashcards">批次匯入</button>
+                    <select id="flashcard-filter">
+                        <option value="all">全部卡片</option>
+                        <option value="new">新卡片</option>
+                        <option value="learning">學習中</option>
+                        <option value="review">複習中</option>
+                        <option value="mastered">已掌握</option>
+                    </select>
+                </div>
+
+                <div class="flashcard-list">
+                    <div class="flashcard-item">
+                        <div class="flashcard-content">
+                            <div class="flashcard-question">民法第 184 條第 1 項規定之侵權行為要件為何？</div>
+                            <div class="flashcard-meta">
+                                <span class="flashcard-tag">民法</span>
+                                <span class="flashcard-status learning">學習中</span>
+                                <span class="flashcard-next">下次複習: 2天後</span>
+                            </div>
+                        </div>
+                        <div class="flashcard-actions">
+                            <button class="btn-icon" title="編輯">✏️</button>
+                            <button class="btn-icon" title="刪除">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Tracking Tab -->
+        <div class="quiz-tab-content" id="progress-tab">
+            <div class="progress-header">
+                <h3>學習追蹤分析</h3>
+                <div class="date-range">
+                    <select id="time-range">
+                        <option value="7">最近 7 天</option>
+                        <option value="30">最近 30 天</option>
+                        <option value="90">最近 90 天</option>
+                        <option value="all">全部</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="progress-overview">
+                <div class="progress-card">
+                    <h4>練習進度</h4>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width: 65%;">
+                            <span>65%</span>
+                        </div>
+                    </div>
+                    <p>已完成 1,582 / 2,435 題</p>
+                </div>
+                <div class="progress-card">
+                    <h4>正確率趨勢</h4>
+                    <div class="trend-chart">
+                        <div class="chart-placeholder">📈 圖表區域</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="subject-breakdown">
+                <h3>科目分析</h3>
+                <div class="subject-grid">
+                    <div class="subject-card">
+                        <h4>民法</h4>
+                        <div class="subject-stats">
+                            <div>練習題數: 456</div>
+                            <div>正確率: 78%</div>
+                            <div>弱點: 物權編</div>
+                        </div>
+                        <div class="progress-mini">
+                            <div class="progress-mini-bar" style="width: 78%;"></div>
+                        </div>
+                    </div>
+                    <div class="subject-card">
+                        <h4>刑法</h4>
+                        <div class="subject-stats">
+                            <div>練習題數: 389</div>
+                            <div>正確率: 71%</div>
+                            <div>弱點: 共犯理論</div>
+                        </div>
+                        <div class="progress-mini">
+                            <div class="progress-mini-bar" style="width: 71%;"></div>
+                        </div>
+                    </div>
+                    <div class="subject-card">
+                        <h4>行政法</h4>
+                        <div class="subject-stats">
+                            <div>練習題數: 342</div>
+                            <div>正確率: 69%</div>
+                            <div>弱點: 行政救濟</div>
+                        </div>
+                        <div class="progress-mini">
+                            <div class="progress-mini-bar" style="width: 69%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wrong-questions">
+                <h3>錯題本</h3>
+                <div class="wrong-list">
+                    <div class="wrong-item">
+                        <div class="wrong-content">
+                            <div class="wrong-question">關於公司法中董事會之召集，下列敘述何者正確？</div>
+                            <div class="wrong-details">
+                                <span class="wrong-subject">公司法</span>
+                                <span class="wrong-date">錯誤 3 次 | 最後練習: 2024-03-15</span>
+                            </div>
+                        </div>
+                        <button class="btn-retry">重新練習</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Tab -->
+        <div class="quiz-tab-content" id="admin-tab">
+            <div class="admin-header">
+                <h3>題庫管理後台</h3>
+                <p>管理者專用：題目維護與批次匯入</p>
+            </div>
+
+            <div class="admin-actions">
+                <button class="btn-primary" id="add-question">➕ 新增題目</button>
+                <button class="btn-primary" id="batch-import">📥 批次匯入</button>
+                <button class="btn-secondary" id="export-data">📤 匯出資料</button>
+                <button class="btn-secondary" id="audit-log">📋 查看日誌</button>
+            </div>
+
+            <div class="import-section">
+                <h4>批次匯入題庫</h4>
+                <div class="import-container">
+                    <div class="upload-area" id="upload-area">
+                        <div class="upload-icon">📁</div>
+                        <p>拖曳檔案至此或點擊上傳</p>
+                        <p class="upload-hint">支援格式: JSON, CSV, PDF</p>
+                        <input type="file" id="file-upload" accept=".json,.csv,.pdf" hidden>
+                    </div>
+                    <div class="import-progress" id="import-progress" style="display: none;">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="import-progress-bar" style="width: 0%;">
+                                <span id="import-percentage">0%</span>
+                            </div>
+                        </div>
+                        <div class="import-status" id="import-status">正在處理...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-management">
+                <h4>題目列表</h4>
+                <div class="admin-filters">
+                    <input type="text" placeholder="搜尋題目..." id="admin-search">
+                    <select id="admin-status">
+                        <option value="all">全部狀態</option>
+                        <option value="published">已發布</option>
+                        <option value="draft">草稿</option>
+                        <option value="archived">已封存</option>
+                    </select>
+                    <select id="admin-source">
+                        <option value="all">全部來源</option>
+                        <option value="official">官方題庫</option>
+                        <option value="manual">手動新增</option>
+                        <option value="imported">批次匯入</option>
+                    </select>
+                </div>
+
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>題號</th>
+                            <th>題目內容</th>
+                            <th>考試別</th>
+                            <th>年度</th>
+                            <th>科目</th>
+                            <th>狀態</th>
+                            <th>最後更新</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#2024-001</td>
+                            <td>關於民法第 184 條侵權行為之規定...</td>
+                            <td>司法官</td>
+                            <td>2024</td>
+                            <td>民法</td>
+                            <td><span class="status-badge published">已發布</span></td>
+                            <td>2024-03-20</td>
+                            <td>
+                                <button class="btn-icon" title="編輯">✏️</button>
+                                <button class="btn-icon" title="預覽">👁️</button>
+                                <button class="btn-icon" title="刪除">🗑️</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#2024-002</td>
+                            <td>刑法共犯理論中，關於幫助犯...</td>
+                            <td>律師</td>
+                            <td>2024</td>
+                            <td>刑法</td>
+                            <td><span class="status-badge draft">草稿</span></td>
+                            <td>2024-03-19</td>
+                            <td>
+                                <button class="btn-icon" title="編輯">✏️</button>
+                                <button class="btn-icon" title="預覽">👁️</button>
+                                <button class="btn-icon" title="刪除">🗑️</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="audit-section">
+                <h4>稽核紀錄</h4>
+                <div class="audit-list">
+                    <div class="audit-item">
+                        <div class="audit-icon">✏️</div>
+                        <div class="audit-content">
+                            <div class="audit-action">題目 #2024-001 已更新</div>
+                            <div class="audit-meta">管理員: admin@example.com | 2024-03-20 14:30</div>
+                        </div>
+                    </div>
+                    <div class="audit-item">
+                        <div class="audit-icon">📥</div>
+                        <div class="audit-content">
+                            <div class="audit-action">批次匯入 150 題成功</div>
+                            <div class="audit-meta">管理員: admin@example.com | 2024-03-20 10:15</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Pricing Section -->
 <section class="pricing">
     <div class="container">
@@ -555,5 +1783,330 @@
         </div>
     </div>
 </section>
+
+<script>
+    // Tab Navigation
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.quiz-tab');
+        const tabContents = document.querySelectorAll('.quiz-tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+
+                // Remove active class from all tabs and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                // Add active class to clicked tab and corresponding content
+                this.classList.add('active');
+                document.getElementById(targetTab + '-tab').classList.add('active');
+            });
+        });
+
+        // Filter functionality
+        const applyFiltersBtn = document.getElementById('apply-filters');
+        const resetFiltersBtn = document.getElementById('reset-filters');
+
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', function() {
+                const examType = document.getElementById('exam-type').value;
+                const examYear = document.getElementById('exam-year').value;
+                const subject = document.getElementById('subject').value;
+                const questionType = document.getElementById('question-type').value;
+                const keyword = document.getElementById('keyword-search').value;
+
+                console.log('Applying filters:', {
+                    examType,
+                    examYear,
+                    subject,
+                    questionType,
+                    keyword
+                });
+
+                // TODO: Implement actual filter logic with backend API
+                alert('篩選已套用！這將連接到後端 API 以獲取篩選結果。');
+            });
+        }
+
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', function() {
+                document.getElementById('exam-type').value = '';
+                document.getElementById('exam-year').value = '';
+                document.getElementById('subject').value = '';
+                document.getElementById('question-type').value = '';
+                document.getElementById('keyword-search').value = '';
+                console.log('Filters reset');
+            });
+        }
+
+        // Practice mode selection
+        const modeCards = document.querySelectorAll('.mode-card');
+        modeCards.forEach(card => {
+            const button = card.querySelector('.btn-mode');
+            if (button) {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const mode = card.getAttribute('data-mode');
+                    console.log('Starting practice mode:', mode);
+                    // TODO: Navigate to practice page with selected mode
+                    alert(`啟動${card.querySelector('h4').textContent}模式！`);
+                });
+            }
+        });
+
+        // Flashcard functionality
+        const createFlashcardBtn = document.getElementById('create-flashcard');
+        if (createFlashcardBtn) {
+            createFlashcardBtn.addEventListener('click', function() {
+                // TODO: Open flashcard creation modal
+                alert('開啟建立快閃卡對話框');
+            });
+        }
+
+        const importFlashcardsBtn = document.getElementById('import-flashcards');
+        if (importFlashcardsBtn) {
+            importFlashcardsBtn.addEventListener('click', function() {
+                // TODO: Open import dialog
+                alert('開啟批次匯入對話框');
+            });
+        }
+
+        // Flashcard filter
+        const flashcardFilter = document.getElementById('flashcard-filter');
+        if (flashcardFilter) {
+            flashcardFilter.addEventListener('change', function() {
+                const filterValue = this.value;
+                console.log('Filtering flashcards by:', filterValue);
+                // TODO: Filter flashcard list
+            });
+        }
+
+        // Admin functionality
+        const uploadArea = document.getElementById('upload-area');
+        const fileUpload = document.getElementById('file-upload');
+        const importProgress = document.getElementById('import-progress');
+        const importProgressBar = document.getElementById('import-progress-bar');
+        const importPercentage = document.getElementById('import-percentage');
+        const importStatus = document.getElementById('import-status');
+
+        if (uploadArea && fileUpload) {
+            uploadArea.addEventListener('click', function() {
+                fileUpload.click();
+            });
+
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#007bff';
+                this.style.background = '#f0f8ff';
+            });
+
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#dee2e6';
+                this.style.background = '';
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#dee2e6';
+                this.style.background = '';
+
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileUpload(files[0]);
+                }
+            });
+
+            fileUpload.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    handleFileUpload(this.files[0]);
+                }
+            });
+        }
+
+        function handleFileUpload(file) {
+            console.log('Uploading file:', file.name);
+
+            // Show progress
+            uploadArea.style.display = 'none';
+            importProgress.style.display = 'block';
+
+            // Simulate upload progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                importProgressBar.style.width = progress + '%';
+                importPercentage.textContent = progress + '%';
+
+                if (progress === 50) {
+                    importStatus.textContent = '解析檔案中...';
+                } else if (progress === 80) {
+                    importStatus.textContent = '驗證資料中...';
+                }
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    importStatus.textContent = '匯入完成！';
+
+                    // Reset after 2 seconds
+                    setTimeout(() => {
+                        uploadArea.style.display = 'block';
+                        importProgress.style.display = 'none';
+                        importProgressBar.style.width = '0%';
+                        importPercentage.textContent = '0%';
+                        importStatus.textContent = '正在處理...';
+                        fileUpload.value = '';
+
+                        alert(`成功匯入題庫檔案：${file.name}`);
+                    }, 2000);
+                }
+            }, 300);
+        }
+
+        // Admin actions
+        const addQuestionBtn = document.getElementById('add-question');
+        if (addQuestionBtn) {
+            addQuestionBtn.addEventListener('click', function() {
+                alert('開啟新增題目對話框');
+                // TODO: Open question creation modal
+            });
+        }
+
+        const batchImportBtn = document.getElementById('batch-import');
+        if (batchImportBtn) {
+            batchImportBtn.addEventListener('click', function() {
+                uploadArea.click();
+            });
+        }
+
+        const exportDataBtn = document.getElementById('export-data');
+        if (exportDataBtn) {
+            exportDataBtn.addEventListener('click', function() {
+                alert('匯出題庫資料');
+                // TODO: Implement export functionality
+            });
+        }
+
+        const auditLogBtn = document.getElementById('audit-log');
+        if (auditLogBtn) {
+            auditLogBtn.addEventListener('click', function() {
+                alert('顯示完整稽核日誌');
+                // TODO: Navigate to audit log page
+            });
+        }
+
+        // Admin search and filters
+        const adminSearch = document.getElementById('admin-search');
+        if (adminSearch) {
+            adminSearch.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                console.log('Searching for:', searchTerm);
+                // TODO: Implement search functionality
+            });
+        }
+
+        const adminStatus = document.getElementById('admin-status');
+        if (adminStatus) {
+            adminStatus.addEventListener('change', function() {
+                console.log('Filtering by status:', this.value);
+                // TODO: Filter questions by status
+            });
+        }
+
+        const adminSource = document.getElementById('admin-source');
+        if (adminSource) {
+            adminSource.addEventListener('change', function() {
+                console.log('Filtering by source:', this.value);
+                // TODO: Filter questions by source
+            });
+        }
+
+        // Time range filter for progress tracking
+        const timeRange = document.getElementById('time-range');
+        if (timeRange) {
+            timeRange.addEventListener('change', function() {
+                console.log('Changing time range to:', this.value, 'days');
+                // TODO: Update progress charts and stats
+            });
+        }
+
+        // Review buttons in flashcard schedule
+        const reviewButtons = document.querySelectorAll('.btn-review');
+        reviewButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const card = this.closest('.schedule-card');
+                const scheduleType = card.querySelector('h4').textContent;
+                console.log('Starting review for:', scheduleType);
+                alert(`開始複習：${scheduleType}`);
+                // TODO: Navigate to flashcard review page
+            });
+        });
+
+        // Retry wrong questions
+        const retryButtons = document.querySelectorAll('.btn-retry');
+        retryButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const question = this.closest('.wrong-item').querySelector('.wrong-question').textContent;
+                console.log('Retrying question:', question);
+                alert('重新練習此題目');
+                // TODO: Navigate to question practice
+            });
+        });
+
+        // Table action buttons
+        document.querySelectorAll('.admin-table .btn-icon').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const action = this.getAttribute('title');
+                const row = this.closest('tr');
+                const questionId = row.querySelector('td:first-child').textContent;
+
+                console.log(`${action} question:`, questionId);
+
+                switch(action) {
+                    case '編輯':
+                        alert(`編輯題目 ${questionId}`);
+                        // TODO: Open edit modal
+                        break;
+                    case '預覽':
+                        alert(`預覽題目 ${questionId}`);
+                        // TODO: Open preview modal
+                        break;
+                    case '刪除':
+                        if (confirm(`確定要刪除題目 ${questionId} 嗎？`)) {
+                            alert(`已刪除題目 ${questionId}`);
+                            // TODO: Delete question via API
+                        }
+                        break;
+                }
+            });
+        });
+
+        // Flashcard actions
+        document.querySelectorAll('.flashcard-actions .btn-icon').forEach(button => {
+            button.addEventListener('click', function() {
+                const action = this.getAttribute('title');
+                const flashcard = this.closest('.flashcard-item');
+                const question = flashcard.querySelector('.flashcard-question').textContent;
+
+                console.log(`${action} flashcard:`, question);
+
+                if (action === '編輯') {
+                    alert(`編輯快閃卡：${question.substring(0, 30)}...`);
+                    // TODO: Open edit modal
+                } else if (action === '刪除') {
+                    if (confirm('確定要刪除此快閃卡嗎？')) {
+                        flashcard.remove();
+                        alert('快閃卡已刪除');
+                        // TODO: Delete via API
+                    }
+                }
+            });
+        });
+
+        console.log('Quiz Bank System initialized');
+    });
+</script>
 </body>
 </html>
