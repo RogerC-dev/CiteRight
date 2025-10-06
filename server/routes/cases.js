@@ -63,17 +63,18 @@ router.get('/', asyncHandler(async (req, res) => {
         console.log(`🔍 Searching for interpretation: ${number}`);
         
         // Query database for interpretation
-        const [rows] = await database.query(
-            `SELECT i.*, 
+        const result = await database.query(
+            `SELECT i.*,
                     iz.issue, iz.description, iz.reasoning, iz.fact,
-                    ie.issue as english_issue, ie.description as english_description, 
+                    ie.issue as english_issue, ie.description as english_description,
                     ie.reasoning as english_reasoning, ie.fact as english_fact
              FROM interpretations i
-             LEFT JOIN interpretations_zh iz ON i.interpretation_number = iz.interpretation_number  
+             LEFT JOIN interpretations_zh iz ON i.interpretation_number = iz.interpretation_number
              LEFT JOIN interpretations_en ie ON i.interpretation_number = ie.interpretation_number
-             WHERE i.interpretation_number = ?`,
+             WHERE i.interpretation_number = @param0`,
             [number]
         );
+        const rows = result.recordset;
         
         if (rows.length > 0) {
             const interpretation = rows[0];
@@ -99,12 +100,12 @@ router.get('/', asyncHandler(async (req, res) => {
             });
         } else {
             console.log(`❌ Interpretation ${number} not found`);
-            
+
             // Get sample available numbers
-            const [sampleRows] = await database.query(
-                'SELECT interpretation_number FROM interpretations ORDER BY interpretation_number LIMIT 5'
+            const sampleResult = await database.query(
+                'SELECT TOP 5 interpretation_number FROM interpretations ORDER BY interpretation_number'
             );
-            const available = sampleRows.map(row => row.interpretation_number).join(', ');
+            const available = sampleResult.recordset.map(row => row.interpretation_number).join(', ');
             
             throw new ApiError(404, `Constitutional interpretation '釋字第${number}號' not found`, true, JSON.stringify({ sampleAvailable: available }));
         }
@@ -171,19 +172,19 @@ router.get('/search', asyncHandler(async (req, res) => {
     
     // Search interpretations
     if (type === 'interpretation') {
-        const [rows] = await database.query(
-            `SELECT i.interpretation_number, i.interpretation_date, i.source_url,
+        const result = await database.query(
+            `SELECT TOP (@param4) i.interpretation_number, i.interpretation_date, i.source_url,
                     iz.number_title, iz.issue, iz.description
              FROM interpretations i
-             LEFT JOIN interpretations_zh iz ON i.interpretation_number = iz.interpretation_number  
-             WHERE i.interpretation_number LIKE ? 
-                OR iz.number_title LIKE ?
-                OR iz.issue LIKE ?
-                OR iz.description LIKE ?
-             ORDER BY i.interpretation_number DESC
-             LIMIT ?`,
+             LEFT JOIN interpretations_zh iz ON i.interpretation_number = iz.interpretation_number
+             WHERE i.interpretation_number LIKE @param0
+                OR iz.number_title LIKE @param1
+                OR iz.issue LIKE @param2
+                OR iz.description LIKE @param3
+             ORDER BY i.interpretation_number DESC`,
             [searchTerm, searchTerm, searchTerm, searchTerm, limitNum]
         );
+        const rows = result.recordset;
         
         const results = rows.map(row => ({
             number: row.interpretation_number,
@@ -244,16 +245,16 @@ router.get('/recent', asyncHandler(async (req, res) => {
     }
     
     const limitNum = parseInt(limit) || 20;
-    
-    const [rows] = await database.query(
-        `SELECT i.interpretation_number, i.interpretation_date, i.source_url,
+
+    const result = await database.query(
+        `SELECT TOP (@param0) i.interpretation_number, i.interpretation_date, i.source_url,
                 iz.number_title, iz.issue, iz.description
          FROM interpretations i
-         LEFT JOIN interpretations_zh iz ON i.interpretation_number = iz.interpretation_number  
-         ORDER BY i.interpretation_number DESC
-         LIMIT ?`,
+         LEFT JOIN interpretations_zh iz ON i.interpretation_number = iz.interpretation_number
+         ORDER BY i.interpretation_number DESC`,
         [limitNum]
     );
+    const rows = result.recordset;
     
     const results = rows.map(row => ({
         number: row.interpretation_number,
