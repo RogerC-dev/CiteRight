@@ -79,6 +79,7 @@
         .header {
             text-align: center;
             margin-bottom: 28px;
+            position: relative;
         }
 
         .logo {
@@ -95,6 +96,12 @@
             color: #1890ff;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             animation: pulse 2s infinite;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
         }
 
         @keyframes pulse {
@@ -204,6 +211,29 @@
             51%, 100% { opacity: 0.3; }
         }
 
+        /* Practice button in top right */
+        .top-right-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            z-index: 10;
+        }
+
+        .top-right-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
         .button-group {
             display: flex;
             flex-direction: column;
@@ -250,29 +280,6 @@
             box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
         }
 
-        .page-link-button {
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 12px 20px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-        }
-
-        .page-link-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
-        }
 
         .icon {
             font-size: 16px;
@@ -294,8 +301,11 @@
     </div>
 
     <div class="container">
+        <!-- Practice button top right -->
+        <a href="#" class="top-right-btn" id="practiceTopBtn">升級</a>
+
         <div class="header">
-            <div class="logo">⚖️</div>
+            <div class="logo" id="mainLogo">⚖️</div>
             <div class="title">CiteRight</div>
             <div class="subtitle">台灣法源探測器</div>
         </div>
@@ -317,19 +327,14 @@
         </div>
 
         <div class="button-group">
-            <button class="page-link-button" id="homeButton">
-                <span class="icon">🏠</span>
-                產品介紹頁面
-            </button>
-
             <button class="action-button" id="aiChatButton">
                 <span class="icon">🤖</span>
                 啟動 AI 法律助手
             </button>
 
-            <button class="action-button secondary" id="practiceButton">
-                <span class="icon">📚</span>
-                開始練習
+            <button class="action-button secondary" id="upgradeButton">
+                <span class="icon">✨</span>
+                題庫練習
             </button>
 
             <button class="action-button secondary" id="bookmarksButton">

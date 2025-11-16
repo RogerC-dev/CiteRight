@@ -257,6 +257,18 @@ function closeSettings() {
     document.getElementById('settingsModal').classList.remove('active');
 }
 
+// Open subscription page for upgrade
+function openSubscription() {
+    // Check if we're in extension context
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+        const subscriptionUrl = chrome.runtime.getURL('extension/pages/subscription.html');
+        chrome.tabs.create({ url: subscriptionUrl });
+    } else {
+        // Fallback for testing
+        window.open('subscription.html', '_blank');
+    }
+}
+
 // Close modal when clicking outside
 document.getElementById('settingsModal').addEventListener('click', function (e) {
     if (e.target === this) {
@@ -625,7 +637,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Add event listeners for settings
     document.getElementById('openSettingsBtn').addEventListener('click', openSettings);
-    document.getElementById('upgradeBtn').addEventListener('click', openSettings);
+    document.getElementById('upgradeBtn').addEventListener('click', openSubscription);
     document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
 
     // Add event listener for PDF upload zone

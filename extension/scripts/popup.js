@@ -16,9 +16,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const statusText = document.getElementById('statusText');
     const bookmarksButton = document.getElementById('bookmarksButton');
     const settingsButton = document.getElementById('settingsButton');
-    const homeButton = document.getElementById('homeButton');
+    const mainLogo = document.getElementById('mainLogo');
+    const practiceTopBtn = document.getElementById('practiceTopBtn');
     const aiChatButton = document.getElementById('aiChatButton');
-    const practiceButton = document.getElementById('practiceButton');
+    const upgradeButton = document.getElementById('upgradeButton');
 
     console.log('📋 DOM elements found:', {
         toggleSwitch: !!toggleSwitch,
@@ -47,9 +48,22 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('✅ Settings button event listener added');
     }
 
-    if (homeButton) {
-        homeButton.addEventListener('click', openHome);
-        console.log('✅ Home button event listener added');
+    // Main logo clickable (goes to main page)
+    if (mainLogo) {
+        mainLogo.addEventListener('click', function (e) {
+            e.preventDefault();
+            openHome();
+        });
+        console.log('✅ Main logo clickable - goes to home');
+    }
+
+    // Practice button top right
+    if (practiceTopBtn) {
+        practiceTopBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            openPractice();
+        });
+        console.log('✅ Practice top button event listener added');
     }
 
     if (aiChatButton) {
@@ -57,9 +71,9 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('✅ AI Chat button event listener added');
     }
 
-    if (practiceButton) {
-        practiceButton.addEventListener('click', openPractice);
-        console.log('✅ Practice button event listener added');
+    if (upgradeButton) {
+        upgradeButton.addEventListener('click', openUpgrade);
+        console.log('✅ Upgrade button event listener added');
     }
 
     // Add entrance animations
@@ -176,7 +190,7 @@ function openSettings() {
 }
 
 function openHome() {
-    console.log('🏠 Home button clicked');
+    console.log('🏠 Home button clicked - going to 5-tab main page');
     openExtensionPage('extension/pages/index.html#/');
 }
 
@@ -186,8 +200,13 @@ function openAIChat() {
 }
 
 function openPractice() {
-    console.log('📚 Practice button clicked - opening exam-bank.html');
-    openExtensionPage('extension/pages/exam-bank.html');
+    console.log('📚 Practice button clicked - opening 5-tab page with practice tab');
+    openExtensionPage('extension/pages/index.html#/practice');
+}
+
+function openUpgrade() {
+    console.log('✨ Upgrade button clicked - opening intro page');
+    openExtensionPage('extension/pages/index.html#/intro');
 }
 
 function openBookmarks() {

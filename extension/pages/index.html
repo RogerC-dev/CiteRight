@@ -18,6 +18,52 @@
             background-color: #f8f9fa;
         }
 
+        /* Logo Header for Intro Page */
+        .intro-logo-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 12px 20px;
+            display: none;
+        }
+
+        .intro-logo-header.show {
+            display: block;
+        }
+
+        .intro-logo-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #1890ff;
+            font-weight: 600;
+            font-size: 18px;
+            transition: opacity 0.2s;
+        }
+
+        .intro-logo-link:hover {
+            opacity: 0.8;
+        }
+
+        .intro-logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -30,6 +76,11 @@
             padding: 80px 0;
             position: relative;
             overflow: hidden;
+        }
+
+        /* Add top padding when logo header is visible */
+        body:has(.intro-logo-header.show) .hero {
+            padding-top: 140px;
         }
 
         .hero::before {
@@ -1275,10 +1326,18 @@
     </style>
 </head>
 <body>
+<!-- Logo Header for Intro Page -->
+<div class="intro-logo-header" id="introLogoHeader">
+    <a href="index.html#/" class="intro-logo-link">
+        <div class="intro-logo-icon">⚖️</div>
+        <span>CiteRight</span>
+    </a>
+</div>
+
 <!-- Navigation -->
 <div id="navigation-container"></div>
 
-<!-- Hero Section -->
+<!-- Hero Section (shown on intro page) -->
 <section class="hero">
     <div class="container">
         <div class="hero-content">
@@ -1312,7 +1371,7 @@
     </div>
 </section>
 
-<!-- Features Section -->
+<!-- Features Section (shown on intro page) -->
 <section class="features">
     <div class="container">
         <h2>Streamline your legal research</h2>
@@ -1340,7 +1399,7 @@
     </div>
 </section>
 
-<!-- Quiz Bank Section -->
+<!-- Quiz Bank Section (5-tab main page - default landing) -->
 <section class="quiz-bank">
     <div class="container">
         <h2>司律考題練習題庫系統</h2>
@@ -1729,7 +1788,7 @@
     </div>
 </section>
 
-<!-- Pricing Section -->
+<!-- Pricing Section (shown on intro page) -->
 <section class="pricing">
     <div class="container">
         <h2>Pricing</h2>
@@ -1775,7 +1834,7 @@
     </div>
 </section>
 
-<!-- Final CTA Section -->
+<!-- Final CTA Section (shown on intro page) -->
 <section class="final-cta">
     <div class="container">
         <h2>Ready to transform your legal research?</h2>
@@ -2439,28 +2498,101 @@
         if (window.extensionRouter) {
             // Register routes
             window.extensionRouter.register('/', function() {
-                showSection('hero');
+                // Default route: show 5-tab main page
                 hideAllTabs();
+                document.querySelector('.hero').style.display = 'none';
+                document.querySelector('.features').style.display = 'none';
+                document.querySelector('.pricing').style.display = 'none';
+                document.querySelector('.final-cta').style.display = 'none';
+                document.querySelector('.quiz-bank').style.display = 'block';
+                showTab('practice');
+                // Hide logo header
+                const logoHeader = document.getElementById('introLogoHeader');
+                if (logoHeader) logoHeader.classList.remove('show');
+                // Show navigation
+                const navContainer = document.getElementById('navigation-container');
+                if (navContainer) navContainer.style.display = 'block';
+            });
+
+            // Product intro route (for upgrade flow)
+            window.extensionRouter.register('intro', function() {
+                hideAllTabs();
+                // Show all product intro sections
+                document.querySelector('.hero').style.display = 'block';
+                document.querySelector('.features').style.display = 'block';
+                document.querySelector('.pricing').style.display = 'block';
+                document.querySelector('.final-cta').style.display = 'block';
+                document.querySelector('.quiz-bank').style.display = 'none';
+                // Show logo header
+                const logoHeader = document.getElementById('introLogoHeader');
+                if (logoHeader) logoHeader.classList.add('show');
+                // Hide navigation
+                const navContainer = document.getElementById('navigation-container');
+                if (navContainer) navContainer.style.display = 'none';
             });
 
             window.extensionRouter.register('practice', function() {
-                showSection('quiz-bank');
+                hideAllTabs();
+                document.querySelector('.hero').style.display = 'none';
+                document.querySelector('.features').style.display = 'none';
+                document.querySelector('.pricing').style.display = 'none';
+                document.querySelector('.final-cta').style.display = 'none';
+                document.querySelector('.quiz-bank').style.display = 'block';
                 showTab('practice');
+                // Hide logo header
+                const logoHeader = document.getElementById('introLogoHeader');
+                if (logoHeader) logoHeader.classList.remove('show');
+                // Show navigation
+                const navContainer = document.getElementById('navigation-container');
+                if (navContainer) navContainer.style.display = 'block';
             });
 
             window.extensionRouter.register('flashcards', function() {
-                showSection('quiz-bank');
+                hideAllTabs();
+                document.querySelector('.hero').style.display = 'none';
+                document.querySelector('.features').style.display = 'none';
+                document.querySelector('.pricing').style.display = 'none';
+                document.querySelector('.final-cta').style.display = 'none';
+                document.querySelector('.quiz-bank').style.display = 'block';
                 showTab('flashcards');
+                // Hide logo header
+                const logoHeader = document.getElementById('introLogoHeader');
+                if (logoHeader) logoHeader.classList.remove('show');
+                // Show navigation
+                const navContainer = document.getElementById('navigation-container');
+                if (navContainer) navContainer.style.display = 'block';
             });
 
             window.extensionRouter.register('progress', function() {
-                showSection('quiz-bank');
+                hideAllTabs();
+                document.querySelector('.hero').style.display = 'none';
+                document.querySelector('.features').style.display = 'none';
+                document.querySelector('.pricing').style.display = 'none';
+                document.querySelector('.final-cta').style.display = 'none';
+                document.querySelector('.quiz-bank').style.display = 'block';
                 showTab('progress');
+                // Hide logo header
+                const logoHeader = document.getElementById('introLogoHeader');
+                if (logoHeader) logoHeader.classList.remove('show');
+                // Show navigation
+                const navContainer = document.getElementById('navigation-container');
+                if (navContainer) navContainer.style.display = 'block';
             });
 
             window.extensionRouter.register('admin', function() {
-                showSection('quiz-bank');
+                hideAllTabs();
+                document.querySelector('.hero').style.display = 'none';
+                document.querySelector('.features').style.display = 'none';
+                document.querySelector('.pricing').style.display = 'none';
+                document.querySelector('.final-cta').style.display = 'none';
+                document.querySelector('.quiz-bank').style.display = 'block';
                 showTab('admin');
+                // Hide logo header
+                const logoHeader = document.getElementById('introLogoHeader');
+                if (logoHeader) logoHeader.classList.remove('show');
+                // Show navigation
+                const navContainer = document.getElementById('navigation-container');
+                if (navContainer) navContainer.style.display = 'block';
             });
 
             window.extensionRouter.register('subscription', function() {
@@ -2489,10 +2621,7 @@
     }
 
     function showSection(sectionId) {
-        const sections = document.querySelectorAll('section');
-        sections.forEach(section => {
-            section.style.display = 'none';
-        });
+        // This function is kept for compatibility but routing now handles visibility directly
         const targetSection = document.querySelector(`.${sectionId}`);
         if (targetSection) {
             targetSection.style.display = 'block';
