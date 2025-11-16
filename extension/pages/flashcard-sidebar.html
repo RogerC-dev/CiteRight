@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,35 +15,37 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
             background: #f5f7fa;
-            color: #333;
+            color: #2c3e50;
             font-size: 14px;
-            line-height: 1.5;
+            line-height: 1.6;
             overflow-x: hidden;
         }
 
-        /* Header */
+        /* Header - Modern Design */
         .sidebar-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+            color: #2c3e50;
+            padding: 20px 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-bottom: 1px solid #e0e0e0;
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
         .sidebar-header h1 {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 4px;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 6px;
             display: flex;
             align-items: center;
             gap: 8px;
+            color: #2c3e50;
         }
 
         .sidebar-header .subtitle {
-            font-size: 12px;
-            opacity: 0.9;
+            font-size: 13px;
+            color: #7f8c8d;
         }
 
         /* Tab Navigation - Compact */
@@ -61,23 +64,23 @@
             background: none;
             border: none;
             border-bottom: 3px solid transparent;
-            color: #6c757d;
-            font-size: 13px;
-            font-weight: 600;
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
             text-align: center;
         }
 
         .tab-btn:hover {
-            color: #667eea;
+            color: #007bff;
             background: #f8f9fa;
         }
 
         .tab-btn.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
-            background: #f0f4ff;
+            color: #007bff;
+            border-bottom-color: #007bff;
+            background: white;
         }
 
         .tab-content {
@@ -99,22 +102,23 @@
 
         .stat-box {
             background: white;
-            padding: 12px;
+            padding: 16px;
             border-radius: 8px;
             text-align: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0e0e0;
         }
 
         .stat-number {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 700;
-            color: #667eea;
-            margin-bottom: 4px;
+            color: #2c3e50;
+            margin-bottom: 6px;
         }
 
         .stat-label {
-            font-size: 11px;
-            color: #666;
+            font-size: 12px;
+            color: #7f8c8d;
         }
 
         /* Deck List - Compact */
@@ -126,23 +130,36 @@
 
         .deck-card {
             background: white;
-            border-radius: 10px;
-            padding: 14px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0e0e0;
             cursor: pointer;
-            transition: all 0.2s ease;
-            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+            border-left: 4px solid #007bff;
         }
 
         .deck-card:hover {
-            box-shadow: 0 4px 12px rgba(102,126,234,0.2);
-            transform: translateX(2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+            border-left-width: 6px;
         }
 
-        .deck-card.civil { border-left-color: #4caf50; }
-        .deck-card.criminal { border-left-color: #f44336; }
-        .deck-card.administrative { border-left-color: #ff9800; }
-        .deck-card.constitutional { border-left-color: #2196f3; }
+        .deck-card.civil {
+            border-left-color: #4caf50;
+        }
+
+        .deck-card.criminal {
+            border-left-color: #f44336;
+        }
+
+        .deck-card.administrative {
+            border-left-color: #ff9800;
+        }
+
+        .deck-card.constitutional {
+            border-left-color: #2196f3;
+        }
 
         .deck-title {
             font-size: 15px;
@@ -169,7 +186,7 @@
         }
 
         .badge-category {
-            background: #e7f3ff;
+            background: #e3f2fd;
             color: #1976d2;
         }
 
@@ -177,9 +194,17 @@
             color: white;
         }
 
-        .badge-difficulty.beginner { background: #4caf50; }
-        .badge-difficulty.intermediate { background: #ff9800; }
-        .badge-difficulty.advanced { background: #f44336; }
+        .badge-difficulty.beginner {
+            background: #4caf50;
+        }
+
+        .badge-difficulty.intermediate {
+            background: #ff9800;
+        }
+
+        .badge-difficulty.advanced {
+            background: #f44336;
+        }
 
         .deck-meta {
             display: flex;
@@ -229,16 +254,16 @@
             padding: 20px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .card-front {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
             color: white;
         }
 
         .card-back {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
             color: white;
             transform: rotateY(180deg);
         }
@@ -252,7 +277,7 @@
         }
 
         .card-category-tag {
-            background: rgba(255,255,255,0.25);
+            background: rgba(255, 255, 255, 0.25);
             padding: 4px 10px;
             border-radius: 12px;
             font-weight: 500;
@@ -282,7 +307,7 @@
         .explanation-box {
             margin-top: 12px;
             padding: 12px;
-            background: rgba(255,255,255,0.15);
+            background: rgba(255, 255, 255, 0.15);
             border-radius: 8px;
             font-size: 13px;
             line-height: 1.4;
@@ -303,8 +328,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
         }
 
         /* Action Buttons - Compact */
@@ -332,49 +364,97 @@
 
         .action-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
-        .btn-again { background: #f44336; }
-        .btn-hard { background: #ff9800; }
-        .btn-good { background: #4caf50; }
-        .btn-easy { background: #2196f3; }
+        .btn-again {
+            background: #f44336;
+        }
 
-        /* Review Schedule - Compact */
+        .btn-again:hover {
+            background: #d32f2f;
+        }
+
+        .btn-hard {
+            background: #ff9800;
+        }
+
+        .btn-hard:hover {
+            background: #f57c00;
+        }
+
+        .btn-good {
+            background: #4CAF50;
+        }
+
+        .btn-good:hover {
+            background: #45a049;
+        }
+
+        .btn-easy {
+            background: #007bff;
+        }
+
+        .btn-easy:hover {
+            background: #0056b3;
+        }
+
+        /* Review Schedule - Modern Design Matching ExamQuestionBank */
         .review-schedule {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 16px;
         }
 
         .schedule-item {
             background: white;
-            border-radius: 10px;
-            padding: 12px;
+            border-radius: 12px;
+            padding: 20px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-            border-left: 4px solid #ddd;
+            gap: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .schedule-item:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
         }
 
         .schedule-item.urgent {
-            border-left-color: #f44336;
+            border-color: #ff6b6b;
             background: #fff5f5;
         }
 
         .schedule-item.soon {
-            border-left-color: #ff9800;
-            background: #fff8e1;
+            border-color: #ffd43b;
+            background: #fffbeb;
         }
 
         .schedule-item.normal {
-            border-left-color: #4caf50;
-            background: #f1f8f4;
+            border-color: #51cf66;
+            background: #f4fdf6;
         }
 
         .schedule-icon {
-            font-size: 24px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .schedule-item.urgent .schedule-icon {
+            background: #ff6b6b;
+        }
+
+        .schedule-item.soon .schedule-icon {
+            background: #ffd43b;
+        }
+
+        .schedule-item.normal .schedule-icon {
+            background: #51cf66;
         }
 
         .schedule-info {
@@ -382,32 +462,33 @@
         }
 
         .schedule-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 2px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 4px;
         }
 
         .schedule-count {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 700;
-            color: #667eea;
+            color: #2c3e50;
         }
 
         .review-btn {
-            padding: 8px 16px;
-            background: #667eea;
+            padding: 10px 20px;
+            background: #007bff;
             color: white;
             border: none;
             border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
             white-space: nowrap;
+            transition: background 0.3s;
         }
 
         .review-btn:hover {
-            background: #5a6fd8;
+            background: #0056b3;
         }
 
         /* Progress Bar - Compact */
@@ -425,7 +506,7 @@
 
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
             transition: width 0.3s ease;
         }
 
@@ -449,26 +530,26 @@
             border: 2px dashed #dee2e6;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            color: #667eea;
-            transition: all 0.2s ease;
+            font-size: 14px;
+            font-weight: 500;
+            color: #007bff;
+            transition: all 0.3s ease;
             text-align: center;
         }
 
         .admin-btn:hover {
-            border-color: #667eea;
-            background: #f0f4ff;
+            border-color: #007bff;
+            background: #f8f9fa;
         }
 
         .admin-btn.primary {
-            background: #667eea;
+            background: #007bff;
             color: white;
             border: none;
         }
 
         .admin-btn.primary:hover {
-            background: #5a6fd8;
+            background: #0056b3;
         }
 
         /* Empty State */
@@ -496,18 +577,19 @@
         }
 
         .create-btn {
-            background: #667eea;
+            background: #007bff;
             color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
         }
 
         .create-btn:hover {
-            background: #5a6fd8;
+            background: #0056b3;
         }
 
         /* Loading State */
@@ -521,34 +603,40 @@
             width: 40px;
             height: 40px;
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border-top: 3px solid #007bff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 12px;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* Back Button */
         .back-btn {
-            background: rgba(255,255,255,0.2);
+            background: #6c757d;
             color: white;
             border: none;
             padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
             margin-bottom: 12px;
             display: flex;
             align-items: center;
             gap: 6px;
+            transition: background 0.3s;
         }
 
         .back-btn:hover {
-            background: rgba(255,255,255,0.3);
+            background: #5a6268;
         }
 
         /* Scrollbar Styling */
@@ -570,6 +658,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Header -->
     <div class="sidebar-header">
@@ -648,30 +737,30 @@
     <div class="tab-content" id="flashcards-tab">
         <div class="review-schedule">
             <div class="schedule-item urgent">
-                <div class="schedule-icon">🔴</div>
+                <div class="schedule-icon"></div>
                 <div class="schedule-info">
                     <div class="schedule-title">今日待複習</div>
-                    <div class="schedule-count">8 張</div>
+                    <div class="schedule-count">8 張卡片</div>
                 </div>
-                <button class="review-btn" onclick="startReview('today')">複習</button>
+                <button class="review-btn" onclick="startReview('today')">立即複習</button>
             </div>
 
             <div class="schedule-item soon">
-                <div class="schedule-icon">🟡</div>
+                <div class="schedule-icon"></div>
                 <div class="schedule-info">
                     <div class="schedule-title">明日預定</div>
-                    <div class="schedule-count">5 張</div>
+                    <div class="schedule-count">5 張卡片</div>
                 </div>
-                <button class="review-btn" onclick="startReview('tomorrow')">查看</button>
+                <button class="review-btn" onclick="viewDetails('tomorrow')">查看詳情</button>
             </div>
 
             <div class="schedule-item normal">
-                <div class="schedule-icon">🟢</div>
+                <div class="schedule-icon"></div>
                 <div class="schedule-info">
                     <div class="schedule-title">本週預定</div>
-                    <div class="schedule-count">12 張</div>
+                    <div class="schedule-count">12 張卡片</div>
                 </div>
-                <button class="review-btn" onclick="startReview('week')">查看</button>
+                <button class="review-btn" onclick="viewDetails('week')">查看詳情</button>
             </div>
         </div>
 
@@ -767,7 +856,7 @@
     <script>
         // Tab Navigation
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const targetTab = this.dataset.tab;
 
                 // Update buttons
@@ -782,7 +871,7 @@
 
         // Deck Selection
         document.querySelectorAll('.deck-card').forEach(card => {
-            card.addEventListener('click', function() {
+            card.addEventListener('click', function () {
                 const deckId = this.dataset.deckId;
                 startDeckStudy(deckId);
             });
@@ -791,7 +880,7 @@
         // Flashcard Flip
         const flashcardInner = document.getElementById('flashcard-inner');
         if (flashcardInner) {
-            flashcardInner.addEventListener('click', function() {
+            flashcardInner.addEventListener('click', function () {
                 if (!this.classList.contains('flipped')) {
                     this.classList.add('flipped');
                     document.getElementById('difficulty-buttons').style.display = 'grid';
@@ -810,6 +899,11 @@
             document.querySelector('.review-schedule').style.display = 'flex';
             document.getElementById('study-view').style.display = 'none';
             resetCard();
+        }
+
+        function viewDetails(period) {
+            console.log('Viewing details for:', period);
+            alert(`查看${period === 'tomorrow' ? '明日' : '本週'}卡片詳情`);
         }
 
         function startDeckStudy(deckId) {
@@ -880,4 +974,5 @@
         console.log('🃏 Flashcard Sidebar initialized');
     </script>
 </body>
+
 </html>

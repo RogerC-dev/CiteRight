@@ -169,6 +169,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return true; // Keep message channel open for async response
     }
 
+    // Handle API proxy requests from content scripts (bypasses CORS)
+    if (msg.type === 'API_REQUEST') {
+        handleApiRequest(msg, sendResponse);
+        return true; // Keep message channel open for async response
+    }
+
     // Handle other message types synchronously
     handleOtherMessages(msg, sendResponse);
     return true; // Keep message channel open for async response
@@ -351,32 +357,32 @@ async function handleDictionarySearch(msg, sendResponse) {
     try {
         const { query } = msg;
         console.log('🔍 Dictionary search for:', query);
-        
+
         // First, try to search in cached data
         const cachedResults = searchCachedLaws(query);
-        
+
         if (cachedResults.length > 0) {
-            sendResponse({ 
-                success: true, 
-                results: cachedResults 
+            sendResponse({
+                success: true,
+                results: cachedResults
             });
             return;
         }
-        
+
         // If no cached results, generate mock results for now
         // In production, this would make actual API calls
         const results = generateMockSearchResults(query);
-        
-        sendResponse({ 
-            success: true, 
-            results: results 
+
+        sendResponse({
+            success: true,
+            results: results
         });
-        
+
     } catch (error) {
         console.error('Dictionary search error:', error);
-        sendResponse({ 
-            success: false, 
-            error: error.message 
+        sendResponse({
+            success: false,
+            error: error.message
         });
     }
 }
@@ -386,36 +392,84 @@ async function handleFetchLawContent(msg, sendResponse) {
     try {
         const { lawName } = msg;
         console.log('📖 Fetching law content for:', lawName);
-        
+
         // Check cache first
         const cacheKey = `law_content_${lawName}`;
         const cached = await getCachedData(cacheKey);
-        
+
         if (cached) {
-            sendResponse({ 
-                success: true, 
-                data: cached 
+            sendResponse({
+                success: true,
+                data: cached
             });
             return;
         }
-        
+
         // Generate mock law content for now
         // In production, this would make actual API calls
         const lawContent = generateMockLawContent(lawName);
-        
+
         // Cache the result
         await setCachedData(cacheKey, lawContent, 3600); // Cache for 1 hour
-        
-        sendResponse({ 
-            success: true, 
-            data: lawContent 
+
+        sendResponse({
+            success: true,
+            data: lawContent
         });
-        
+
     } catch (error) {
         console.error('Fetch law content error:', error);
-        sendResponse({ 
-            success: false, 
-            error: error.message 
+        sendResponse({
+            success: false,
+            error: error.message
+        });
+    }
+}
+
+// API proxy handler - allows content scripts to make API requests through background script
+async function handleApiRequest(msg, sendResponse) {
+    try {
+        const { endpoint, method = 'GET', body, headers = {} } = msg;
+
+        if (!endpoint) {
+            return sendResponse({
+                success: false,
+                error: 'Missing endpoint in API request'
+            });
+        }
+
+        const url = endpoint.startsWith('http')
+            ? endpoint
+            : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+
+        console.log(`🌐 Background: Proxying API request to ${url}`);
+
+        const fetchOptions = {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...headers
+            }
+        };
+
+        if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+            fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
+        }
+
+        const response = await fetchWithRetry(url, fetchOptions);
+        const data = await response.json();
+
+        return sendResponse({
+            success: true,
+            data: data,
+            status: response.status
+        });
+
+    } catch (error) {
+        console.error('Background: API proxy error:', error);
+        return sendResponse({
+            success: false,
+            error: error.message || 'API request failed'
         });
     }
 }
@@ -430,10 +484,10 @@ function searchCachedLaws(query) {
         { lawName: '公司法', articles: ['第1條', '第8條', '第128條'] },
         { lawName: '民事訴訟法', articles: ['第1條', '第244條', '第427條'] }
     ];
-    
+
     const results = [];
     const lowerQuery = query.toLowerCase();
-    
+
     commonLaws.forEach(law => {
         if (law.lawName.includes(query)) {
             law.articles.forEach(article => {
@@ -447,7 +501,7 @@ function searchCachedLaws(query) {
             });
         }
     });
-    
+
     return results.slice(0, 10); // Return max 10 results
 }
 
@@ -465,16 +519,16 @@ function generateMockSearchResults(query) {
             })
         }
     ];
-    
+
     const results = [];
     const template = mockTemplates[0];
-    
+
     // Generate 3-5 results
     const numResults = Math.floor(Math.random() * 3) + 3;
     for (let i = 0; i < numResults && i < template.laws.length; i++) {
         results.push(template.getResult(template.laws[i]));
     }
-    
+
     return results;
 }
 
@@ -513,7 +567,7 @@ function generateMockLawContent(lawName) {
         totalArticles: 100,
         officialUrl: `https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=${lawName}`
     };
-    
+
     return mockContent;
 }
 
@@ -536,7 +590,7 @@ async function setCachedData(key, value, ttlSeconds = 3600) {
         value: value,
         expiry: Date.now() + (ttlSeconds * 1000)
     };
-    
+
     return new Promise((resolve) => {
         chrome.storage.local.set({ [key]: data }, () => {
             resolve();
@@ -587,7 +641,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 
     if (details.reason === 'install') {
         console.log('CiteRight: First time installation');
-        
+
         // Initialize dictionary settings
         chrome.storage.local.set({
             dictionary_settings: {
@@ -598,7 +652,7 @@ chrome.runtime.onInstalled.addListener((details) => {
             }
         });
         console.log('📖 Dictionary feature initialized');
-        
+
     } else if (details.reason === 'update') {
         console.log('CiteRight: Extension updated');
         console.log('📖 Dictionary feature updated');

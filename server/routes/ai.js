@@ -34,7 +34,7 @@ const axios = require('axios');
  */
 router.post('/chat', asyncHandler(async (req, res) => {
     const { message, conversationId, model = 'gpt-3.5-turbo' } = req.body;
-    
+
     if (!message) {
         return res.status(400).json({
             success: false,
@@ -54,7 +54,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
             saveRequest.input('role', 'user');
             saveRequest.input('content', message);
             saveRequest.input('model', model);
-            
+
             try {
                 await saveRequest.query(`
                     INSERT INTO ChatMessages (conversation_id, user_id, role, content, model, created_at)
@@ -72,7 +72,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
             aiResponse = await callAIAPI(message, model);
         } catch (aiError) {
             console.error('AI API error:', aiError);
-            
+
             // Fallback response
             aiResponse = {
                 content: '抱歉，AI 服務暫時無法使用。請稍後再試。',
@@ -89,7 +89,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
             saveRequest.input('role', 'assistant');
             saveRequest.input('content', aiResponse.content);
             saveRequest.input('model', model);
-            
+
             try {
                 await saveRequest.query(`
                     INSERT INTO ChatMessages (conversation_id, user_id, role, content, model, created_at)
@@ -269,11 +269,11 @@ async function callClaude(message, systemPrompt) {
  */
 router.get('/history', asyncHandler(async (req, res) => {
     const { conversationId, limit = 50 } = req.query;
-    
+
     if (!database.isConnected()) {
-        return res.status(503).json({ 
-            success: false, 
-            error: 'Database not connected' 
+        return res.status(503).json({
+            success: false,
+            error: 'Database not connected'
         });
     }
 
@@ -353,7 +353,7 @@ router.get('/history', asyncHandler(async (req, res) => {
  */
 router.post('/analyze-case', asyncHandler(async (req, res) => {
     const { text, model = 'gpt-3.5-turbo' } = req.body;
-    
+
     if (!text) {
         return res.status(400).json({
             success: false,

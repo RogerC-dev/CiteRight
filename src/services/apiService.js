@@ -5,13 +5,71 @@
 const API_BASE_URL = 'http://localhost:3000'
 
 /**
+ * 檢查是否在 Chrome 擴充功能環境中
+ */
+function isChromeExtension() {
+  return typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id
+}
+
+/**
+ * 透過背景腳本代理 API 請求（用於內容腳本，避免 CORS 問題）
+ */
+async function apiRequestViaBackground(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    // 從完整 URL 中提取端點路徑
+    let endpoint = url
+    if (url.startsWith(API_BASE_URL)) {
+      endpoint = url.replace(API_BASE_URL, '')
+    }
+    // 確保端點以 / 開頭
+    if (!endpoint.startsWith('/')) {
+      endpoint = '/' + endpoint
+    }
+
+    chrome.runtime.sendMessage(
+      {
+        type: 'API_REQUEST',
+        endpoint: endpoint,
+        method: options.method || 'GET',
+        body: options.body,
+        headers: options.headers
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message))
+          return
+        }
+
+        if (response && response.success) {
+          resolve(response.data)
+        } else {
+          reject(new Error(response?.error || 'API request failed'))
+        }
+      }
+    )
+  })
+}
+
+/**
  * 基礎 fetch 包裝器，包含錯誤處理
+ * 在內容腳本環境中會自動使用背景腳本代理以避免 CORS 問題
  * @param {string} url - API 端點
  * @param {Object} options - fetch 選項
  * @returns {Promise} - API 回應
  */
 async function apiRequest(url, options = {}) {
   try {
+    // 如果在 Chrome 擴充功能環境中，使用背景腳本代理
+    if (isChromeExtension()) {
+      try {
+        return await apiRequestViaBackground(url, options)
+      } catch (proxyError) {
+        console.warn('背景腳本代理失敗，嘗試直接請求:', proxyError)
+        // 如果代理失敗，回退到直接請求（可能會遇到 CORS 錯誤）
+      }
+    }
+
+    // 直接 fetch 請求（用於非內容腳本環境）
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
@@ -56,9 +114,9 @@ export async function fetchInterpretation(number) {
       'caseType': '釋字',
       'number': number
     })
-    
+
     const response = await apiRequest(`${API_BASE_URL}/api/case?${params.toString()}`)
-    
+
     return response
   } catch (error) {
     console.error('載入釋字資料失敗:', error)
@@ -106,7 +164,7 @@ export async function fetchLawArticle(lawName, article, paragraph = '') {
           // 建立簡單的項目分段規則：以 '項' 分隔或以換行 + 項號標記
           const parts = contentText.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
           // 嘗試在每段中尋找包含 '第 p 項' 或 '（p）' 或 '（第p項）' 的段落
-          const found = parts.find(part => new RegExp(`第\\s*${p}\\s*項`).test(part) || new RegExp(`^\\(${p}\\)`).test(part) || new RegExp(`（\\s*${p}\\s*）`).test(part) )
+          const found = parts.find(part => new RegExp(`第\\s*${p}\\s*項`).test(part) || new RegExp(`^\\(${p}\\)`).test(part) || new RegExp(`（\\s*${p}\\s*）`).test(part))
           if (found) {
             contentText = found
           } else {
@@ -181,9 +239,9 @@ export async function fetchJudgment(year, caseType, number) {
       caseType: caseType,
       number: number
     })
-    
+
     const response = await apiRequest(`${API_BASE_URL}/api/judgment?${params.toString()}`)
-    
+
     return {
       title: response.title || `${year}年${caseType}字第${number}號`,
       content: response.content || '無法載入判決內容',

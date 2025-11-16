@@ -19,10 +19,10 @@ async function checkSubscription(req, res, next) {
 
     try {
         const userId = req.user?.id || 'anonymous';
-        
+
         const request = database.getRequest();
         request.input('userId', userId);
-        
+
         const result = await request.query(`
             SELECT TOP 1
                 plan,
@@ -115,7 +115,7 @@ function checkFeature(featureName) {
         }
 
         const features = getPlanFeatures(req.subscription.plan);
-        
+
         if (!features[featureName]) {
             return res.status(403).json({
                 success: false,

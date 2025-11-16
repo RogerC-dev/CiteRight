@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -60,7 +61,7 @@
 
         .pricing-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
         }
 
         .pricing-card.featured {
@@ -257,6 +258,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -344,14 +346,14 @@
 
                 if (data.success) {
                     const subscription = data.data;
-                    
+
                     // Show status if has subscription
                     if (subscription.hasSubscription) {
                         document.getElementById('subscription-status').style.display = 'block';
                         document.getElementById('current-plan').textContent = subscription.plan.toUpperCase();
                         document.getElementById('end-date').textContent = new Date(subscription.endDate).toLocaleDateString('zh-TW');
                         document.getElementById('auto-renew').textContent = subscription.autoRenew ? '是' : '否';
-                        
+
                         const badge = document.getElementById('status-badge');
                         badge.textContent = subscription.status === 'active' ? '啟用中' : '已過期';
                         badge.className = `status-badge ${subscription.status}`;
@@ -366,8 +368,8 @@
 
                     const currentPlan = planButtons[subscription.plan] || 'basic';
                     document.getElementById(`${currentPlan}-current`).style.display = 'inline-block';
-                    document.getElementById(`${currentPlan}-button`).textContent = subscription.hasSubscription && subscription.status === 'active' 
-                        ? '目前方案' 
+                    document.getElementById(`${currentPlan}-button`).textContent = subscription.hasSubscription && subscription.status === 'active'
+                        ? '目前方案'
                         : (currentPlan === 'basic' ? '目前方案' : '選擇此方案');
                 }
             } catch (error) {
@@ -459,5 +461,5 @@
         loadSubscriptionStatus();
     </script>
 </body>
-</html>
 
+</html>

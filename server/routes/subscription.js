@@ -17,18 +17,18 @@ const { asyncHandler } = require('../middleware/errorHandler');
  */
 router.get('/status', asyncHandler(async (req, res) => {
     if (!database.isConnected()) {
-        return res.status(503).json({ 
-            success: false, 
-            error: 'Database not connected' 
+        return res.status(503).json({
+            success: false,
+            error: 'Database not connected'
         });
     }
 
     try {
         const userId = req.user?.id || 'anonymous';
-        
+
         const request = database.getRequest();
         request.input('userId', userId);
-        
+
         const result = await request.query(`
             SELECT TOP 1
                 id,
@@ -157,7 +157,7 @@ function getPlanFeatures(plan) {
  */
 router.post('/create', asyncHandler(async (req, res) => {
     const { plan, paymentMethodId, autoRenew = true } = req.body;
-    
+
     if (!plan || !['pro', 'enterprise'].includes(plan)) {
         return res.status(400).json({
             success: false,
@@ -173,15 +173,15 @@ router.post('/create', asyncHandler(async (req, res) => {
     }
 
     if (!database.isConnected()) {
-        return res.status(503).json({ 
-            success: false, 
-            error: 'Database not connected' 
+        return res.status(503).json({
+            success: false,
+            error: 'Database not connected'
         });
     }
 
     try {
         const userId = req.user?.id || 'anonymous';
-        
+
         // TODO: Process payment with Stripe/PayPal
         // For now, we'll just create the subscription record
         // In production, you would:
@@ -245,18 +245,18 @@ router.post('/create', asyncHandler(async (req, res) => {
  */
 router.post('/cancel', asyncHandler(async (req, res) => {
     if (!database.isConnected()) {
-        return res.status(503).json({ 
-            success: false, 
-            error: 'Database not connected' 
+        return res.status(503).json({
+            success: false,
+            error: 'Database not connected'
         });
     }
 
     try {
         const userId = req.user?.id || 'anonymous';
-        
+
         const request = database.getRequest();
         request.input('userId', userId);
-        
+
         await request.query(`
             UPDATE Subscriptions
             SET status = 'cancelled',

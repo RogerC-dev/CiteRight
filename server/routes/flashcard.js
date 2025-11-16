@@ -24,11 +24,11 @@ const { asyncHandler } = require('../middleware/errorHandler');
  */
 router.get('/', asyncHandler(async (req, res) => {
     const { filter = 'all' } = req.query;
-    
+
     if (!database.isConnected()) {
-        return res.status(503).json({ 
-            success: false, 
-            error: 'Database not connected' 
+        return res.status(503).json({
+            success: false,
+            error: 'Database not connected'
         });
     }
 
@@ -134,7 +134,7 @@ router.get('/', asyncHandler(async (req, res) => {
  */
 router.post('/', asyncHandler(async (req, res) => {
     const { questionId, frontText, backText, tags = [] } = req.body;
-    
+
     if (!frontText || !backText) {
         return res.status(400).json({
             success: false,
@@ -143,9 +143,9 @@ router.post('/', asyncHandler(async (req, res) => {
     }
 
     if (!database.isConnected()) {
-        return res.status(503).json({ 
-            success: false, 
-            error: 'Database not connected' 
+        return res.status(503).json({
+            success: false,
+            error: 'Database not connected'
         });
     }
 
@@ -157,7 +157,7 @@ router.post('/', asyncHandler(async (req, res) => {
         request.input('frontText', frontText);
         request.input('backText', backText);
         request.input('tags', JSON.stringify(tags));
-        
+
         // Initialize SRS values
         const easeFactor = 2.5;
         const intervalDays = 1;
@@ -236,7 +236,7 @@ router.post('/', asyncHandler(async (req, res) => {
 router.put('/:id/review', asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { quality } = req.body;
-    
+
     if (quality === undefined || quality < 0 || quality > 5) {
         return res.status(400).json({
             success: false,
@@ -245,15 +245,15 @@ router.put('/:id/review', asyncHandler(async (req, res) => {
     }
 
     if (!database.isConnected()) {
-        return res.status(503).json({ 
-            success: false, 
-            error: 'Database not connected' 
+        return res.status(503).json({
+            success: false,
+            error: 'Database not connected'
         });
     }
 
     try {
         const userId = req.user?.id || 'anonymous';
-        
+
         // Get current flashcard
         const getRequest = database.getRequest();
         getRequest.input('id', parseInt(id));
@@ -289,7 +289,7 @@ router.put('/:id/review', asyncHandler(async (req, res) => {
             }
             repetitions += 1;
             easeFactor = Math.max(1.3, easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
-            
+
             if (status === 'new') {
                 status = 'learning';
             } else if (intervalDays >= 21) {
@@ -365,20 +365,20 @@ router.put('/:id/review', asyncHandler(async (req, res) => {
  */
 router.get('/due', asyncHandler(async (req, res) => {
     if (!database.isConnected()) {
-        return res.status(503).json({ 
-            success: false, 
-            error: 'Database not connected' 
+        return res.status(503).json({
+            success: false,
+            error: 'Database not connected'
         });
     }
 
     try {
         const userId = req.user?.id || 'anonymous';
         const today = new Date().toISOString().split('T')[0];
-        
+
         const request = database.getRequest();
         request.input('userId', userId);
         request.input('today', today);
-        
+
         const result = await request.query(`
             SELECT 
                 f.id,

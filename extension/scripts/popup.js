@@ -7,9 +7,9 @@ const isExtensionContext = !!(typeof chrome !== 'undefined' && chrome.runtime &&
 console.log('🔧 Popup script loaded, extension context:', isExtensionContext);
 
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('🎯 DOM loaded, initializing popup...');
-    
+
     // DOM elements
     const toggleSwitch = document.getElementById('toggleSwitch');
     const statusDot = document.getElementById('statusDot');
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
         bookmarksButton.addEventListener('click', openBookmarks);
         console.log('✅ Bookmarks button event listener added');
     }
-    
+
     if (settingsButton) {
         settingsButton.addEventListener('click', openSettings);
         console.log('✅ Settings button event listener added');
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
         practiceButton.addEventListener('click', openPractice);
         console.log('✅ Practice button event listener added');
     }
-    
+
     // Add entrance animations
     const elements = document.querySelectorAll('.toggle-section, .action-button');
     elements.forEach((el, index) => {
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
             el.style.transform = 'translateY(0)';
         }, index * 100);
     });
-    
+
     console.log('🚀 Popup initialization complete');
 });
 
@@ -83,7 +83,7 @@ function toggleExtension() {
     console.log('🔄 New state:', isEnabled ? 'ENABLED' : 'DISABLED');
     updateUI();
     saveExtensionState();
-    
+
     // Send global enable state change to background script
     if (isExtensionContext) {
         try {
@@ -104,11 +104,11 @@ function toggleExtension() {
     } else {
         console.log('Not in extension context - background message skipped');
     }
-    
+
     // Send message to current tab's content script
     if (isExtensionContext) {
         try {
-            chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
                 if (tabs && tabs[0]) {
                     console.log('📤 Sending toggle message to content script on tab:', tabs[0].id);
                     chrome.tabs.sendMessage(tabs[0].id, {
@@ -132,7 +132,7 @@ function toggleExtension() {
         // For testing without extension context
         alert(`法律辨識工具已${isEnabled ? '啟用' : '停用'}\n\n在實際使用時，請在擴充功能中操作。`);
     }
-    
+
     // Visual feedback
     const toggleSwitch = document.getElementById('toggleSwitch');
     toggleSwitch.style.transform = 'scale(0.95)';
@@ -147,10 +147,10 @@ function openSettings() {
         try {
             const settingsUrl = chrome.runtime.getURL('extension/pages/index.html');
             console.log('📤 Opening settings URL:', settingsUrl);
-            
+
             // Open index.html in new tab (extension context)
-            chrome.tabs.create({ 
-                url: settingsUrl 
+            chrome.tabs.create({
+                url: settingsUrl
             }, (tab) => {
                 if (chrome.runtime.lastError) {
                     console.error('❌ Error creating settings tab:', chrome.runtime.lastError);
@@ -159,7 +159,7 @@ function openSettings() {
                     console.log('✅ Settings tab created:', tab.id);
                 }
             });
-            
+
             // Close popup after action
             if (typeof window.close === 'function') {
                 setTimeout(() => window.close(), 200);
@@ -186,8 +186,8 @@ function openAIChat() {
 }
 
 function openPractice() {
-    console.log('📚 Practice button clicked');
-    openExtensionPage('extension/pages/index.html#/practice');
+    console.log('📚 Practice button clicked - opening exam-bank.html');
+    openExtensionPage('extension/pages/exam-bank.html');
 }
 
 function openBookmarks() {
@@ -195,7 +195,7 @@ function openBookmarks() {
     if (isExtensionContext) {
         try {
             // Send message to content script to open bookmarks
-            chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
                 if (tabs && tabs[0]) {
                     console.log('📤 Sending openBookmarks message to tab:', tabs[0].id);
                     chrome.tabs.sendMessage(tabs[0].id, {
@@ -213,7 +213,7 @@ function openBookmarks() {
                     alert('無法找到活躍的分頁。請確認您在正確的頁面上。');
                 }
             });
-            
+
             // Close popup after action
             if (typeof window.close === 'function') {
                 setTimeout(() => window.close(), 300); // Increased delay
@@ -234,9 +234,9 @@ function openExtensionPage(path) {
         try {
             const pageUrl = chrome.runtime.getURL(path);
             console.log('📤 Opening extension page:', pageUrl);
-            
-            chrome.tabs.create({ 
-                url: pageUrl 
+
+            chrome.tabs.create({
+                url: pageUrl
             }, (tab) => {
                 if (chrome.runtime.lastError) {
                     console.error('❌ Error creating tab:', chrome.runtime.lastError);
@@ -245,7 +245,7 @@ function openExtensionPage(path) {
                     console.log('✅ Tab created:', tab.id);
                 }
             });
-            
+
             // Close popup after action
             if (typeof window.close === 'function') {
                 setTimeout(() => window.close(), 200);
@@ -265,7 +265,7 @@ function updateUI() {
     const toggleSwitch = document.getElementById('toggleSwitch');
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
-    
+
     if (isEnabled) {
         toggleSwitch.classList.add('active');
         statusDot.classList.add('active');
@@ -280,19 +280,19 @@ function updateUI() {
 function saveExtensionState() {
     // Save to localStorage
     localStorage.setItem('citeright-enabled', isEnabled);
-    
+
     // For Chrome extension, also use chrome.storage
     if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.set({'citeright_enabled': isEnabled});
+        chrome.storage.local.set({ 'citeright_enabled': isEnabled });
     }
 }
 
 function loadExtensionState() {
     console.log('Loading extension state, isExtensionContext:', isExtensionContext);
-    
+
     // For Chrome extension, use chrome.storage
     if (isExtensionContext && chrome.storage) {
-        chrome.storage.local.get(['citeright_enabled'], function(result) {
+        chrome.storage.local.get(['citeright_enabled'], function (result) {
             console.log('Chrome storage result:', result);
             // Default to enabled if not set
             if (result.citeright_enabled !== undefined) {

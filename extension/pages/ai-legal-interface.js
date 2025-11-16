@@ -1,18 +1,18 @@
 // Auto-resize textarea
 const messageInput = document.getElementById('messageInput');
-messageInput.addEventListener('input', function() {
+messageInput.addEventListener('input', function () {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
 });
 
 // Enable send button when there's text
-messageInput.addEventListener('input', function() {
+messageInput.addEventListener('input', function () {
     const sendBtn = document.getElementById('sendBtn');
     sendBtn.disabled = this.value.trim() === '';
 });
 
 // Send message on Enter (without Shift)
-messageInput.addEventListener('keydown', function(e) {
+messageInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
@@ -194,13 +194,13 @@ function generateAIResponse(message) {
 
 // Model selection
 document.querySelectorAll('.model-card').forEach(card => {
-    card.addEventListener('click', function() {
+    card.addEventListener('click', function () {
         document.querySelectorAll('.model-card').forEach(c => c.classList.remove('active'));
         this.classList.add('active');
 
         const modelName = this.querySelector('.model-name').textContent;
         document.getElementById('currentModel').textContent = modelName + ' + Legal DB';
-        
+
         // Update current model
         const modelNameLower = modelName.toLowerCase();
         if (modelNameLower.includes('gpt-4')) {
@@ -243,7 +243,7 @@ async function loadChatHistory() {
 }
 
 // Load history when page loads
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Try to load last conversation
     loadChatHistory();
 });
@@ -258,7 +258,7 @@ function closeSettings() {
 }
 
 // Close modal when clicking outside
-document.getElementById('settingsModal').addEventListener('click', function(e) {
+document.getElementById('settingsModal').addEventListener('click', function (e) {
     if (e.target === this) {
         closeSettings();
     }
@@ -273,7 +273,7 @@ async function loadPdfApiService() {
         // In a real extension, you'd import this properly
         // For now, we'll implement basic functionality inline
         return {
-            uploadAndProcessPdf: async function(file) {
+            uploadAndProcessPdf: async function (file) {
                 // Simulate API call
                 const formData = new FormData();
                 formData.append('pdf', file);
@@ -289,7 +289,7 @@ async function loadPdfApiService() {
 
                 return await response.json();
             },
-            processUrlPdf: async function(url) {
+            processUrlPdf: async function (url) {
                 const response = await fetch('http://localhost:3000/api/pdf/process-url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -341,7 +341,7 @@ function resetPdfUrl() {
 }
 
 // PDF file input handler
-document.getElementById('pdfFileInput').addEventListener('change', async function(e) {
+document.getElementById('pdfFileInput').addEventListener('change', async function (e) {
     const file = e.target.files[0];
     if (file) {
         await processPdfFile(file);
@@ -351,17 +351,17 @@ document.getElementById('pdfFileInput').addEventListener('change', async functio
 // Drag and drop for PDF upload
 const uploadZone = document.getElementById('pdfUploadZone');
 
-uploadZone.addEventListener('dragover', function(e) {
+uploadZone.addEventListener('dragover', function (e) {
     e.preventDefault();
     this.classList.add('dragover');
 });
 
-uploadZone.addEventListener('dragleave', function(e) {
+uploadZone.addEventListener('dragleave', function (e) {
     e.preventDefault();
     this.classList.remove('dragover');
 });
 
-uploadZone.addEventListener('drop', async function(e) {
+uploadZone.addEventListener('drop', async function (e) {
     e.preventDefault();
     this.classList.remove('dragover');
 
@@ -600,16 +600,16 @@ function formatDate(dateString) {
 }
 
 // Close modals when clicking outside
-document.getElementById('pdfUploadArea').addEventListener('click', function(e) {
+document.getElementById('pdfUploadArea').addEventListener('click', function (e) {
     if (e.target === this) closePdfUpload();
 });
 
-document.getElementById('pdfUrlArea').addEventListener('click', function(e) {
+document.getElementById('pdfUrlArea').addEventListener('click', function (e) {
     if (e.target === this) closePdfUrl();
 });
 
 // Initialize and add event listeners when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Initialize
     document.getElementById('sendBtn').disabled = true;
 
@@ -629,13 +629,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
 
     // Add event listener for PDF upload zone
-    document.getElementById('pdfUploadZone').addEventListener('click', function() {
+    document.getElementById('pdfUploadZone').addEventListener('click', function () {
         document.getElementById('pdfFileInput').click();
     });
 
     // Add event listeners for quick action cards
     document.querySelectorAll('.quick-action-card').forEach(card => {
-        card.addEventListener('click', function() {
+        card.addEventListener('click', function () {
             const text = this.getAttribute('data-prompt');
             if (text) {
                 sendPrompt(text);
