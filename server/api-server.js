@@ -16,6 +16,11 @@ const caseRoutes = require('./routes/cases');
 const lawRoutes = require('./routes/laws');
 const debugRoutes = require('./routes/debug');
 const pdfRoutes = require('./routes/pdf');
+const quizRoutes = require('./routes/quiz');
+const flashcardRoutes = require('./routes/flashcard');
+const analyticsRoutes = require('./routes/analytics');
+const aiRoutes = require('./routes/ai');
+const subscriptionRoutes = require('./routes/subscription');
 
 // Validate environment variables before starting
 validateEnvironment();
@@ -61,6 +66,11 @@ app.use('/api/case', caseRoutes);
 app.use('/api/laws', lawRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/pdf', pdfRoutes);
+app.use('/api/quiz', quizRoutes);
+app.use('/api/flashcards', flashcardRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 
 // 404 handler for undefined routes
 app.use('*', (req, res) => {

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CiteRight - 訂閱方案</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8f0e8 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 16px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .pricing-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 30px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+
+        .pricing-card.featured {
+            border-color: #007bff;
+            transform: scale(1.05);
+        }
+
+        .pricing-card.featured::before {
+            content: '最受歡迎';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #007bff;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .plan-price {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .plan-period {
+            color: #6c757d;
+            margin-bottom: 30px;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .plan-features li {
+            padding: 12px 0;
+            color: #495057;
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .plan-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .plan-button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .plan-button.primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .plan-button.primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .plan-button.secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .plan-button.secondary:hover {
+            background: #5a6268;
+        }
+
+        .current-plan {
+            background: #e7f3ff;
+            color: #007bff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .subscription-status {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid #e9ecef;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .status-header h2 {
+            font-size: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .status-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.expired {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .status-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .status-item-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .status-item-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .cancel-button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .cancel-button:hover {
+            background: #c82333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-card.featured {
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>選擇您的方案</h1>
+            <p>升級以解鎖更多功能，提升您的法律研究效率</p>
+        </div>
+
+        <div id="subscription-status" class="subscription-status" style="display: none;">
+            <div class="status-header">
+                <h2>目前訂閱狀態</h2>
+                <span class="status-badge" id="status-badge">Active</span>
+            </div>
+            <div class="status-details">
+                <div class="status-item">
+                    <div class="status-item-label">方案</div>
+                    <div class="status-item-value" id="current-plan">Free</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-item-label">到期日</div>
+                    <div class="status-item-value" id="end-date">-</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-item-label">自動續訂</div>
+                    <div class="status-item-value" id="auto-renew">-</div>
+                </div>
+            </div>
+            <button class="cancel-button" id="cancel-subscription" style="margin-top: 20px;">取消訂閱</button>
+        </div>
+
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <div class="plan-name">Basic</div>
+                <div class="plan-price">免費</div>
+                <div class="plan-period">永久免費</div>
+                <ul class="plan-features">
+                    <li>5 次 AI 查詢/天</li>
+                    <li>基本法律辨識</li>
+                    <li>書籤管理</li>
+                    <li>基本題庫練習</li>
+                </ul>
+                <div id="basic-current" class="current-plan" style="display: none;">目前方案</div>
+                <button class="plan-button secondary" id="basic-button">目前方案</button>
+            </div>
+
+            <div class="pricing-card featured">
+                <div class="plan-name">Pro</div>
+                <div class="plan-price">$9.99</div>
+                <div class="plan-period">/月</div>
+                <ul class="plan-features">
+                    <li>無限 AI 查詢</li>
+                    <li>PDF 文件上傳與分析</li>
+                    <li>進階搜尋功能</li>
+                    <li>完整學習分析</li>
+                    <li>優先技術支援</li>
+                </ul>
+                <div id="pro-current" class="current-plan" style="display: none;">目前方案</div>
+                <button class="plan-button primary" id="pro-button">升級到 Pro</button>
+            </div>
+
+            <div class="pricing-card">
+                <div class="plan-name">Enterprise</div>
+                <div class="plan-price">聯繫我們</div>
+                <div class="plan-period">客製化方案</div>
+                <ul class="plan-features">
+                    <li>所有 Pro 功能</li>
+                    <li>專屬客戶經理</li>
+                    <li>客製化整合</li>
+                    <li>團隊協作功能</li>
+                    <li>API 存取</li>
+                </ul>
+                <div id="enterprise-current" class="current-plan" style="display: none;">目前方案</div>
+                <button class="plan-button secondary" id="enterprise-button">聯繫我們</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        // Load subscription status
+        async function loadSubscriptionStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/subscription/status`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const subscription = data.data;
+                    
+                    // Show status if has subscription
+                    if (subscription.hasSubscription) {
+                        document.getElementById('subscription-status').style.display = 'block';
+                        document.getElementById('current-plan').textContent = subscription.plan.toUpperCase();
+                        document.getElementById('end-date').textContent = new Date(subscription.endDate).toLocaleDateString('zh-TW');
+                        document.getElementById('auto-renew').textContent = subscription.autoRenew ? '是' : '否';
+                        
+                        const badge = document.getElementById('status-badge');
+                        badge.textContent = subscription.status === 'active' ? '啟用中' : '已過期';
+                        badge.className = `status-badge ${subscription.status}`;
+                    }
+
+                    // Update current plan badge
+                    const planButtons = {
+                        'free': 'basic',
+                        'pro': 'pro',
+                        'enterprise': 'enterprise'
+                    };
+
+                    const currentPlan = planButtons[subscription.plan] || 'basic';
+                    document.getElementById(`${currentPlan}-current`).style.display = 'inline-block';
+                    document.getElementById(`${currentPlan}-button`).textContent = subscription.hasSubscription && subscription.status === 'active' 
+                        ? '目前方案' 
+                        : (currentPlan === 'basic' ? '目前方案' : '選擇此方案');
+                }
+            } catch (error) {
+                console.error('Error loading subscription status:', error);
+            }
+        }
+
+        // Handle subscription creation
+        async function createSubscription(plan) {
+            if (plan === 'enterprise') {
+                alert('請聯繫我們以了解 Enterprise 方案詳情。\nEmail: enterprise@citeright.com');
+                return;
+            }
+
+            // In production, this would integrate with Stripe/PayPal
+            // For now, we'll show a placeholder
+            const paymentMethodId = prompt('請輸入付款方式 ID（測試用）:');
+            if (!paymentMethodId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/subscription/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plan,
+                        paymentMethodId,
+                        autoRenew: true
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('訂閱成功！');
+                    loadSubscriptionStatus();
+                } else {
+                    alert('訂閱失敗：' + data.error);
+                }
+            } catch (error) {
+                console.error('Error creating subscription:', error);
+                alert('訂閱時發生錯誤，請稍後再試。');
+            }
+        }
+
+        // Handle subscription cancellation
+        async function cancelSubscription() {
+            if (!confirm('確定要取消訂閱嗎？取消後將無法使用 Pro 功能。')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/subscription/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('訂閱已取消');
+                    loadSubscriptionStatus();
+                } else {
+                    alert('取消訂閱失敗：' + data.error);
+                }
+            } catch (error) {
+                console.error('Error cancelling subscription:', error);
+                alert('取消訂閱時發生錯誤，請稍後再試。');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('pro-button').addEventListener('click', () => {
+            if (document.getElementById('pro-button').textContent !== '目前方案') {
+                createSubscription('pro');
+            }
+        });
+
+        document.getElementById('enterprise-button').addEventListener('click', () => {
+            createSubscription('enterprise');
+        });
+
+        document.getElementById('cancel-subscription').addEventListener('click', cancelSubscription);
+
+        // Load status on page load
+        loadSubscriptionStatus();
+    </script>
+</body>
+</html>
+

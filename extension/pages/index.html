@@ -1275,6 +1275,9 @@
     </style>
 </head>
 <body>
+<!-- Navigation -->
+<div id="navigation-container"></div>
+
 <!-- Hero Section -->
 <section class="hero">
     <div class="container">
@@ -1430,21 +1433,21 @@
                 </div>
             </div>
 
-            <div class="quiz-stats">
+            <div class="quiz-stats" id="quiz-stats">
                 <div class="stat-card">
-                    <div class="stat-number">3,247</div>
+                    <div class="stat-number" id="stat-total">-</div>
                     <div class="stat-label">總題數</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">1,582</div>
+                    <div class="stat-number" id="stat-practiced">-</div>
                     <div class="stat-label">已練習</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">73%</div>
+                    <div class="stat-number" id="stat-accuracy">-</div>
                     <div class="stat-label">正確率</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">156</div>
+                    <div class="stat-number" id="stat-to-review">-</div>
                     <div class="stat-label">待複習</div>
                 </div>
             </div>
@@ -1784,6 +1787,10 @@
     </div>
 </section>
 
+<!-- Quiz and Flashcard Handlers -->
+<script src="../scripts/quiz-handler.js"></script>
+<script src="../scripts/flashcard-handler.js"></script>
+
 <script>
     // Tab Navigation
     document.addEventListener('DOMContentLoaded', function() {
@@ -1845,22 +1852,151 @@
         modeCards.forEach(card => {
             const button = card.querySelector('.btn-mode');
             if (button) {
-                button.addEventListener('click', function(e) {
+                button.addEventListener('click', async function(e) {
                     e.stopPropagation();
                     const mode = card.getAttribute('data-mode');
                     console.log('Starting practice mode:', mode);
-                    // TODO: Navigate to practice page with selected mode
-                    alert(`啟動${card.querySelector('h4').textContent}模式！`);
+
+                    try {
+                        // Get current filter values
+                        const examType = document.getElementById('exam-type')?.value || '';
+                        const examYear = document.getElementById('exam-year')?.value || '';
+                        const subject = document.getElementById('subject')?.value || '';
+                        const questionType = document.getElementById('question-type')?.value || '';
+
+                        // Show loading
+                        button.disabled = true;
+                        button.textContent = '載入中...';
+
+                        // Start practice session
+                        const sessionData = await window.quizHandler.startPractice(mode, {
+                            examType,
+                            examYear,
+                            subject,
+                            questionType
+                        });
+
+                        console.log('Practice session started:', sessionData);
+                        
+                        // Navigate to practice interface
+                        // TODO: Create practice interface page or modal
+                        alert(`已啟動${card.querySelector('h4').textContent}模式！\n共 ${sessionData.totalQuestions} 題。`);
+                        
+                        // You can navigate to a practice page here
+                        // window.extensionRouter?.navigate('practice-session');
+                    } catch (error) {
+                        console.error('Error starting practice:', error);
+                        alert('啟動練習模式時發生錯誤，請稍後再試。');
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = '開始練習';
+                    }
                 });
             }
         });
+
+        // Load flashcard data
+        async function loadFlashcards() {
+            try {
+                const dueData = await window.flashcardHandler.getDueFlashcards();
+                
+                // Update schedule cards
+                const urgentCard = document.querySelector('.schedule-card.urgent .schedule-count');
+                const soonCard = document.querySelector('.schedule-card.soon .schedule-count');
+                const normalCard = document.querySelector('.schedule-card.normal .schedule-count');
+                
+                if (urgentCard) {
+                    urgentCard.textContent = `${dueData.summary.urgent} 張卡片`;
+                }
+                if (soonCard) {
+                    soonCard.textContent = `${dueData.summary.soon} 張卡片`;
+                }
+                if (normalCard) {
+                    normalCard.textContent = `${dueData.summary.normal} 張卡片`;
+                }
+
+                // Load flashcard list
+                const filter = document.getElementById('flashcard-filter')?.value || 'all';
+                const flashcards = await window.flashcardHandler.getFlashcards(filter);
+                
+                // Update flashcard list UI
+                updateFlashcardList(flashcards);
+            } catch (error) {
+                console.error('Error loading flashcards:', error);
+            }
+        }
+
+        function updateFlashcardList(flashcards) {
+            const flashcardList = document.querySelector('.flashcard-list');
+            if (!flashcardList) return;
+
+            if (flashcards.length === 0) {
+                flashcardList.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">尚無快閃卡</div>';
+                return;
+            }
+
+            flashcardList.innerHTML = flashcards.map(f => `
+                <div class="flashcard-item" data-id="${f.id}">
+                    <div class="flashcard-content">
+                        <div class="flashcard-question">${f.frontText}</div>
+                        <div class="flashcard-meta">
+                            <span class="flashcard-tag">${f.subject || '未分類'}</span>
+                            <span class="flashcard-status ${f.status}">${getStatusText(f.status)}</span>
+                            <span class="flashcard-next">下次複習: ${formatDate(f.nextReviewDate)}</span>
+                        </div>
+                    </div>
+                    <div class="flashcard-actions">
+                        <button class="btn-icon" title="編輯" onclick="editFlashcard(${f.id})">✏️</button>
+                        <button class="btn-icon" title="刪除" onclick="deleteFlashcard(${f.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'new': '新卡片',
+                'learning': '學習中',
+                'review': '複習中',
+                'mastered': '已掌握'
+            };
+            return statusMap[status] || status;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '未知';
+            const date = new Date(dateString);
+            const today = new Date();
+            const diffTime = date - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) return '已過期';
+            if (diffDays === 0) return '今天';
+            if (diffDays === 1) return '明天';
+            return `${diffDays} 天後`;
+        }
 
         // Flashcard functionality
         const createFlashcardBtn = document.getElementById('create-flashcard');
         if (createFlashcardBtn) {
             createFlashcardBtn.addEventListener('click', function() {
                 // TODO: Open flashcard creation modal
-                alert('開啟建立快閃卡對話框');
+                const frontText = prompt('輸入問題/正面內容：');
+                if (frontText) {
+                    const backText = prompt('輸入答案/背面內容：');
+                    if (backText) {
+                        window.flashcardHandler.createFlashcard({
+                            frontText,
+                            backText,
+                            tags: []
+                        }).then(() => {
+                            alert('快閃卡已建立！');
+                            loadFlashcards();
+                        }).catch(err => {
+                            alert('建立快閃卡失敗：' + err.message);
+                        });
+                    }
+                }
             });
         }
 
@@ -1868,7 +2004,7 @@
         if (importFlashcardsBtn) {
             importFlashcardsBtn.addEventListener('click', function() {
                 // TODO: Open import dialog
-                alert('開啟批次匯入對話框');
+                alert('批次匯入功能開發中...');
             });
         }
 
@@ -1876,11 +2012,25 @@
         const flashcardFilter = document.getElementById('flashcard-filter');
         if (flashcardFilter) {
             flashcardFilter.addEventListener('change', function() {
-                const filterValue = this.value;
-                console.log('Filtering flashcards by:', filterValue);
-                // TODO: Filter flashcard list
+                loadFlashcards();
             });
         }
+
+        // Load flashcards on tab switch
+        const flashcardsTab = document.getElementById('flashcards-tab');
+        if (flashcardsTab) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.target.classList.contains('active')) {
+                        loadFlashcards();
+                    }
+                });
+            });
+            observer.observe(flashcardsTab, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Load initial flashcards
+        loadFlashcards();
 
         // Admin functionality
         const uploadArea = document.getElementById('upload-area');
@@ -2022,14 +2172,136 @@
             });
         }
 
+        // Load analytics data
+        async function loadAnalytics(timeRange = '30') {
+            try {
+                // Load progress data
+                const progressResult = await fetch(`http://localhost:3000/api/analytics/progress?timeRange=${timeRange}`);
+                const progressData = await progressResult.json();
+                
+                if (progressData.success) {
+                    const overall = progressData.data.overall;
+                    
+                    // Update progress bar
+                    const progressBar = document.querySelector('.progress-bar');
+                    if (progressBar) {
+                        progressBar.style.width = overall.progressPercentage + '%';
+                        progressBar.querySelector('span').textContent = overall.progressPercentage + '%';
+                    }
+                    
+                    // Update progress text
+                    const progressText = document.querySelector('.progress-card p');
+                    if (progressText) {
+                        progressText.textContent = `已完成 ${overall.practicedQuestions} / ${overall.totalQuestions} 題`;
+                    }
+                }
+
+                // Load subject breakdown
+                const subjectResult = await fetch('http://localhost:3000/api/analytics/subject-breakdown');
+                const subjectData = await subjectResult.json();
+                
+                if (subjectData.success) {
+                    updateSubjectBreakdown(subjectData.data.subjects);
+                }
+
+                // Load wrong questions
+                const wrongResult = await fetch('http://localhost:3000/api/analytics/wrong-questions?limit=10');
+                const wrongData = await wrongResult.json();
+                
+                if (wrongData.success) {
+                    updateWrongQuestions(wrongData.data);
+                }
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+
+        function updateSubjectBreakdown(subjects) {
+            const subjectGrid = document.querySelector('.subject-grid');
+            if (!subjectGrid) return;
+
+            subjectGrid.innerHTML = subjects.map(s => `
+                <div class="subject-card">
+                    <h4>${s.subject}</h4>
+                    <div class="subject-stats">
+                        <div>練習題數: ${s.practicedQuestions}</div>
+                        <div>正確率: ${s.accuracy}%</div>
+                        <div>弱點: ${s.accuracy < 70 ? '需要加強' : '表現良好'}</div>
+                    </div>
+                    <div class="progress-mini">
+                        <div class="progress-mini-bar" style="width: ${s.progressPercentage}%;"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateWrongQuestions(questions) {
+            const wrongList = document.querySelector('.wrong-list');
+            if (!wrongList) return;
+
+            if (questions.length === 0) {
+                wrongList.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">尚無錯題</div>';
+                return;
+            }
+
+            wrongList.innerHTML = questions.map(q => `
+                <div class="wrong-item">
+                    <div class="wrong-content">
+                        <div class="wrong-question">${q.questionText.substring(0, 100)}${q.questionText.length > 100 ? '...' : ''}</div>
+                        <div class="wrong-details">
+                            <span class="wrong-subject">${q.subject}</span>
+                            <span class="wrong-date">錯誤 ${q.errorCount} 次 | 最後練習: ${new Date(q.lastAttemptDate).toLocaleDateString('zh-TW')}</span>
+                        </div>
+                    </div>
+                    <button class="btn-retry" onclick="retryQuestion(${q.id})">重新練習</button>
+                </div>
+            `).join('');
+        }
+
         // Time range filter for progress tracking
         const timeRange = document.getElementById('time-range');
         if (timeRange) {
             timeRange.addEventListener('change', function() {
-                console.log('Changing time range to:', this.value, 'days');
-                // TODO: Update progress charts and stats
+                loadAnalytics(this.value);
             });
         }
+
+        // Load analytics when progress tab is shown
+        const progressTab = document.getElementById('progress-tab');
+        if (progressTab) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.target.classList.contains('active')) {
+                        const timeRangeValue = document.getElementById('time-range')?.value || '30';
+                        loadAnalytics(timeRangeValue);
+                    }
+                });
+            });
+            observer.observe(progressTab, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Global helper functions
+        window.editFlashcard = function(id) {
+            alert('編輯快閃卡功能開發中...');
+        };
+
+        window.deleteFlashcard = async function(id) {
+            if (confirm('確定要刪除此快閃卡嗎？')) {
+                try {
+                    await window.flashcardHandler.deleteFlashcard(id);
+                    alert('快閃卡已刪除');
+                    loadFlashcards();
+                } catch (error) {
+                    alert('刪除失敗：' + error.message);
+                }
+            }
+        };
+
+        window.retryQuestion = function(questionId) {
+            // Navigate to practice with this question
+            window.extensionRouter?.navigate('practice');
+            alert('將開始練習此題目...');
+        };
 
         // Review buttons in flashcard schedule
         const reviewButtons = document.querySelectorAll('.btn-review');
@@ -2105,8 +2377,167 @@
             });
         });
 
+        // Load stats
+        async function loadStats() {
+            try {
+                const stats = await window.quizHandler.getStats();
+                document.getElementById('stat-total').textContent = stats.totalQuestions || 0;
+                document.getElementById('stat-practiced').textContent = stats.practiced || 0;
+                document.getElementById('stat-accuracy').textContent = (stats.accuracy || 0) + '%';
+                document.getElementById('stat-to-review').textContent = stats.toReview || 0;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load stats when practice tab is shown
+        const practiceTab = document.getElementById('practice-tab');
+        if (practiceTab) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.target.classList.contains('active')) {
+                        loadStats();
+                    }
+                });
+            });
+            observer.observe(practiceTab, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Load initial stats
+        loadStats();
+
         console.log('Quiz Bank System initialized');
     });
+
+    // Initialize Router
+    function initializeRouter() {
+        // Load navigation component
+        const navContainer = document.getElementById('navigation-container');
+        if (navContainer) {
+            fetch(chrome?.runtime?.getURL ? chrome.runtime.getURL('extension/components/navigation.html') : '../components/navigation.html')
+                .then(response => response.text())
+                .then(html => {
+                    navContainer.innerHTML = html;
+                    
+                    // Re-execute navigation script
+                    const scripts = navContainer.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => {
+                            newScript.setAttribute(attr.name, attr.value);
+                        });
+                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                })
+                .catch(err => {
+                    console.error('Failed to load navigation:', err);
+                });
+        }
+
+        // Load router script
+        if (window.extensionRouter) {
+            // Register routes
+            window.extensionRouter.register('/', function() {
+                showSection('hero');
+                hideAllTabs();
+            });
+
+            window.extensionRouter.register('practice', function() {
+                showSection('quiz-bank');
+                showTab('practice');
+            });
+
+            window.extensionRouter.register('flashcards', function() {
+                showSection('quiz-bank');
+                showTab('flashcards');
+            });
+
+            window.extensionRouter.register('progress', function() {
+                showSection('quiz-bank');
+                showTab('progress');
+            });
+
+            window.extensionRouter.register('admin', function() {
+                showSection('quiz-bank');
+                showTab('admin');
+            });
+
+            window.extensionRouter.register('subscription', function() {
+                // Navigate to subscription page or show subscription section
+                if (window.location.pathname.includes('index.html')) {
+                    showSection('subscription');
+                } else {
+                    window.location.href = 'index.html#/subscription';
+                }
+            });
+
+            // Handle initial route
+            const currentRoute = window.extensionRouter.getCurrentRoute();
+            if (currentRoute) {
+                window.extensionRouter.handleHashChange();
+            }
+        } else {
+            // Load router script if not already loaded
+            const routerScript = document.createElement('script');
+            routerScript.src = chrome?.runtime?.getURL ? chrome.runtime.getURL('extension/scripts/router.js') : '../scripts/router.js';
+            routerScript.onload = function() {
+                setTimeout(initializeRouter, 100);
+            };
+            document.head.appendChild(routerScript);
+        }
+    }
+
+    function showSection(sectionId) {
+        const sections = document.querySelectorAll('section');
+        sections.forEach(section => {
+            section.style.display = 'none';
+        });
+        const targetSection = document.querySelector(`.${sectionId}`);
+        if (targetSection) {
+            targetSection.style.display = 'block';
+        }
+    }
+
+    function showTab(tabName) {
+        const tabButtons = document.querySelectorAll('.quiz-tab');
+        const tabContents = document.querySelectorAll('.quiz-tab-content');
+        
+        tabButtons.forEach(btn => {
+            if (btn.getAttribute('data-tab') === tabName) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        tabContents.forEach(content => {
+            if (content.id === `${tabName}-tab`) {
+                content.classList.add('active');
+            } else {
+                content.classList.remove('active');
+            }
+        });
+    }
+
+    function hideAllTabs() {
+        const tabContents = document.querySelectorAll('.quiz-tab-content');
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        const tabButtons = document.querySelectorAll('.quiz-tab');
+        tabButtons.forEach(btn => {
+            btn.classList.remove('active');
+        });
+    }
+
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeRouter);
+    } else {
+        initializeRouter();
+    }
 </script>
 </body>
+</html>
 </html>

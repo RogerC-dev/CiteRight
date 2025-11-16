@@ -16,6 +16,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusText = document.getElementById('statusText');
     const bookmarksButton = document.getElementById('bookmarksButton');
     const settingsButton = document.getElementById('settingsButton');
+    const homeButton = document.getElementById('homeButton');
+    const aiChatButton = document.getElementById('aiChatButton');
+    const practiceButton = document.getElementById('practiceButton');
 
     console.log('📋 DOM elements found:', {
         toggleSwitch: !!toggleSwitch,
@@ -42,6 +45,21 @@ document.addEventListener('DOMContentLoaded', function() {
     if (settingsButton) {
         settingsButton.addEventListener('click', openSettings);
         console.log('✅ Settings button event listener added');
+    }
+
+    if (homeButton) {
+        homeButton.addEventListener('click', openHome);
+        console.log('✅ Home button event listener added');
+    }
+
+    if (aiChatButton) {
+        aiChatButton.addEventListener('click', openAIChat);
+        console.log('✅ AI Chat button event listener added');
+    }
+
+    if (practiceButton) {
+        practiceButton.addEventListener('click', openPractice);
+        console.log('✅ Practice button event listener added');
     }
     
     // Add entrance animations
@@ -157,6 +175,21 @@ function openSettings() {
     }
 }
 
+function openHome() {
+    console.log('🏠 Home button clicked');
+    openExtensionPage('extension/pages/index.html#/');
+}
+
+function openAIChat() {
+    console.log('🤖 AI Chat button clicked');
+    openExtensionPage('extension/pages/ai-legal-interface.html');
+}
+
+function openPractice() {
+    console.log('📚 Practice button clicked');
+    openExtensionPage('extension/pages/index.html#/practice');
+}
+
 function openBookmarks() {
     console.log('📚 Bookmarks button clicked');
     if (isExtensionContext) {
@@ -193,6 +226,38 @@ function openBookmarks() {
         // For testing without extension context
         console.log('Chrome tabs not available - showing test message');
         alert('書籤功能需要在實際擴充功能中使用。\n\n請確認擴充功能已正確安裝。');
+    }
+}
+
+function openExtensionPage(path) {
+    if (isExtensionContext) {
+        try {
+            const pageUrl = chrome.runtime.getURL(path);
+            console.log('📤 Opening extension page:', pageUrl);
+            
+            chrome.tabs.create({ 
+                url: pageUrl 
+            }, (tab) => {
+                if (chrome.runtime.lastError) {
+                    console.error('❌ Error creating tab:', chrome.runtime.lastError);
+                    alert('無法開啟頁面。請確認擴充功能正常運行。');
+                } else {
+                    console.log('✅ Tab created:', tab.id);
+                }
+            });
+            
+            // Close popup after action
+            if (typeof window.close === 'function') {
+                setTimeout(() => window.close(), 200);
+            }
+        } catch (e) {
+            console.error('❌ Error in openExtensionPage:', e);
+            alert('無法開啟頁面。請確認擴充功能正常運行。');
+        }
+    } else {
+        // For testing - open in new window
+        console.log('Opening page via window.open (test mode)');
+        window.open(path, '_blank');
     }
 }
 

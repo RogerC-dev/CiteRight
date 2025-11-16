@@ -19,18 +19,23 @@ messageInput.addEventListener('keydown', function(e) {
     }
 });
 
+// API configuration
+const API_BASE = 'http://localhost:3000/api';
+let currentConversationId = null;
+let currentModel = 'gpt-3.5-turbo';
+
 // Demo query counter
 let demoQueriesUsed = 0;
 const demoQueryLimit = 5;
 
 // Send message function
-function sendMessage() {
+async function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
 
     if (message === '') return;
 
-    // Check demo limit
+    // Check demo limit (can be removed when subscription is implemented)
     if (demoQueriesUsed >= demoQueryLimit) {
         alert('Demo limit reached! You\'ve used all 5 free queries. Please upgrade to Pro for unlimited access.');
         return;
@@ -47,18 +52,70 @@ function sendMessage() {
     // Add user message
     addMessage(message, 'user');
 
-    // Clear input
+    // Clear input and disable send button
     input.value = '';
     input.style.height = 'auto';
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.disabled = true;
 
     // Update demo status
     updateDemoStatus();
 
-    // Simulate AI response
-    setTimeout(() => {
-        const response = generateAIResponse(message);
-        addMessage(response, 'assistant');
-    }, 1000);
+    // Show loading indicator
+    const loadingMessage = addMessage('思考中...', 'assistant', true);
+
+    try {
+        // Get selected model
+        const activeModelCard = document.querySelector('.model-card.active');
+        if (activeModelCard) {
+            const modelName = activeModelCard.querySelector('.model-name').textContent.toLowerCase();
+            if (modelName.includes('gpt-4')) {
+                currentModel = 'gpt-4';
+            } else if (modelName.includes('gemini')) {
+                currentModel = 'gemini';
+            } else if (modelName.includes('claude')) {
+                currentModel = 'claude';
+            } else {
+                currentModel = 'gpt-3.5-turbo';
+            }
+        }
+
+        // Call AI API
+        const response = await fetch(`${API_BASE}/ai/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message,
+                conversationId: currentConversationId,
+                model: currentModel
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update conversation ID
+            currentConversationId = data.data.conversationId;
+
+            // Remove loading message and add AI response
+            loadingMessage.remove();
+            addMessage(data.data.message, 'assistant', false, data.data.sources);
+        } else {
+            throw new Error(data.error || 'Failed to get AI response');
+        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        loadingMessage.remove();
+        addMessage(`抱歉，發生錯誤：${error.message}。請稍後再試。`, 'assistant');
+    } finally {
+        sendBtn.disabled = false;
+    }
 }
 
 function updateDemoStatus() {
@@ -81,31 +138,48 @@ function sendPrompt(prompt) {
 }
 
 // Add message to chat
-function addMessage(text, sender) {
+function addMessage(text, sender, isLoading = false, sources = []) {
     const chatMessages = document.getElementById('chatMessages');
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender}`;
+    if (isLoading) {
+        messageDiv.classList.add('loading');
+    }
 
     let header = '';
     if (sender === 'assistant') {
-        header = '<div class="message-header">🤖 CiteRight AI (GPT-4 + Legal DB)</div>';
+        const modelName = document.getElementById('currentModel')?.textContent || 'GPT-4 + Legal DB';
+        header = `<div class="message-header">🤖 CiteRight AI (${modelName})</div>`;
+    }
+
+    let sourcesHtml = '';
+    if (sources && sources.length > 0) {
+        sourcesHtml = `
+            <div class="cited-sources">
+                ${sources.map(source => `<span class="cited-source">${source}</span>`).join('')}
+            </div>
+        `;
+    } else if (sender === 'assistant' && text.includes('民法')) {
+        // Auto-detect citations in text (fallback)
+        sourcesHtml = `
+            <div class="cited-sources">
+                <span class="cited-source">📚 相關法條</span>
+            </div>
+        `;
     }
 
     messageDiv.innerHTML = `
         <div class="message-content">
             ${header}
-            <div class="message-text">${text}</div>
-            ${sender === 'assistant' && text.includes('民法') ? `
-                <div class="cited-sources">
-                    <span class="cited-source">📚 民法第965條</span>
-                    <span class="cited-source">⚖️ 司法院釋字第123號</span>
-                </div>
-            ` : ''}
+            <div class="message-text">${isLoading ? '<div class="loading-spinner"></div>' : text.replace(/\n/g, '<br>')}</div>
+            ${sourcesHtml}
         </div>
     `;
 
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    return messageDiv;
 }
 
 // Generate AI response (mock)
@@ -126,7 +200,52 @@ document.querySelectorAll('.model-card').forEach(card => {
 
         const modelName = this.querySelector('.model-name').textContent;
         document.getElementById('currentModel').textContent = modelName + ' + Legal DB';
+        
+        // Update current model
+        const modelNameLower = modelName.toLowerCase();
+        if (modelNameLower.includes('gpt-4')) {
+            currentModel = 'gpt-4';
+        } else if (modelNameLower.includes('gemini')) {
+            currentModel = 'gemini';
+        } else if (modelNameLower.includes('claude')) {
+            currentModel = 'claude';
+        } else {
+            currentModel = 'gpt-3.5-turbo';
+        }
     });
+});
+
+// Load chat history on page load
+async function loadChatHistory() {
+    if (!currentConversationId) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/ai/history?conversationId=${currentConversationId}`);
+        const data = await response.json();
+
+        if (data.success && data.data.length > 0) {
+            // Clear current messages (except welcome)
+            const chatMessages = document.getElementById('chatMessages');
+            const welcomeMsg = chatMessages.querySelector('.welcome-message');
+            chatMessages.innerHTML = '';
+            if (welcomeMsg) {
+                chatMessages.appendChild(welcomeMsg);
+            }
+
+            // Add history messages
+            data.data.forEach(msg => {
+                addMessage(msg.content, msg.role);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading chat history:', error);
+    }
+}
+
+// Load history when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Try to load last conversation
+    loadChatHistory();
 });
 
 // Settings modal
