@@ -257,9 +257,11 @@
             }
         }
     </style>
+    <script src="../scripts/navigation-loader.js"></script>
 </head>
 
 <body>
+    <div id="navigation-container" data-nav-path="../components/navigation.html"></div>
     <div class="container">
         <div class="header">
             <h1>選擇您的方案</h1>
@@ -459,6 +461,21 @@
 
         // Load status on page load
         loadSubscriptionStatus();
+    </script>
+    <script>
+        (function () {
+            const initNav = function () {
+                if (window.loadExtensionNavigation) {
+                    window.loadExtensionNavigation('navigation-container', { activeKey: 'subscription' });
+                }
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initNav);
+            } else {
+                initNav();
+            }
+        })();
     </script>
 </body>
 

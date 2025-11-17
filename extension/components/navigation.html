@@ -2,43 +2,51 @@
 <nav class="extension-nav" id="extensionNav">
     <div class="nav-container">
         <div class="nav-brand">
-            <a href="index.html#/" class="nav-logo">
+            <a href="index.html#/intro" class="nav-logo">
                 <span class="logo-icon">⚖️</span>
                 <span class="logo-text">CiteRight</span>
             </a>
         </div>
 
         <div class="nav-links">
-            <a href="index.html#/" class="nav-link" data-route="home">
+            <a href="index.html#/intro" class="nav-link" data-nav-key="intro">
                 <span class="nav-icon">🏠</span>
-                <span class="nav-text">首頁</span>
+                <span class="nav-text">產品總覽</span>
             </a>
-            <a href="index.html#/practice" class="nav-link" data-route="practice">
+            <a href="exam-bank.html" class="nav-link" data-nav-key="exam-bank">
                 <span class="nav-icon">📚</span>
-                <span class="nav-text">練習</span>
+                <span class="nav-text">題庫練習</span>
             </a>
-            <a href="index.html#/flashcards" class="nav-link" data-route="flashcards">
+            <a href="ai-legal-interface.html" class="nav-link" data-nav-key="ai-chat">
+                <span class="nav-icon">🤖</span>
+                <span class="nav-text">AI 法律助手</span>
+            </a>
+            <a href="subscription.html" class="nav-link" data-nav-key="subscription">
+                <span class="nav-icon">💳</span>
+                <span class="nav-text">方案資訊</span>
+            </a>
+            <a href="index.html#/flashcards" class="nav-link" data-nav-key="flashcards">
                 <span class="nav-icon">📇</span>
                 <span class="nav-text">快閃卡</span>
             </a>
-            <a href="index.html#/progress" class="nav-link" data-route="progress">
+            <a href="index.html#/progress" class="nav-link" data-nav-key="progress">
                 <span class="nav-icon">📊</span>
                 <span class="nav-text">學習追蹤</span>
             </a>
-            <a href="ai-legal-interface.html" class="nav-link" data-route="ai-chat">
-                <span class="nav-icon">🤖</span>
-                <span class="nav-text">AI 助手</span>
-            </a>
-            <a href="subscription.html" class="nav-link" data-route="subscription">
-                <span class="nav-icon">💳</span>
-                <span class="nav-text">訂閱</span>
+            <a href="index.html#/admin" class="nav-link" data-nav-key="admin">
+                <span class="nav-icon">🛠️</span>
+                <span class="nav-text">題庫管理</span>
             </a>
         </div>
 
         <div class="nav-actions">
-            <button class="nav-action-btn" id="navSettingsBtn" title="設定">
-                <span>⚙️</span>
-            </button>
+            <a href="subscription.html" class="nav-action-btn" title="方案介紹">
+                💳
+            </a>
+            <a href="index.html#/intro" class="nav-upgrade-btn" id="navUpgradeBtn">
+                <span>✨</span>
+                <span>升級</span>
+            </a>
         </div>
     </div>
 </nav>
@@ -97,29 +105,34 @@
         gap: 8px;
         flex: 1;
         justify-content: center;
+        flex-wrap: wrap;
     }
 
     .nav-link {
         display: flex;
         align-items: center;
         gap: 6px;
-        padding: 8px 16px;
+        padding: 8px 14px;
         text-decoration: none;
-        color: #666;
-        border-radius: 8px;
+        color: #4a5568;
+        border-radius: 999px;
         transition: all 0.2s;
         font-size: 14px;
         font-weight: 500;
+        border: 1px solid transparent;
     }
 
     .nav-link:hover {
-        background: #f5f5f5;
-        color: #1890ff;
+        border-color: #bae7ff;
+        background: #f0faff;
+        color: #096dd9;
     }
 
     .nav-link.active {
-        background: #e6f7ff;
-        color: #1890ff;
+        background: #1890ff;
+        color: white;
+        border-color: #1890ff;
+        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25);
     }
 
     .nav-icon {
@@ -137,11 +150,11 @@
     }
 
     .nav-action-btn {
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         border: none;
-        background: transparent;
-        border-radius: 8px;
+        background: #f5f5f5;
+        border-radius: 50%;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -149,11 +162,32 @@
         font-size: 18px;
         transition: all 0.2s;
         color: #666;
+        text-decoration: none;
     }
 
     .nav-action-btn:hover {
-        background: #f5f5f5;
+        background: #e6f7ff;
         color: #1890ff;
+    }
+
+    .nav-upgrade-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+        color: white;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+    }
+
+    .nav-upgrade-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
     }
 
     /* Responsive */
@@ -174,19 +208,42 @@
 
 <script>
     (function () {
-        // Initialize navigation
         document.addEventListener('DOMContentLoaded', function () {
             const nav = document.getElementById('extensionNav');
-            if (!nav) return;
+            if (!nav) {
+                return;
+            }
 
-            // Update active link based on current route
+            const forcedKey = nav.dataset.forceActive;
+
+            function detectActiveKey() {
+                if (forcedKey) {
+                    return forcedKey;
+                }
+
+                const path = window.location.pathname;
+                const hash = window.location.hash.replace('#/', '') || 'intro';
+
+                if (path.includes('exam-bank.html')) {
+                    return 'exam-bank';
+                }
+                if (path.includes('ai-legal-interface.html')) {
+                    return 'ai-chat';
+                }
+                if (path.includes('subscription.html')) {
+                    return 'subscription';
+                }
+
+                return hash;
+            }
+
             function updateActiveLink() {
-                const currentRoute = window.location.hash.substring(2) || 'home';
+                const activeKey = detectActiveKey();
                 const links = nav.querySelectorAll('.nav-link');
 
-                links.forEach(link => {
-                    const route = link.getAttribute('data-route');
-                    if (route === currentRoute) {
+                links.forEach((link) => {
+                    const key = link.getAttribute('data-nav-key');
+                    if (key === activeKey) {
                         link.classList.add('active');
                     } else {
                         link.classList.remove('active');
@@ -194,33 +251,19 @@
                 });
             }
 
-            // Handle hash changes
             window.addEventListener('hashchange', updateActiveLink);
             updateActiveLink();
 
-            // Handle settings button
-            const settingsBtn = document.getElementById('navSettingsBtn');
-            if (settingsBtn) {
-                settingsBtn.addEventListener('click', function () {
-                    // Navigate to settings or open settings modal
-                    if (window.extensionRouter) {
-                        window.extensionRouter.navigate('settings');
-                    }
-                });
-            }
-
-            // Handle link clicks - prevent default and use router if available
             const links = nav.querySelectorAll('.nav-link');
-            links.forEach(link => {
-                link.addEventListener('click', function (e) {
+            links.forEach((link) => {
+                link.addEventListener('click', function (event) {
                     const href = this.getAttribute('href');
 
-                    // If it's a hash route and router is available, use router
-                    if (href && href.includes('#') && window.extensionRouter) {
-                        const hash = href.split('#')[1];
-                        if (hash) {
-                            e.preventDefault();
-                            window.extensionRouter.navigate(hash.substring(1));
+                    if (href && href.includes('#/') && window.extensionRouter) {
+                        const route = href.split('#/')[1];
+                        if (route) {
+                            event.preventDefault();
+                            window.extensionRouter.navigate(route);
                         }
                     }
                 });
