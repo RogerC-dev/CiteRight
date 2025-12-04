@@ -1,34 +1,29 @@
 <template>
   <Teleport to="body">
-    <!-- 側邊欄背景 -->
+    <!-- Draggable Divider for Split View -->
     <div
-      id="citeright-sidebar-background"
-      :class="['sidebar-background', { active: isFloating }]"
-      :style="backgroundStyle"
-    ></div>
-    
-    <!-- 主工具面板 -->
+      ref="resizeHandleRef"
+      class="split-divider"
+      :style="dividerStyle"
+      @mousedown="startResize"
+      @touchstart="startResize"
+    >
+      <div class="divider-handle"></div>
+    </div>
+
+    <!-- Main Tool Panel (Split View) -->
     <div
       id="citeright-tool-panel"
       ref="panelRef"
-      :class="['tool-panel', { floating: isFloating }]"
+      class="tool-panel-split"
       :style="panelStyle"
     >
-      <!-- 調整大小控制桿 -->
-      <div
-        ref="resizeHandleRef"
-        class="resize-handle"
-        @mouseenter="handleResizeHover(true)"
-        @mouseleave="handleResizeHover(false)"
-        @mousedown="startResize"
-      ></div>
-      
-      <!-- 標題欄和分頁導航 -->
+      <!-- Panel Header with Tabs -->
       <div class="panel-header">
         <div class="header-top">
-          <h2 class="panel-title">CiteRight 工具面板</h2>
+          <h2 class="panel-title">CiteRight</h2>
           <button class="close-btn" @click="$emit('close')" title="關閉面板">
-            &times;
+            ×
           </button>
         </div>
         
@@ -44,7 +39,7 @@
         </div>
       </div>
       
-      <!-- 分頁內容區域 -->
+      <!-- Tab Content Area -->
       <div class="tab-content-area">
         <!-- 法律工具分頁 -->
         <div
@@ -87,58 +82,32 @@
           v-show="currentTab === 'flashcard'"
           id="tab-content-flashcard"
           class="tab-content"
-          style="background: white; min-height: 400px;"
         >
-          <div class="tab-content-inner flashcard-content" style="background: #f5f5f5; position: relative;">
-            <div style="padding: 20px; background: white; margin: 8px; border-radius: 8px; min-height: 300px;">
-              <h3>🃏 記憶卡片功能</h3>
-              <p><strong>Current tab:</strong> {{ currentTab }}</p>
-              <p><strong>Show study mode:</strong> {{ showStudyMode }}</p>
-              <p><strong>Debug:</strong> Tab content should be visible</p>
+          <div class="tab-content-inner flashcard-content">
+            <!-- 模式切換按鈕 -->
+            <div class="mode-toggle">
+              <button
+                @click="showStudyMode = false"
+                :class="['mode-btn', { active: !showStudyMode }]"
+              >
+                🛠️ 管理
+              </button>
+              <button
+                @click="showStudyMode = true"
+                :class="['mode-btn', { active: showStudyMode }]"
+              >
+                🎓 學習
+              </button>
+            </div>
 
-              <!-- 模式切換按鈕 -->
-              <div style="position: absolute; top: 16px; right: 16px; display: flex; background: rgba(255, 255, 255, 0.9); border-radius: 8px; padding: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); z-index: 10;">
-                <button
-                  @click="showStudyMode = false"
-                  :style="{
-                    padding: '8px 12px',
-                    border: 'none',
-                    background: showStudyMode ? 'transparent' : '#667eea',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    color: showStudyMode ? '#666' : 'white'
-                  }"
-                >
-                  🛠️ 管理模式
-                </button>
-                <button
-                  @click="showStudyMode = true"
-                  :style="{
-                    padding: '8px 12px',
-                    border: 'none',
-                    background: showStudyMode ? '#667eea' : 'transparent',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    color: showStudyMode ? 'white' : '#666'
-                  }"
-                >
-                  🎓 學習模式
-                </button>
-              </div>
+            <!-- 學習模式 -->
+            <div v-if="showStudyMode" class="mode-content">
+              <StudySession @create-deck="handleCreateDeck" />
+            </div>
 
-              <!-- 學習模式 -->
-              <div v-if="showStudyMode" style="margin-top: 60px;">
-                <h4>🎓 學習模式</h4>
-                <StudySession @create-deck="handleCreateDeck" />
-              </div>
-
-              <!-- 管理模式 -->
-              <div v-else style="margin-top: 60px;">
-                <h4>🛠️ 管理模式</h4>
-                <FlashcardManager @start-study="handleStartStudy" />
-              </div>
+            <!-- 管理模式 -->
+            <div v-else class="mode-content">
+              <FlashcardManager @start-study="handleStartStudy" />
             </div>
           </div>
         </div>
@@ -148,19 +117,18 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import ToolContent from './ToolContent.vue'
 import BookmarkContent from './BookmarkContent.vue'
 import DictionaryContent from './DictionaryContent.vue'
 import FlashcardManager from './FlashcardManager.vue'
 import StudySession from './StudySession.vue'
-import { useSidebarStore } from '../../stores/sidebar'
 
 // Props
 const props = defineProps({
   width: {
     type: Number,
-    default: 500
+    default: 420
   },
   currentTab: {
     type: String,
@@ -171,182 +139,157 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['close', 'resize', 'tab-change', 'dictionary-result', 'law-content'])
 
-// Store
-const sidebarStore = useSidebarStore()
 
-// 引用
+// Refs
 const panelRef = ref(null)
 const resizeHandleRef = ref(null)
 
-// 狀態
+// State
 const isResizing = ref(false)
 const resizeStartX = ref(0)
 const resizeStartWidth = ref(0)
-const isHoveringHandle = ref(false)
-
-// 分頁配置
-const tabs = [
-  { id: 'tool', label: '法律工具', icon: '🔧' },
-  { id: 'bookmarks', label: '我的書籤', icon: '📚' },
-  { id: 'dictionary', label: '法律辭典', icon: '📖' },
-  { id: 'flashcard', label: '記憶卡片', icon: '🃏' }
-]
-
-// 記憶卡片狀態
 const showStudyMode = ref(false)
 
-// 計算屬性
-const sidebarBoundary = computed(() => Math.floor(window.innerWidth / 3))
-const isFloating = computed(() => props.width > sidebarBoundary.value)
+// Constants
+const MIN_PANEL_WIDTH = 320
+const MAX_PANEL_RATIO = 0.6
 
-const backgroundStyle = computed(() => ({
-  width: `${sidebarBoundary.value}px`,
-  opacity: isFloating.value ? '1' : '0'
+// Tab configuration
+const tabs = [
+  { id: 'tool', label: '工具', icon: '🔧' },
+  { id: 'bookmarks', label: '書籤', icon: '📚' },
+  { id: 'dictionary', label: '辭典', icon: '📖' },
+  { id: 'flashcard', label: '卡片', icon: '🃏' }
+]
+
+// Computed styles for split view
+const panelStyle = computed(() => ({
+  width: `${props.width}px`
 }))
 
-const panelStyle = computed(() => ({
-  width: `${props.width}px`,
-  zIndex: isFloating.value ? '2147483648' : '2147483647',
-  boxShadow: isFloating.value 
-    ? '-8px 0 24px rgba(0,0,0,0.25)' 
-    : '-6px 0 18px rgba(0,0,0,0.15)',
-  transform: 'translateX(0)' // 確保可見
+const dividerStyle = computed(() => ({
+  right: `${props.width}px`
 }))
 
 /**
- * 切換分頁
+ * Apply split view - push page content to make room for sidebar
  */
+function applySplitView() {
+  const html = document.documentElement
+  const body = document.body
+
+  const pushWidth = props.width
+
+  // Apply styles to push the page content
+  html.style.marginRight = `${pushWidth}px`
+  html.style.width = `calc(100% - ${pushWidth}px)`
+  html.style.maxWidth = `calc(100vw - ${pushWidth}px)`
+  html.style.transition = isResizing.value ? 'none' : 'margin-right 0.15s ease, width 0.15s ease'
+  html.style.overflow = 'visible'
+
+  body.style.marginRight = '0'
+  body.style.width = '100%'
+  body.style.maxWidth = '100%'
+  body.style.position = 'relative'
+
+  console.log('✅ Split view applied:', pushWidth + 'px')
+}
+
+/**
+ * Remove split view - restore page to full width
+ */
+function removeSplitView() {
+  const html = document.documentElement
+  const body = document.body
+
+  html.style.marginRight = ''
+  html.style.width = ''
+  html.style.maxWidth = ''
+  html.style.transition = ''
+  html.style.overflow = ''
+
+  body.style.marginRight = ''
+  body.style.width = ''
+  body.style.maxWidth = ''
+  body.style.position = ''
+
+  console.log('✅ Split view removed')
+}
+
 function switchTab(tabId) {
-  console.log('🔄 Switching to tab:', tabId, 'Current:', props.currentTab)
   if (tabId !== props.currentTab) {
     emit('tab-change', tabId)
   }
 }
 
-/**
- * 處理法律辭典搜尋結果選擇
- */
 function handleDictionaryResult(result) {
-  console.log('📚 辭典結果選擇:', result)
-  
-  // 切換到工具分頁顯示詳細內容
   if (props.currentTab !== 'tool') {
     emit('tab-change', 'tool')
   }
-  
-  // 發送結果到父組件
   emit('dictionary-result', result)
 }
 
-/**
- * 處理法律內容載入
- */
 function handleLawLoaded(lawData) {
-  console.log('📖 法律內容載入:', lawData)
-
-  // 切換到工具分頁顯示內容
   if (props.currentTab !== 'tool') {
     emit('tab-change', 'tool')
   }
-
-  // 發送法律內容到父組件
   emit('law-content', lawData)
 }
 
-/**
- * 處理開始學習
- */
 function handleStartStudy(deck) {
-  console.log('🎓 開始學習牌組:', deck.name)
   showStudyMode.value = true
 }
 
-/**
- * 處理建立牌組
- */
 function handleCreateDeck() {
-  console.log('🃏 切換到管理模式建立牌組')
   showStudyMode.value = false
 }
 
-/**
- * 處理調整大小控制桿懸停
- */
-function handleResizeHover(hovering) {
-  if (!isResizing.value) {
-    isHoveringHandle.value = hovering
-  }
-}
-
-/**
- * 開始調整大小
- */
 function startResize(e) {
+  e.preventDefault()
   isResizing.value = true
-  resizeStartX.value = e.clientX
+  resizeStartX.value = e.clientX || e.touches?.[0]?.clientX || 0
   resizeStartWidth.value = props.width
   
-  document.body.style.cursor = 'ew-resize'
+  document.body.style.cursor = 'col-resize'
   document.body.style.userSelect = 'none'
   
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
-  
-  emit('resize', { type: 'start', width: props.width })
-  
-  console.log('🔧 開始調整面板大小')
-  e.preventDefault()
+  document.addEventListener('touchmove', handleResize)
+  document.addEventListener('touchend', stopResize)
 }
 
-/**
- * 處理調整大小
- */
 function handleResize(e) {
   if (!isResizing.value) return
   
-  const deltaX = resizeStartX.value - e.clientX // 反向拖拽（向左擴展）
+  const clientX = e.clientX || e.touches?.[0]?.clientX || 0
+  const deltaX = resizeStartX.value - clientX
   let newWidth = resizeStartWidth.value + deltaX
   
-  // 應用寬度限制
-  const minWidth = sidebarBoundary.value
-  const maxWidth = window.innerWidth * 0.8
-  newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth))
-  
+  const maxWidth = window.innerWidth * MAX_PANEL_RATIO
+  newWidth = Math.max(MIN_PANEL_WIDTH, Math.min(newWidth, maxWidth))
+
   emit('resize', newWidth)
-  
-  console.log('🔄 調整面板寬度:', newWidth + 'px')
 }
 
-/**
- * 停止調整大小
- */
 function stopResize() {
   if (!isResizing.value) return
   
   isResizing.value = false
-  isHoveringHandle.value = false
-  
+
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
   
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
-  
-  emit('resize', props.width)
-  
-  console.log('✅ 完成面板大小調整')
+  document.removeEventListener('touchmove', handleResize)
+  document.removeEventListener('touchend', stopResize)
 }
 
-/**
- * 處理鍵盤快捷鍵
- */
 function handleKeyDown(e) {
-  // ESC 鍵關閉面板
   if (e.key === 'Escape') {
     emit('close')
   }
-
-  // Tab 鍵切換分頁
   if (e.key === 'Tab' && e.ctrlKey) {
     e.preventDefault()
     const currentIndex = tabs.findIndex(tab => tab.id === props.currentTab)
@@ -355,155 +298,83 @@ function handleKeyDown(e) {
   }
 }
 
-/**
- * 調整網頁內容以適應側邊欄
- */
-function adjustWebContentForSidebar() {
-  if (!isFloating.value && sidebarStore.isOpen) {
-    const adjustWidth = Math.min(props.width, sidebarBoundary.value)
-    document.body.style.width = `calc(100vw - ${adjustWidth}px)`
-    document.body.style.maxWidth = `calc(100vw - ${adjustWidth}px)`
-    document.body.style.transition = 'width 0.3s ease'
-    console.log('✅ 頁面分割: 左側內容，右側側邊欄')
-  }
-}
+watch(() => props.width, () => {
+  applySplitView()
+})
 
-/**
- * 恢復網頁內容為全寬
- */
-function restoreWebContent() {
-  document.body.style.width = ''
-  document.body.style.maxWidth = ''
-  document.body.style.transition = ''
-  console.log('✅ 恢復全頁面寬度')
-}
-
-/**
- * 更新側邊欄佈局
- */
-function updateSidebarLayout() {
-  if (sidebarStore.isOpen && !isFloating.value) {
-    adjustWebContentForSidebar()
-  } else {
-    restoreWebContent()
-  }
-}
-
-// 生命週期
 onMounted(() => {
-  console.log('📱 MainSidebar 組件已掛載')
-  console.log('📱 Current tab on mount:', props.currentTab)
-
-  // 添加鍵盤事件監聽
   document.addEventListener('keydown', handleKeyDown)
-
-  // 初始化佈局
-  updateSidebarLayout()
-
-  // 確保面板可見
-  nextTick(() => {
-    if (panelRef.value) {
-      panelRef.value.style.transform = 'translateX(0)'
-    }
-  })
+  applySplitView()
 })
 
 onUnmounted(() => {
-  console.log('📱 MainSidebar 組件即將卸載')
-
-  // 清理事件監聽
   document.removeEventListener('keydown', handleKeyDown)
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
+  document.removeEventListener('touchmove', handleResize)
+  document.removeEventListener('touchend', stopResize)
 
-  // 重置 body 樣式
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
 
-  // 恢復網頁內容樣式
-  restoreWebContent()
-})
-
-// 監聽寬度變化，更新調整大小狀態和佈局
-watch(() => props.width, (newWidth) => {
-  console.log('📏 面板寬度更新:', newWidth + 'px')
-  updateSidebarLayout()
-})
-
-// 監聽浮動狀態變化，更新佈局
-watch(() => isFloating.value, () => {
-  updateSidebarLayout()
-})
-
-// 監聽當前分頁變化
-watch(() => props.currentTab, (newTab, oldTab) => {
-  console.log('📱 Tab changed from', oldTab, 'to', newTab)
+  removeSplitView()
 })
 </script>
 
 <style scoped>
-.sidebar-background {
+/* Split View Divider */
+.split-divider {
   position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  background: rgba(24, 144, 255, 0.03);
-  border-left: 1px solid rgba(24, 144, 255, 0.1);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: 2147483645;
-}
-
-.sidebar-background.active {
-  opacity: 1;
-}
-
-.tool-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  background: white;
-  border-left: 3px solid #1890ff;
-  font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
-  font-size: 14px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.3s ease;
-  z-index: 2147483647;
-}
-
-.tool-panel.floating {
-  z-index: 2147483648;
-}
-
-.resize-handle {
-  position: absolute;
-  left: -6px;
   top: 0;
   bottom: 0;
-  width: 12px;
-  background: linear-gradient(90deg, rgba(24, 144, 255, 0.5), #1890ff);
-  cursor: ew-resize;
-  z-index: 10;
-  opacity: 0.8;
-  transition: all 0.2s;
-  border-radius: 4px 0 0 4px;
-  box-shadow: -2px 0 8px rgba(24, 144, 255, 0.3);
+  width: 8px;
+  background: #e5e7eb;
+  cursor: col-resize;
+  z-index: 2147483648;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
 }
 
-.resize-handle:hover {
-  opacity: 1;
-  background: linear-gradient(90deg, rgba(24, 144, 255, 0.8), #1890ff);
+.split-divider:hover,
+.split-divider:active {
+  background: #d1d5db;
+}
+
+.divider-handle {
+  width: 4px;
+  height: 48px;
+  background: #9ca3af;
+  border-radius: 2px;
+  transition: background 0.2s, height 0.2s;
+}
+
+.split-divider:hover .divider-handle,
+.split-divider:active .divider-handle {
+  background: #1890ff;
+  height: 64px;
+}
+
+/* Split View Panel */
+.tool-panel-split {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  z-index: 2147483647;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
 }
 
 .panel-header {
   background: linear-gradient(135deg, #1890ff, #096dd9);
   color: white;
-  padding: 16px;
+  padding: 12px 16px;
   flex-shrink: 0;
 }
 
@@ -511,12 +382,12 @@ watch(() => props.currentTab, (newTab, oldTab) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .panel-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
 }
 
@@ -528,11 +399,11 @@ watch(() => props.currentTab, (newTab, oldTab) => {
   border: none;
   color: white;
   border-radius: 50%;
-  padding: 8px;
   cursor: pointer;
-  font-size: 18px;
-  width: 36px;
-  height: 36px;
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  line-height: 1;
   transition: all 0.2s;
 }
 
@@ -543,24 +414,25 @@ watch(() => props.currentTab, (newTab, oldTab) => {
 
 .tab-navigation {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
-  padding: 8px 16px;
+  padding: 6px 12px;
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   transition: all 0.2s;
   font-family: inherit;
+  white-space: nowrap;
 }
 
 .tab-btn:hover {
   background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
 }
 
 .tab-btn.active {
@@ -571,7 +443,7 @@ watch(() => props.currentTab, (newTab, oldTab) => {
 .tab-content-area {
   flex: 1;
   overflow: hidden;
-  background: #fafafa;
+  background: #f8f9fa;
 }
 
 .tab-content {
@@ -608,63 +480,7 @@ watch(() => props.currentTab, (newTab, oldTab) => {
   background: #a1a1a1;
 }
 
-/* 動畫 */
-.tool-panel {
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-/* 響應式設計 */
-@media (max-width: 768px) {
-  .tool-panel {
-    width: 100vw !important;
-    left: 0;
-    right: 0;
-  }
-  
-  .resize-handle {
-    display: none;
-  }
-}
-
-/* 禁用字典和書籤區域的高亮 */
-#tab-content-dictionary :deep(.citeright-link),
-#tab-content-bookmarks :deep(.citeright-link),
-.bookmark-preview :deep(.citeright-link),
-.search-hint :deep(.citeright-link),
-.result-title :deep(.citeright-link),
-.law-links :deep(.citeright-link) {
-  background: none !important;
-  border: none !important;
-  color: inherit !important;
-  text-decoration: none !important;
-  cursor: default !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
-}
-
-#tab-content-dictionary :deep(.citeright-link:hover),
-#tab-content-bookmarks :deep(.citeright-link:hover),
-.bookmark-preview :deep(.citeright-link:hover),
-.search-hint :deep(.citeright-link:hover),
-.result-title :deep(.citeright-link:hover),
-.law-links :deep(.citeright-link:hover) {
-  background: none !important;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-/* 記憶卡片樣式 */
+/* Flashcard styles */
 .flashcard-content {
   position: relative;
   height: 100%;
@@ -674,10 +490,10 @@ watch(() => props.currentTab, (newTab, oldTab) => {
 
 .mode-toggle {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 8px;
+  right: 8px;
   display: flex;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 8px;
   padding: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -685,7 +501,7 @@ watch(() => props.currentTab, (newTab, oldTab) => {
 }
 
 .mode-btn {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: none;
   background: transparent;
   border-radius: 6px;
@@ -696,27 +512,48 @@ watch(() => props.currentTab, (newTab, oldTab) => {
 }
 
 .mode-btn:hover {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
+  background: rgba(24, 144, 255, 0.1);
+  color: #1890ff;
 }
 
 .mode-btn.active {
-  background: #667eea;
+  background: #1890ff;
   color: white;
 }
 
-/* 無障礙設計 */
-@media (prefers-reduced-motion: reduce) {
-  .tool-panel,
-  .tab-btn,
-  .mode-btn {
-    transition: none;
+.mode-content {
+  padding-top: 48px;
+}
+
+/* Disable highlights in dictionary/bookmark areas */
+#tab-content-dictionary :deep(.citeright-link),
+#tab-content-bookmarks :deep(.citeright-link) {
+  background: none !important;
+  border: none !important;
+  color: inherit !important;
+  text-decoration: none !important;
+  cursor: default !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tool-panel-split {
+    width: 100vw !important;
   }
 
-  @keyframes slideIn {
-    from, to {
-      transform: translateX(0);
-    }
+  .split-divider {
+    display: none;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .split-divider,
+  .divider-handle,
+  .tab-btn,
+  .mode-btn,
+  .close-btn {
+    transition: none;
   }
 }
 </style>
