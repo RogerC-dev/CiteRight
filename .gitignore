@@ -102,3 +102,8 @@ dist
 # Test files (exclude from repository)
 test-fetch-improvements.js
 *.md
+/.idea
+/DataInsertion
+/processed_data
+/docs
+.env.AutoAgent
