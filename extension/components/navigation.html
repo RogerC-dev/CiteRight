@@ -1,273 +1,338 @@
 <!-- Shared Navigation Component for Extension Pages -->
+<!-- Requires Bootstrap Icons and shared-theme.css to be loaded on parent page -->
 <nav class="extension-nav" id="extensionNav">
-    <div class="nav-container">
-        <div class="nav-brand">
-            <a href="index.html#/intro" class="nav-logo">
-                <span class="logo-icon">⚖️</span>
-                <span class="logo-text">CiteRight</span>
-            </a>
-        </div>
-
-        <div class="nav-links">
-            <a href="index.html#/intro" class="nav-link" data-nav-key="intro">
-                <span class="nav-icon">🏠</span>
-                <span class="nav-text">產品總覽</span>
-            </a>
-            <a href="exam-bank.html" class="nav-link" data-nav-key="exam-bank">
-                <span class="nav-icon">📚</span>
-                <span class="nav-text">題庫練習</span>
-            </a>
-            <a href="ai-legal-interface.html" class="nav-link" data-nav-key="ai-chat">
-                <span class="nav-icon">🤖</span>
-                <span class="nav-text">AI 法律助手</span>
-            </a>
-            <a href="subscription.html" class="nav-link" data-nav-key="subscription">
-                <span class="nav-icon">💳</span>
-                <span class="nav-text">方案資訊</span>
-            </a>
-            <a href="index.html#/flashcards" class="nav-link" data-nav-key="flashcards">
-                <span class="nav-icon">📇</span>
-                <span class="nav-text">快閃卡</span>
-            </a>
-            <a href="index.html#/progress" class="nav-link" data-nav-key="progress">
-                <span class="nav-icon">📊</span>
-                <span class="nav-text">學習追蹤</span>
-            </a>
-            <a href="index.html#/admin" class="nav-link" data-nav-key="admin">
-                <span class="nav-icon">🛠️</span>
-                <span class="nav-text">題庫管理</span>
-            </a>
-        </div>
-
-        <div class="nav-actions">
-            <a href="subscription.html" class="nav-action-btn" title="方案介紹">
-                💳
-            </a>
-            <a href="index.html#/intro" class="nav-upgrade-btn" id="navUpgradeBtn">
-                <span>✨</span>
-                <span>升級</span>
-            </a>
-        </div>
+  <div class="nav-container">
+    <!-- Brand -->
+    <div class="nav-brand">
+      <a href="index.html" class="nav-logo">
+        <span class="logo-icon">
+          <i class="bi bi-journal-bookmark-fill"></i>
+        </span>
+        <span class="logo-text">CiteRight</span>
+      </a>
     </div>
+
+    <!-- Navigation Links -->
+    <div class="nav-links">
+      <a href="index.html#/practice" class="nav-link" data-nav-key="practice">
+        <i class="bi bi-collection-fill"></i>
+        <span class="nav-text">練習模式</span>
+      </a>
+      <a href="index.html#/flashcards" class="nav-link" data-nav-key="flashcards">
+        <i class="bi bi-layers-fill"></i>
+        <span class="nav-text">快閃卡</span>
+      </a>
+      <a href="index.html#/progress" class="nav-link" data-nav-key="progress">
+        <i class="bi bi-graph-up"></i>
+        <span class="nav-text">學習追蹤</span>
+      </a>
+      <a href="ai-legal-interface.html" class="nav-link" data-nav-key="ai-chat">
+        <i class="bi bi-robot"></i>
+        <span class="nav-text">AI 助手</span>
+      </a>
+      <a href="index.html#/admin" class="nav-link" data-nav-key="admin">
+        <i class="bi bi-gear-fill"></i>
+        <span class="nav-text">題庫管理</span>
+      </a>
+    </div>
+
+    <!-- Actions -->
+    <div class="nav-actions">
+      <button class="nav-action-btn" data-theme-toggle title="切換主題">
+        <i class="bi bi-moon-fill"></i>
+      </button>
+      <a href="subscription.html" class="nav-action-btn" title="方案資訊" data-nav-key="subscription">
+        <i class="bi bi-credit-card"></i>
+      </a>
+      <a href="subscription.html" class="nav-upgrade-btn" id="navUpgradeBtn">
+        <i class="bi bi-gem"></i>
+        <span>升級</span>
+      </a>
+    </div>
+  </div>
 </nav>
 
 <style>
-    .extension-nav {
-        background: white;
-        border-bottom: 1px solid #e0e0e0;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-    }
+  .extension-nav {
+    background: var(--surface, #fff);
+    border-bottom: 1px solid var(--border, #e0e0e0);
+    box-shadow: var(--shadow-elegant, 0 2px 4px rgba(0, 0, 0, 0.05));
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
 
-    .nav-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 0 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        height: 60px;
-    }
+  .nav-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    gap: 24px;
+  }
 
-    .nav-brand {
-        display: flex;
-        align-items: center;
-    }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+  }
 
-    .nav-logo {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        text-decoration: none;
-        color: #1890ff;
-        font-weight: 600;
-        font-size: 18px;
-        transition: opacity 0.2s;
-    }
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--primary, #476996);
+    font-weight: 600;
+    font-size: 18px;
+    transition: opacity 0.2s;
+  }
 
-    .nav-logo:hover {
-        opacity: 0.8;
-    }
+  .nav-logo:hover {
+    opacity: 0.85;
+  }
 
-    .logo-icon {
-        font-size: 24px;
-    }
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--primary-soft, #EEF2FF);
+    color: var(--primary, #476996);
+    border-radius: var(--radius-sm, 8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
 
-    .logo-text {
-        font-weight: 600;
-    }
+  .logo-text {
+    font-weight: 700;
+    color: var(--text-primary, #1E293B);
+  }
 
-    .nav-links {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex: 1;
-        justify-content: center;
-        flex-wrap: wrap;
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    text-decoration: none;
+    color: var(--text-secondary, #64748B);
+    border-radius: var(--radius-sm, 8px);
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+
+  .nav-link i {
+    font-size: 16px;
+  }
+
+  .nav-link:hover {
+    background: var(--primary-soft, #EEF2FF);
+    color: var(--primary, #476996);
+    border-color: var(--primary-soft, #EEF2FF);
+  }
+
+  .nav-link.active {
+    background: var(--primary, #476996);
+    color: #fff;
+    border-color: var(--primary, #476996);
+    box-shadow: 0 4px 12px rgba(71, 105, 150, 0.25);
+  }
+
+  .nav-text {
+    white-space: nowrap;
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-action-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border, #CBD5E1);
+    background: var(--surface, #fff);
+    border-radius: var(--radius-sm, 8px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s;
+    color: var(--text-secondary, #64748B);
+    text-decoration: none;
+  }
+
+  .nav-action-btn:hover {
+    background: var(--primary-soft, #EEF2FF);
+    color: var(--primary, #476996);
+    border-color: var(--primary, #476996);
+  }
+
+  .nav-upgrade-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    background: var(--gradient-primary, linear-gradient(135deg, #476996 0%, #35527a 100%));
+    color: #fff;
+    border-radius: var(--radius-sm, 8px);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(71, 105, 150, 0.3);
+  }
+
+  .nav-upgrade-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(71, 105, 150, 0.4);
+    color: #fff;
+  }
+
+  .nav-upgrade-btn i {
+    font-size: 14px;
+  }
+
+  /* Dark mode adjustments */
+  [data-bs-theme="dark"] .extension-nav,
+  .dark .extension-nav {
+    background: var(--surface, #1e293b);
+    border-color: var(--border, #334155);
+  }
+
+  [data-bs-theme="dark"] .logo-text,
+  .dark .logo-text {
+    color: var(--text-primary, #f1f5f9);
+  }
+
+  [data-bs-theme="dark"] .nav-action-btn,
+  .dark .nav-action-btn {
+    background: var(--surface-muted, #334155);
+    border-color: var(--border, #334155);
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .nav-text {
+      display: none;
     }
 
     .nav-link {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 14px;
-        text-decoration: none;
-        color: #4a5568;
-        border-radius: 999px;
-        transition: all 0.2s;
-        font-size: 14px;
-        font-weight: 500;
-        border: 1px solid transparent;
+      padding: 10px;
     }
 
-    .nav-link:hover {
-        border-color: #bae7ff;
-        background: #f0faff;
-        color: #096dd9;
+    .nav-link i {
+      font-size: 18px;
     }
 
-    .nav-link.active {
-        background: #1890ff;
-        color: white;
-        border-color: #1890ff;
-        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25);
-    }
-
-    .nav-icon {
-        font-size: 16px;
-    }
-
-    .nav-text {
-        white-space: nowrap;
-    }
-
-    .nav-actions {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .nav-action-btn {
-        width: 40px;
-        height: 40px;
-        border: none;
-        background: #f5f5f5;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        transition: all 0.2s;
-        color: #666;
-        text-decoration: none;
-    }
-
-    .nav-action-btn:hover {
-        background: #e6f7ff;
-        color: #1890ff;
+    .nav-upgrade-btn span {
+      display: none;
     }
 
     .nav-upgrade-btn {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 16px;
-        background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-        color: white;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 14px;
-        font-weight: 600;
-        transition: all 0.2s;
-        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+      padding: 10px 14px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .nav-container {
+      padding: 0 12px;
+      gap: 12px;
     }
 
-    .nav-upgrade-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+    .nav-links {
+      gap: 2px;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-        .nav-text {
-            display: none;
-        }
-
-        .nav-link {
-            padding: 8px 12px;
-        }
-
-        .nav-container {
-            padding: 0 12px;
-        }
+    .nav-link {
+      padding: 8px;
     }
+
+    .logo-text {
+      display: none;
+    }
+  }
 </style>
 
 <script>
-    (function () {
-        document.addEventListener('DOMContentLoaded', function () {
-            const nav = document.getElementById('extensionNav');
-            if (!nav) {
-                return;
-            }
+  (function() {
+    document.addEventListener('DOMContentLoaded', function() {
+      const nav = document.getElementById('extensionNav');
+      if (!nav) return;
 
-            const forcedKey = nav.dataset.forceActive;
+      const forcedKey = nav.dataset.forceActive;
 
-            function detectActiveKey() {
-                if (forcedKey) {
-                    return forcedKey;
-                }
+      // Detect active navigation key
+      function detectActiveKey() {
+        if (forcedKey) return forcedKey;
 
-                const path = window.location.pathname;
-                const hash = window.location.hash.replace('#/', '') || 'intro';
+        const path = window.location.pathname;
+        const hash = window.location.hash.replace('#/', '') || 'practice';
 
-                if (path.includes('exam-bank.html')) {
-                    return 'exam-bank';
-                }
-                if (path.includes('ai-legal-interface.html')) {
-                    return 'ai-chat';
-                }
-                if (path.includes('subscription.html')) {
-                    return 'subscription';
-                }
+        if (path.includes('ai-legal-interface.html')) return 'ai-chat';
+        if (path.includes('subscription.html')) return 'subscription';
+        if (path.includes('flashcard-sidebar.html')) return 'flashcards';
 
-                return hash;
-            }
+        // Map hash to nav keys
+        const validKeys = ['practice', 'flashcards', 'progress', 'admin'];
+        return validKeys.includes(hash) ? hash : 'practice';
+      }
 
-            function updateActiveLink() {
-                const activeKey = detectActiveKey();
-                const links = nav.querySelectorAll('.nav-link');
+      // Update active link styling
+      function updateActiveLink() {
+        const activeKey = detectActiveKey();
+        const links = nav.querySelectorAll('.nav-link');
 
-                links.forEach((link) => {
-                    const key = link.getAttribute('data-nav-key');
-                    if (key === activeKey) {
-                        link.classList.add('active');
-                    } else {
-                        link.classList.remove('active');
-                    }
-                });
-            }
-
-            window.addEventListener('hashchange', updateActiveLink);
-            updateActiveLink();
-
-            const links = nav.querySelectorAll('.nav-link');
-            links.forEach((link) => {
-                link.addEventListener('click', function (event) {
-                    const href = this.getAttribute('href');
-
-                    if (href && href.includes('#/') && window.extensionRouter) {
-                        const route = href.split('#/')[1];
-                        if (route) {
-                            event.preventDefault();
-                            window.extensionRouter.navigate(route);
-                        }
-                    }
-                });
-            });
+        links.forEach((link) => {
+          const key = link.getAttribute('data-nav-key');
+          if (key === activeKey) {
+            link.classList.add('active');
+          } else {
+            link.classList.remove('active');
+          }
         });
-    })();
+      }
+
+      // Handle hash changes
+      window.addEventListener('hashchange', updateActiveLink);
+      updateActiveLink();
+
+      // Handle navigation clicks
+      const links = nav.querySelectorAll('.nav-link');
+      links.forEach((link) => {
+        link.addEventListener('click', function(event) {
+          const href = this.getAttribute('href');
+
+          if (href && href.includes('#/') && window.extensionRouter) {
+            const route = href.split('#/')[1];
+            if (route) {
+              event.preventDefault();
+              window.extensionRouter.navigate(route);
+            }
+          }
+        });
+      });
+
+      // Initialize theme toggle in nav
+      const themeToggle = nav.querySelector('[data-theme-toggle]');
+      if (themeToggle && window.ThemeManager) {
+        themeToggle.addEventListener('click', () => {
+          ThemeManager.toggle();
+        });
+      }
+    });
+  })();
 </script>

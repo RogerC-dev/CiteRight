@@ -1,978 +1,1077 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>記憶卡片 - CiteRight</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
-            background: #f5f7fa;
-            color: #2c3e50;
-            font-size: 14px;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* Header - Modern Design */
-        .sidebar-header {
-            background: white;
-            color: #2c3e50;
-            padding: 20px 16px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            border-bottom: 1px solid #e0e0e0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .sidebar-header h1 {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #2c3e50;
-        }
-
-        .sidebar-header .subtitle {
-            font-size: 13px;
-            color: #7f8c8d;
-        }
-
-        /* Tab Navigation - Compact */
-        .tab-nav {
-            display: flex;
-            background: white;
-            border-bottom: 2px solid #e9ecef;
-            position: sticky;
-            top: 74px;
-            z-index: 99;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 12px 8px;
-            background: none;
-            border: none;
-            border-bottom: 3px solid transparent;
-            color: #666;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: center;
-        }
-
-        .tab-btn:hover {
-            color: #007bff;
-            background: #f8f9fa;
-        }
-
-        .tab-btn.active {
-            color: #007bff;
-            border-bottom-color: #007bff;
-            background: white;
-        }
-
-        .tab-content {
-            display: none;
-            padding: 16px;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Quick Stats - Compact */
-        .quick-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .stat-box {
-            background: white;
-            padding: 16px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e0e0e0;
-        }
-
-        .stat-number {
-            font-size: 24px;
-            font-weight: 700;
-            color: #2c3e50;
-            margin-bottom: 6px;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #7f8c8d;
-        }
-
-        /* Deck List - Compact */
-        .deck-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .deck-card {
-            background: white;
-            border-radius: 8px;
-            padding: 16px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e0e0e0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-left: 4px solid #007bff;
-        }
-
-        .deck-card:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
-            border-left-width: 6px;
-        }
-
-        .deck-card.civil {
-            border-left-color: #4caf50;
-        }
-
-        .deck-card.criminal {
-            border-left-color: #f44336;
-        }
-
-        .deck-card.administrative {
-            border-left-color: #ff9800;
-        }
-
-        .deck-card.constitutional {
-            border-left-color: #2196f3;
-        }
-
-        .deck-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .deck-badges {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-        }
-
-        .badge {
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 500;
-        }
-
-        .badge-category {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .badge-difficulty {
-            color: white;
-        }
-
-        .badge-difficulty.beginner {
-            background: #4caf50;
-        }
-
-        .badge-difficulty.intermediate {
-            background: #ff9800;
-        }
-
-        .badge-difficulty.advanced {
-            background: #f44336;
-        }
-
-        .deck-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
-            color: #999;
-            margin-top: 8px;
-        }
-
-        /* Flashcard Study View - Optimized for Sidebar */
-        .flashcard-view {
-            padding: 16px;
-        }
-
-        .card-counter {
-            text-align: center;
-            color: #666;
-            font-size: 12px;
-            margin-bottom: 12px;
-            font-weight: 500;
-        }
-
-        .flashcard {
-            perspective: 1000px;
-            margin-bottom: 16px;
-        }
-
-        .flashcard-inner {
-            position: relative;
-            width: 100%;
-            min-height: 280px;
-            transform-style: preserve-3d;
-            transition: transform 0.5s ease;
-            cursor: pointer;
-        }
-
-        .flashcard-inner.flipped {
-            transform: rotateY(180deg);
-        }
-
-        .card-face {
-            position: absolute;
-            width: 100%;
-            min-height: 280px;
-            backface-visibility: hidden;
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-front {
-            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-            color: white;
-        }
-
-        .card-back {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            transform: rotateY(180deg);
-        }
-
-        .card-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            font-size: 11px;
-        }
-
-        .card-category-tag {
-            background: rgba(255, 255, 255, 0.25);
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-weight: 500;
-        }
-
-        .card-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            gap: 12px;
-        }
-
-        .card-icon {
-            font-size: 36px;
-            opacity: 0.9;
-        }
-
-        .card-text {
-            font-size: 16px;
-            font-weight: 600;
-            line-height: 1.5;
-        }
-
-        .explanation-box {
-            margin-top: 12px;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
-            font-size: 13px;
-            line-height: 1.4;
-            text-align: left;
-        }
-
-        .explanation-box h4 {
-            font-size: 12px;
-            margin-bottom: 6px;
-            opacity: 0.9;
-        }
-
-        .flip-hint {
-            text-align: center;
-            font-size: 11px;
-            opacity: 0.8;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 0.6;
-            }
-
-            50% {
-                opacity: 1;
-            }
-        }
-
-        /* Action Buttons - Compact */
-        .card-actions {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin-top: 16px;
-        }
-
-        .action-btn {
-            padding: 10px 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            color: white;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-again {
-            background: #f44336;
-        }
-
-        .btn-again:hover {
-            background: #d32f2f;
-        }
-
-        .btn-hard {
-            background: #ff9800;
-        }
-
-        .btn-hard:hover {
-            background: #f57c00;
-        }
-
-        .btn-good {
-            background: #4CAF50;
-        }
-
-        .btn-good:hover {
-            background: #45a049;
-        }
-
-        .btn-easy {
-            background: #007bff;
-        }
-
-        .btn-easy:hover {
-            background: #0056b3;
-        }
-
-        /* Review Schedule - Modern Design Matching ExamQuestionBank */
-        .review-schedule {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .schedule-item {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            border: 2px solid #e0e0e0;
-            transition: all 0.3s ease;
-        }
-
-        .schedule-item:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .schedule-item.urgent {
-            border-color: #ff6b6b;
-            background: #fff5f5;
-        }
-
-        .schedule-item.soon {
-            border-color: #ffd43b;
-            background: #fffbeb;
-        }
-
-        .schedule-item.normal {
-            border-color: #51cf66;
-            background: #f4fdf6;
-        }
-
-        .schedule-icon {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        .schedule-item.urgent .schedule-icon {
-            background: #ff6b6b;
-        }
-
-        .schedule-item.soon .schedule-icon {
-            background: #ffd43b;
-        }
-
-        .schedule-item.normal .schedule-icon {
-            background: #51cf66;
-        }
-
-        .schedule-info {
-            flex: 1;
-        }
-
-        .schedule-title {
-            font-size: 14px;
-            font-weight: 500;
-            color: #666;
-            margin-bottom: 4px;
-        }
-
-        .schedule-count {
-            font-size: 18px;
-            font-weight: 700;
-            color: #2c3e50;
-        }
-
-        .review-btn {
-            padding: 10px 20px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background 0.3s;
-        }
-
-        .review-btn:hover {
-            background: #0056b3;
-        }
-
-        /* Progress Bar - Compact */
-        .progress-section {
-            margin-top: 16px;
-        }
-
-        .progress-bar-container {
-            background: #e9ecef;
-            border-radius: 8px;
-            height: 6px;
-            overflow: hidden;
-            margin-bottom: 6px;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
-            transition: width 0.3s ease;
-        }
-
-        .progress-text {
-            font-size: 11px;
-            color: #666;
-            text-align: center;
-        }
-
-        /* Admin Section - Compact */
-        .admin-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .admin-btn {
-            padding: 12px;
-            background: white;
-            border: 2px dashed #dee2e6;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            color: #007bff;
-            transition: all 0.3s ease;
-            text-align: center;
-        }
-
-        .admin-btn:hover {
-            border-color: #007bff;
-            background: #f8f9fa;
-        }
-
-        .admin-btn.primary {
-            background: #007bff;
-            color: white;
-            border: none;
-        }
-
-        .admin-btn.primary:hover {
-            background: #0056b3;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-        }
-
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-            opacity: 0.5;
-        }
-
-        .empty-state h3 {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 8px;
-        }
-
-        .empty-state p {
-            font-size: 13px;
-            margin-bottom: 16px;
-        }
-
-        .create-btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: background 0.3s;
-        }
-
-        .create-btn:hover {
-            background: #0056b3;
-        }
-
-        /* Loading State */
-        .loading {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #007bff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 12px;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Back Button */
-        .back-btn {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: background 0.3s;
-        }
-
-        .back-btn:hover {
-            background: #5a6268;
-        }
-
-        /* Scrollbar Styling */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>快閃卡 - CiteRight</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Inter + Noto Sans TC Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Shared Theme -->
+  <link rel="stylesheet" href="../styles/shared-theme.css">
+  <style>
+    body {
+      min-height: 100vh;
+    }
+
+    /* Sidebar Header */
+    .sidebar-header {
+      background: var(--gradient-primary);
+      padding: 20px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-title h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin: 0;
+    }
+
+    .header-title .icon-box {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .header-subtitle {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.85);
+      margin-top: 4px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-header-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-header-icon:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Main Content */
+    .sidebar-content {
+      padding: 0;
+    }
+
+    /* Stats Overview */
+    .stats-section {
+      padding: 16px;
+      background: var(--bg-page);
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 8px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stat-value.primary { color: var(--primary); }
+    .stat-value.success { color: var(--success); }
+    .stat-value.warning { color: var(--warning); }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Due Cards Section */
+    .due-section {
+      padding: 0 16px 16px;
+      background: var(--bg-page);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .due-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .due-card:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow);
+    }
+
+    .due-card.urgent {
+      border-left: 3px solid var(--destructive);
+    }
+
+    .due-card.soon {
+      border-left: 3px solid var(--warning);
+    }
+
+    .due-card.normal {
+      border-left: 3px solid var(--success);
+    }
+
+    .due-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .due-card.urgent .due-icon {
+      background: var(--destructive-soft);
+      color: var(--destructive);
+    }
+
+    .due-card.soon .due-icon {
+      background: var(--warning-soft);
+      color: var(--warning);
+    }
+
+    .due-card.normal .due-icon {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    .due-info {
+      flex: 1;
+    }
+
+    .due-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .due-count {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .due-action {
+      padding: 6px 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .due-action:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Deck List */
+    .deck-section {
+      padding: 0 16px 16px;
+      background: var(--bg-page);
+    }
+
+    .deck-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .deck-item:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow);
+    }
+
+    .deck-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .deck-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .deck-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .deck-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Flashcard Study View */
+    .study-view {
+      display: none;
+      padding: 16px;
+      background: var(--bg-page);
+      min-height: calc(100vh - 80px);
+    }
+
+    .study-view.active {
+      display: block;
+    }
+
+    .study-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .back-btn:hover {
+      background: var(--surface-muted);
+    }
+
+    .card-counter {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Flashcard */
+    .flashcard-container {
+      perspective: 1000px;
+      margin-bottom: 16px;
+    }
+
+    .flashcard {
+      position: relative;
+      width: 100%;
+      min-height: 280px;
+      transform-style: preserve-3d;
+      transition: transform 0.5s ease;
+      cursor: pointer;
+    }
+
+    .flashcard.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      min-height: 280px;
+      backface-visibility: hidden;
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-front {
+      background: var(--gradient-primary);
+      color: #fff;
+    }
+
+    .card-back {
+      background: linear-gradient(135deg, var(--success) 0%, #16a34a 100%);
+      color: #fff;
+      transform: rotateY(180deg);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      font-size: 11px;
+    }
+
+    .card-tag {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-weight: 500;
+    }
+
+    .card-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 12px;
+    }
+
+    .card-icon {
+      font-size: 36px;
+      opacity: 0.9;
+    }
+
+    .card-text {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .card-explanation {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: left;
+    }
+
+    .card-explanation h4 {
+      font-size: 12px;
+      margin-bottom: 6px;
+      opacity: 0.9;
+    }
+
+    .flip-hint {
+      text-align: center;
+      font-size: 11px;
+      opacity: 0.7;
+      animation: pulse-opacity 2s infinite;
+    }
+
+    @keyframes pulse-opacity {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 0.9; }
+    }
+
+    /* Rating Buttons */
+    .rating-buttons {
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .rating-buttons.visible {
+      display: grid;
+    }
+
+    .rating-btn {
+      padding: 10px 8px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .rating-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .rating-btn i {
+      font-size: 16px;
+    }
+
+    .rating-btn.again { background: var(--destructive); }
+    .rating-btn.hard { background: var(--warning); }
+    .rating-btn.good { background: var(--success); }
+    .rating-btn.easy { background: var(--primary); }
+
+    /* Progress */
+    .study-progress {
+      margin-top: 16px;
+    }
+
+    .progress-text {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* Empty State */
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      color: var(--text-secondary);
+      opacity: 0.5;
+      margin-bottom: 16px;
+    }
+
+    .empty-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .empty-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    /* Login Prompt */
+    .login-prompt {
+      background: var(--primary-soft);
+      border: 1px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      margin: 16px;
+    }
+
+    .login-prompt i {
+      font-size: 32px;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+
+    .login-prompt h3 {
+      font-size: 14px;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .login-prompt p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    /* Loading */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    /* Quick Add Form */
+    .quick-add {
+      padding: 16px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+    .quick-add-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    .quick-add-input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      background: var(--bg-page);
+      color: var(--text-primary);
+    }
+
+    .quick-add-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .quick-add-btn {
+      padding: 10px 16px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .quick-add-btn:hover {
+      background: var(--primary-hover);
+    }
+  </style>
 </head>
-
 <body>
-    <!-- Header -->
-    <div class="sidebar-header">
-        <h1>🃏 記憶卡片</h1>
-        <div class="subtitle">智慧複習系統</div>
+  <!-- Header -->
+  <header class="sidebar-header">
+    <div class="header-content">
+      <div>
+        <div class="header-title">
+          <div class="icon-box">
+            <i class="bi bi-layers-fill"></i>
+          </div>
+          <h1>快閃卡</h1>
+        </div>
+        <p class="header-subtitle">智慧複習系統</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-header-icon" data-theme-toggle title="切換主題">
+          <i class="bi bi-moon-fill"></i>
+        </button>
+        <button class="btn-header-icon" id="refreshBtn" title="重新整理">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="sidebar-content">
+    <!-- Login Prompt (shown when not authenticated) -->
+    <div class="login-prompt" id="loginPrompt" style="display: none;">
+      <i class="bi bi-person-lock"></i>
+      <h3>請先登入</h3>
+      <p>登入後即可存取您的快閃卡並同步學習進度</p>
+      <button class="btn btn-primary" id="loginBtn">
+        <i class="bi bi-box-arrow-in-right"></i> 登入
+      </button>
     </div>
 
-    <!-- Tab Navigation -->
-    <div class="tab-nav">
-        <button class="tab-btn active" data-tab="overview">📊 總覽</button>
-        <button class="tab-btn" data-tab="flashcards">📇 複習</button>
-        <button class="tab-btn" data-tab="manage">⚙️ 管理</button>
+    <!-- Dashboard View -->
+    <div id="dashboardView">
+      <!-- Stats Section -->
+      <section class="stats-section">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-value" id="totalCards">-</div>
+            <div class="stat-label">總卡片</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value success" id="masteredCards">-</div>
+            <div class="stat-label">已精熟</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value warning" id="dueCards">-</div>
+            <div class="stat-label">待複習</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value primary" id="streakDays">-</div>
+            <div class="stat-label">連續天</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Due Cards Section -->
+      <section class="due-section">
+        <div class="section-header">
+          <span class="section-title">
+            <i class="bi bi-clock-history"></i>
+            複習排程
+          </span>
+        </div>
+        <div id="dueList">
+          <!-- Due cards will be populated here -->
+        </div>
+      </section>
+
+      <!-- Decks Section -->
+      <section class="deck-section">
+        <div class="section-header">
+          <span class="section-title">
+            <i class="bi bi-collection"></i>
+            牌組列表
+          </span>
+          <button class="btn-icon" id="addDeckBtn" title="新增牌組">
+            <i class="bi bi-plus-lg"></i>
+          </button>
+        </div>
+        <div id="deckList">
+          <!-- Decks will be populated here -->
+        </div>
+      </section>
+
+      <!-- Loading State -->
+      <div class="loading-container" id="loadingState" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p style="margin-top: 12px; color: var(--text-secondary);">載入中...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" id="emptyState" style="display: none;">
+        <div class="empty-icon">
+          <i class="bi bi-inbox"></i>
+        </div>
+        <h3 class="empty-title">尚無快閃卡</h3>
+        <p class="empty-text">從題庫或書籤建立您的第一張快閃卡</p>
+        <button class="btn btn-primary" id="createFirstBtn">
+          <i class="bi bi-plus-lg"></i> 建立快閃卡
+        </button>
+      </div>
     </div>
 
-    <!-- Overview Tab -->
-    <div class="tab-content active" id="overview-tab">
-        <div class="quick-stats">
-            <div class="stat-box">
-                <div class="stat-number" id="total-decks">3</div>
-                <div class="stat-label">牌組數</div>
+    <!-- Study View -->
+    <div class="study-view" id="studyView">
+      <div class="study-header">
+        <button class="back-btn" id="exitStudyBtn">
+          <i class="bi bi-arrow-left"></i> 返回
+        </button>
+        <span class="card-counter" id="cardCounter">1 / 10</span>
+      </div>
+
+      <div class="flashcard-container">
+        <div class="flashcard" id="flashcard">
+          <!-- Front -->
+          <div class="card-face card-front">
+            <div class="card-top">
+              <span class="card-tag" id="cardTag">民法</span>
+              <span id="cardDifficulty">中等</span>
             </div>
-            <div class="stat-box">
-                <div class="stat-number" id="total-cards">45</div>
-                <div class="stat-label">總卡片</div>
+            <div class="card-main">
+              <div class="card-icon">
+                <i class="bi bi-question-circle"></i>
+              </div>
+              <div class="card-text" id="cardFront">
+                載入中...
+              </div>
             </div>
-            <div class="stat-box">
-                <div class="stat-number" id="today-studied">12</div>
-                <div class="stat-label">今日已學</div>
+            <div class="flip-hint">
+              <i class="bi bi-hand-index"></i> 點擊翻面查看答案
             </div>
-            <div class="stat-box">
-                <div class="stat-number" id="due-cards">8</div>
-                <div class="stat-label">待複習</div>
+          </div>
+
+          <!-- Back -->
+          <div class="card-face card-back">
+            <div class="card-top">
+              <span class="card-tag" id="cardSource">-</span>
+              <span id="cardPosition">1 / 10</span>
             </div>
+            <div class="card-main">
+              <div class="card-icon">
+                <i class="bi bi-check-circle"></i>
+              </div>
+              <div class="card-text" id="cardBack">
+                載入中...
+              </div>
+              <div class="card-explanation" id="cardExplanation">
+                <h4>詳細說明：</h4>
+                <p id="explanationText">-</p>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div class="deck-list">
-            <div class="deck-card civil" data-deck-id="1">
-                <div class="deck-title">📗 民法基礎</div>
-                <div class="deck-badges">
-                    <span class="badge badge-category">民法</span>
-                    <span class="badge badge-difficulty beginner">初級</span>
-                </div>
-                <div class="deck-meta">
-                    <span>15 張卡片</span>
-                    <span>上次學習: 2天前</span>
-                </div>
-            </div>
+      <div class="rating-buttons" id="ratingButtons">
+        <button class="rating-btn again" data-quality="1">
+          <i class="bi bi-arrow-repeat"></i>
+          <span>重來</span>
+        </button>
+        <button class="rating-btn hard" data-quality="2">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>困難</span>
+        </button>
+        <button class="rating-btn good" data-quality="3">
+          <i class="bi bi-hand-thumbs-up"></i>
+          <span>良好</span>
+        </button>
+        <button class="rating-btn easy" data-quality="4">
+          <i class="bi bi-emoji-smile"></i>
+          <span>簡單</span>
+        </button>
+      </div>
 
-            <div class="deck-card criminal" data-deck-id="2">
-                <div class="deck-title">📕 刑法總則</div>
-                <div class="deck-badges">
-                    <span class="badge badge-category">刑法</span>
-                    <span class="badge badge-difficulty intermediate">中級</span>
-                </div>
-                <div class="deck-meta">
-                    <span>18 張卡片</span>
-                    <span>上次學習: 1週前</span>
-                </div>
-            </div>
-
-            <div class="deck-card constitutional" data-deck-id="3">
-                <div class="deck-title">📘 憲法解釋</div>
-                <div class="deck-badges">
-                    <span class="badge badge-category">憲法</span>
-                    <span class="badge badge-difficulty advanced">高級</span>
-                </div>
-                <div class="deck-meta">
-                    <span>12 張卡片</span>
-                    <span>上次學習: 3天前</span>
-                </div>
-            </div>
+      <div class="study-progress">
+        <div class="progress-container">
+          <div class="progress-bar" id="studyProgressBar" style="width: 0%;"></div>
         </div>
+        <div class="progress-text" id="progressText">已完成 0/10 (0%)</div>
+      </div>
     </div>
+  </main>
 
-    <!-- Flashcards Tab -->
-    <div class="tab-content" id="flashcards-tab">
-        <div class="review-schedule">
-            <div class="schedule-item urgent">
-                <div class="schedule-icon"></div>
-                <div class="schedule-info">
-                    <div class="schedule-title">今日待複習</div>
-                    <div class="schedule-count">8 張卡片</div>
-                </div>
-                <button class="review-btn" onclick="startReview('today')">立即複習</button>
-            </div>
+  <!-- Scripts -->
+  <script src="../scripts/api-config.js"></script>
+  <script src="../scripts/theme-manager.js"></script>
+  <script src="../scripts/flashcard-handler.js"></script>
+  <script>
+    // State
+    let currentCards = [];
+    let currentIndex = 0;
+    let isFlipped = false;
+    let totalReviewed = 0;
 
-            <div class="schedule-item soon">
-                <div class="schedule-icon"></div>
-                <div class="schedule-info">
-                    <div class="schedule-title">明日預定</div>
-                    <div class="schedule-count">5 張卡片</div>
-                </div>
-                <button class="review-btn" onclick="viewDetails('tomorrow')">查看詳情</button>
-            </div>
+    // DOM Elements
+    const dashboardView = document.getElementById('dashboardView');
+    const studyView = document.getElementById('studyView');
+    const loginPrompt = document.getElementById('loginPrompt');
+    const loadingState = document.getElementById('loadingState');
+    const emptyState = document.getElementById('emptyState');
+    const flashcard = document.getElementById('flashcard');
+    const ratingButtons = document.getElementById('ratingButtons');
 
-            <div class="schedule-item normal">
-                <div class="schedule-icon"></div>
-                <div class="schedule-info">
-                    <div class="schedule-title">本週預定</div>
-                    <div class="schedule-count">12 張卡片</div>
-                </div>
-                <button class="review-btn" onclick="viewDetails('week')">查看詳情</button>
-            </div>
+    // Initialize
+    async function init() {
+      const isAuth = await flashcardHandler.isAuthenticated();
+      
+      if (!isAuth) {
+        loginPrompt.style.display = 'block';
+        dashboardView.style.display = 'none';
+        return;
+      }
+
+      loginPrompt.style.display = 'none';
+      dashboardView.style.display = 'block';
+      await loadDashboard();
+    }
+
+    // Load Dashboard Data
+    async function loadDashboard() {
+      loadingState.style.display = 'flex';
+      
+      try {
+        // Load stats
+        const statsResult = await flashcardHandler.getStats();
+        if (statsResult.success) {
+          updateStats(statsResult.data);
+        }
+
+        // Load due cards
+        const dueResult = await flashcardHandler.getDueFlashcards();
+        if (dueResult.success) {
+          renderDueCards(dueResult.data);
+        }
+
+        // Load decks
+        const decksResult = await flashcardHandler.getDecks();
+        if (decksResult.success) {
+          renderDecks(decksResult.data);
+        }
+
+        loadingState.style.display = 'none';
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        loadingState.style.display = 'none';
+      }
+    }
+
+    // Update Stats Display
+    function updateStats(stats) {
+      document.getElementById('totalCards').textContent = stats.total_cards || 0;
+      document.getElementById('masteredCards').textContent = stats.mastered || 0;
+      document.getElementById('dueCards').textContent = stats.due_today || 0;
+      document.getElementById('streakDays').textContent = stats.streak || 0;
+    }
+
+    // Render Due Cards
+    function renderDueCards(data) {
+      const container = document.getElementById('dueList');
+      const { summary } = data;
+      
+      container.innerHTML = `
+        <div class="due-card urgent" data-type="urgent">
+          <div class="due-icon">
+            <i class="bi bi-exclamation-circle-fill"></i>
+          </div>
+          <div class="due-info">
+            <div class="due-title">今日待複習</div>
+            <div class="due-count">${summary.urgent + summary.soon + summary.normal} 張卡片</div>
+          </div>
+          <button class="due-action" onclick="startReview('today')">
+            <i class="bi bi-play-fill"></i> 開始
+          </button>
         </div>
-
-        <!-- Study View (Hidden initially) -->
-        <div class="flashcard-view" id="study-view" style="display: none;">
-            <button class="back-btn" onclick="exitStudy()">← 返回</button>
-
-            <div class="card-counter" id="card-counter">1 / 8</div>
-
-            <div class="flashcard">
-                <div class="flashcard-inner" id="flashcard-inner">
-                    <!-- Front -->
-                    <div class="card-face card-front">
-                        <div class="card-top">
-                            <span class="card-category-tag" id="card-category">民法</span>
-                            <span id="card-difficulty">初級</span>
-                        </div>
-                        <div class="card-main">
-                            <div class="card-icon">❓</div>
-                            <div class="card-text" id="question-text">
-                                民法第 184 條第 1 項規定之侵權行為要件為何？
-                            </div>
-                        </div>
-                        <div class="flip-hint">點擊翻面查看答案</div>
-                    </div>
-
-                    <!-- Back -->
-                    <div class="card-face card-back">
-                        <div class="card-top">
-                            <span class="card-category-tag" id="answer-source">民法第184條</span>
-                            <span>1 / 8</span>
-                        </div>
-                        <div class="card-main">
-                            <div class="card-icon">✅</div>
-                            <div class="card-text" id="answer-text">
-                                須具備：故意或過失、不法、侵害他人權利、損害、因果關係
-                            </div>
-                            <div class="explanation-box" id="explanation-box">
-                                <h4>詳細說明：</h4>
-                                <p>侵權行為之成立要件包含主觀要件（故意或過失）、客觀要件（不法侵害行為）、權利侵害、損害發生，以及因果關係。缺一不可。</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card-actions" id="difficulty-buttons" style="display: none;">
-                <button class="action-btn btn-again" onclick="answer('again')">
-                    🔄 重來
-                </button>
-                <button class="action-btn btn-hard" onclick="answer('hard')">
-                    😰 困難
-                </button>
-                <button class="action-btn btn-good" onclick="answer('good')">
-                    👍 良好
-                </button>
-                <button class="action-btn btn-easy" onclick="answer('easy')">
-                    😊 簡單
-                </button>
-            </div>
-
-            <div class="progress-section">
-                <div class="progress-bar-container">
-                    <div class="progress-bar" id="progress-bar" style="width: 12.5%;"></div>
-                </div>
-                <div class="progress-text" id="progress-text">已完成 1/8 (12%)</div>
-            </div>
+        <div class="due-card soon" data-type="soon">
+          <div class="due-icon">
+            <i class="bi bi-clock-fill"></i>
+          </div>
+          <div class="due-info">
+            <div class="due-title">即將到期</div>
+            <div class="due-count">${summary.soon} 張卡片</div>
+          </div>
+          <button class="due-action" onclick="startReview('soon')">查看</button>
         </div>
-    </div>
-
-    <!-- Manage Tab -->
-    <div class="tab-content" id="manage-tab">
-        <div class="admin-actions">
-            <button class="admin-btn primary" onclick="createDeck()">
-                ➕ 新增牌組
-            </button>
-            <button class="admin-btn" onclick="createFromBookmarks()">
-                📚 從書籤建立測驗
-            </button>
-            <button class="admin-btn" onclick="importDeck()">
-                📥 匯入牌組
-            </button>
-            <button class="admin-btn" onclick="exportAllDecks()">
-                📤 匯出所有牌組
-            </button>
+        <div class="due-card normal" data-type="normal">
+          <div class="due-icon">
+            <i class="bi bi-calendar-check"></i>
+          </div>
+          <div class="due-info">
+            <div class="due-title">本週預定</div>
+            <div class="due-count">${summary.normal} 張卡片</div>
+          </div>
+          <button class="due-action" onclick="startReview('week')">查看</button>
         </div>
+      `;
+    }
 
-        <div class="deck-list" id="manage-deck-list">
-            <!-- Same deck cards as overview, but with edit/delete options -->
-        </div>
-    </div>
+    // Render Decks
+    function renderDecks(decks) {
+      const container = document.getElementById('deckList');
+      
+      if (!decks || decks.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
 
-    <script>
-        // Tab Navigation
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const targetTab = this.dataset.tab;
+      emptyState.style.display = 'none';
+      
+      const colors = ['blue', 'green', 'purple', 'orange', 'amber'];
+      
+      container.innerHTML = decks.map((deck, index) => {
+        const color = colors[index % colors.length];
+        return `
+          <div class="deck-item" data-deck-id="${deck.id}" onclick="startDeckReview(${deck.id})">
+            <div class="deck-header">
+              <div class="deck-icon" style="background: var(--icon-${color}-bg); color: var(--icon-${color}-fg);">
+                <i class="bi bi-stack"></i>
+              </div>
+              <span class="deck-name">${deck.name}</span>
+            </div>
+            <div class="deck-meta">
+              <span>${deck.card_count || 0} 張卡片</span>
+              <span>${deck.due_count || 0} 待複習</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
-                // Update buttons
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
+    // Start Review Session
+    async function startReview(type) {
+      const result = await flashcardHandler.getDueFlashcards();
+      
+      if (result.success && result.data.flashcards.length > 0) {
+        currentCards = result.data.flashcards;
+        currentIndex = 0;
+        totalReviewed = 0;
+        
+        showStudyView();
+        showCurrentCard();
+      } else {
+        alert('目前沒有待複習的卡片');
+      }
+    }
 
-                // Update content
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                document.getElementById(targetTab + '-tab').classList.add('active');
-            });
-        });
+    // Start Deck Review
+    async function startDeckReview(deckId) {
+      const result = await flashcardHandler.getFlashcards({ deck: deckId });
+      
+      if (result.success && result.data.length > 0) {
+        currentCards = result.data;
+        currentIndex = 0;
+        totalReviewed = 0;
+        
+        showStudyView();
+        showCurrentCard();
+      } else {
+        alert('此牌組沒有卡片');
+      }
+    }
 
-        // Deck Selection
-        document.querySelectorAll('.deck-card').forEach(card => {
-            card.addEventListener('click', function () {
-                const deckId = this.dataset.deckId;
-                startDeckStudy(deckId);
-            });
-        });
+    // Show Study View
+    function showStudyView() {
+      dashboardView.style.display = 'none';
+      studyView.classList.add('active');
+      isFlipped = false;
+      flashcard.classList.remove('flipped');
+      ratingButtons.classList.remove('visible');
+    }
 
-        // Flashcard Flip
-        const flashcardInner = document.getElementById('flashcard-inner');
-        if (flashcardInner) {
-            flashcardInner.addEventListener('click', function () {
-                if (!this.classList.contains('flipped')) {
-                    this.classList.add('flipped');
-                    document.getElementById('difficulty-buttons').style.display = 'grid';
-                }
-            });
-        }
+    // Exit Study
+    function exitStudy() {
+      studyView.classList.remove('active');
+      dashboardView.style.display = 'block';
+      loadDashboard();
+    }
 
-        // Functions
-        function startReview(type) {
-            console.log('Starting review:', type);
-            document.querySelector('.review-schedule').style.display = 'none';
-            document.getElementById('study-view').style.display = 'block';
-        }
+    // Show Current Card
+    function showCurrentCard() {
+      if (currentIndex >= currentCards.length) {
+        completeSession();
+        return;
+      }
 
-        function exitStudy() {
-            document.querySelector('.review-schedule').style.display = 'flex';
-            document.getElementById('study-view').style.display = 'none';
-            resetCard();
-        }
+      const card = currentCards[currentIndex];
+      
+      document.getElementById('cardFront').textContent = card.front;
+      document.getElementById('cardBack').textContent = card.back;
+      document.getElementById('cardTag').textContent = card.deck_name || card.tags?.[0] || '未分類';
+      document.getElementById('cardSource').textContent = card.source || '-';
+      document.getElementById('explanationText').textContent = card.explanation || '無額外說明';
+      
+      updateProgress();
+      
+      // Reset card state
+      isFlipped = false;
+      flashcard.classList.remove('flipped');
+      ratingButtons.classList.remove('visible');
+    }
 
-        function viewDetails(period) {
-            console.log('Viewing details for:', period);
-            alert(`查看${period === 'tomorrow' ? '明日' : '本週'}卡片詳情`);
-        }
+    // Update Progress
+    function updateProgress() {
+      const total = currentCards.length;
+      const completed = totalReviewed;
+      const percent = Math.round((completed / total) * 100);
+      
+      document.getElementById('cardCounter').textContent = `${currentIndex + 1} / ${total}`;
+      document.getElementById('cardPosition').textContent = `${currentIndex + 1} / ${total}`;
+      document.getElementById('studyProgressBar').style.width = `${percent}%`;
+      document.getElementById('progressText').textContent = `已完成 ${completed}/${total} (${percent}%)`;
+    }
 
-        function startDeckStudy(deckId) {
-            console.log('Starting deck study:', deckId);
-            // Switch to flashcards tab and start study
-            document.querySelector('[data-tab="flashcards"]').click();
-            setTimeout(() => {
-                startReview('deck-' + deckId);
-            }, 100);
-        }
+    // Flip Card
+    flashcard.addEventListener('click', () => {
+      if (!isFlipped) {
+        isFlipped = true;
+        flashcard.classList.add('flipped');
+        ratingButtons.classList.add('visible');
+      }
+    });
 
-        function answer(difficulty) {
-            console.log('Answer difficulty:', difficulty);
+    // Rating Buttons
+    document.querySelectorAll('.rating-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const quality = parseInt(btn.dataset.quality);
+        const card = currentCards[currentIndex];
+        
+        // Submit review
+        await flashcardHandler.reviewFlashcard(card.id, quality);
+        
+        totalReviewed++;
+        currentIndex++;
+        showCurrentCard();
+      });
+    });
 
-            // Show next card or complete
-            const currentCard = 1; // This would be tracked
-            const totalCards = 8;
+    // Complete Session
+    function completeSession() {
+      const total = currentCards.length;
+      alert(`複習完成！\n\n已複習 ${total} 張卡片`);
+      exitStudy();
+    }
 
-            if (currentCard < totalCards) {
-                nextCard();
-            } else {
-                completeStudy();
-            }
-        }
+    // Exit Study Button
+    document.getElementById('exitStudyBtn').addEventListener('click', exitStudy);
 
-        function nextCard() {
-            // Reset card
-            resetCard();
+    // Refresh Button
+    document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
 
-            // Update counter and progress
-            // Load next card data
-            console.log('Loading next card...');
-        }
+    // Login Button
+    document.getElementById('loginBtn')?.addEventListener('click', () => {
+      // Open ExamQuestionBank login page or popup
+      window.open('http://localhost:8000/#/login', '_blank');
+    });
 
-        function resetCard() {
-            flashcardInner.classList.remove('flipped');
-            document.getElementById('difficulty-buttons').style.display = 'none';
-        }
+    // Add Deck Button
+    document.getElementById('addDeckBtn')?.addEventListener('click', async () => {
+      const name = prompt('請輸入牌組名稱：');
+      if (name) {
+        await flashcardHandler.createDeck(name);
+        loadDashboard();
+      }
+    });
 
-        function completeStudy() {
-            alert('🎉 恭喜完成今日複習！\n\n已完成 8 張卡片\n正確率: 87%');
-            exitStudy();
-        }
+    // Create First Button
+    document.getElementById('createFirstBtn')?.addEventListener('click', () => {
+      window.open('http://localhost:8000/#/flashcards', '_blank');
+    });
 
-        // Admin Functions
-        function createDeck() {
-            alert('開啟新增牌組對話框');
-            // Open modal or navigate to creation page
-        }
-
-        function createFromBookmarks() {
-            alert('正在從書籤建立測驗牌組...');
-            console.log('Creating deck from bookmarks...');
-            // This would call the bookmark API
-        }
-
-        function importDeck() {
-            alert('開啟匯入牌組對話框');
-            // Open file picker
-        }
-
-        function exportAllDecks() {
-            alert('匯出所有牌組為 JSON 檔案');
-            // Export functionality
-        }
-
-        // Initialize
-        console.log('🃏 Flashcard Sidebar initialized');
-    </script>
+    // Initialize on load
+    init();
+  </script>
 </body>
-
 </html>

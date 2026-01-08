@@ -17,16 +17,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const bookmarksButton = document.getElementById('bookmarksButton');
     const settingsButton = document.getElementById('settingsButton');
     const mainLogo = document.getElementById('mainLogo');
-    const upgradeTopBtn = document.getElementById('upgradeTopBtn');
+    const upgradeTopBtn = document.getElementById('upgradeBtn');
     const aiChatButton = document.getElementById('aiChatButton');
     const practiceButton = document.getElementById('practiceButton');
+    const flashcardsButton = document.getElementById('flashcardsButton');
+    const dictionaryButton = document.getElementById('dictionaryButton');
 
-    console.log('📋 DOM elements found:', {
+    console.log('DOM elements found:', {
         toggleSwitch: !!toggleSwitch,
         statusDot: !!statusDot,
-        statusText: !!statusText,
-        bookmarksButton: !!bookmarksButton,
-        settingsButton: !!settingsButton
+        practiceButton: !!practiceButton,
+        flashcardsButton: !!flashcardsButton
     });
 
     // Load saved state
@@ -35,45 +36,50 @@ document.addEventListener('DOMContentLoaded', function () {
     // Event listeners
     if (toggleSwitch) {
         toggleSwitch.addEventListener('click', toggleExtension);
-        console.log('✅ Toggle switch event listener added');
     }
 
     if (bookmarksButton) {
         bookmarksButton.addEventListener('click', openBookmarks);
-        console.log('✅ Bookmarks button event listener added');
     }
 
     if (settingsButton) {
         settingsButton.addEventListener('click', openSettings);
-        console.log('✅ Settings button event listener added');
     }
 
-    // Main logo clickable (goes to main page - 5 tab interface)
+    // Main logo clickable - goes to ExamQuestionBank landing page
     if (mainLogo) {
         mainLogo.addEventListener('click', function (e) {
             e.preventDefault();
             openHome();
         });
-        console.log('✅ Main logo clickable - goes to home (5-tab page)');
     }
 
-    // Upgrade button top right (goes to intro/pricing page)
+    // Upgrade button - goes to ExamQuestionBank landing page
     if (upgradeTopBtn) {
         upgradeTopBtn.addEventListener('click', function (e) {
             e.preventDefault();
             openUpgrade();
         });
-        console.log('✅ Upgrade top button event listener added');
     }
 
+    // AI Chat button - goes to ExamQuestionBank AI chat
     if (aiChatButton) {
         aiChatButton.addEventListener('click', openAIChat);
-        console.log('✅ AI Chat button event listener added');
     }
 
+    // Practice button - goes to ExamQuestionBank practice page
     if (practiceButton) {
         practiceButton.addEventListener('click', openPractice);
-        console.log('✅ Practice button event listener added');
+    }
+
+    // Flashcards button - goes to ExamQuestionBank flashcard page
+    if (flashcardsButton) {
+        flashcardsButton.addEventListener('click', openFlashcards);
+    }
+
+    // Dictionary button - opens sidebar dictionary tab
+    if (dictionaryButton) {
+        dictionaryButton.addEventListener('click', openDictionary);
     }
 
     // Add entrance animations
@@ -189,24 +195,80 @@ function openSettings() {
     }
 }
 
+// ExamQuestionBank base URL - the separate frontend project
+const EXAM_QUESTION_BANK_URL = 'http://localhost:5173';
+
 function openHome() {
-    console.log('🏠 Home button clicked - going to 5-tab main page');
-    openExtensionPage('extension/pages/index.html#/');
+    console.log('Home button clicked - going to ExamQuestionBank landing page');
+    openExternalUrl(`${EXAM_QUESTION_BANK_URL}/`);
 }
 
 function openAIChat() {
-    console.log('🤖 AI Chat button clicked');
-    openExtensionPage('extension/pages/ai-legal-interface.html');
+    console.log('AI Chat button clicked - opening ExamQuestionBank AI chat');
+    openExternalUrl(`${EXAM_QUESTION_BANK_URL}/ai-chat`);
 }
 
 function openPractice() {
-    console.log('📚 Practice button clicked - opening dedicated exam bank page');
-    openExtensionPage('extension/pages/exam-bank.html');
+    console.log('Practice button clicked - opening ExamQuestionBank practice page');
+    openExternalUrl(`${EXAM_QUESTION_BANK_URL}/practice`);
+}
+
+function openFlashcards() {
+    console.log('Flashcards button clicked - opening ExamQuestionBank flashcard page');
+    openExternalUrl(`${EXAM_QUESTION_BANK_URL}/flashcard`);
 }
 
 function openUpgrade() {
-    console.log('✨ Upgrade button clicked - opening intro page');
-    openExtensionPage('extension/pages/index.html#/intro');
+    console.log('Upgrade button clicked - opening ExamQuestionBank landing page');
+    openExternalUrl(`${EXAM_QUESTION_BANK_URL}/`);
+}
+
+function openExternalUrl(url) {
+    if (isExtensionContext) {
+        try {
+            chrome.tabs.create({ url: url }, (tab) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Error creating tab:', chrome.runtime.lastError);
+                    alert('無法開啟頁面。請確認網路連線正常。');
+                } else {
+                    console.log('Tab created for external URL:', tab.id);
+                }
+            });
+            if (typeof window.close === 'function') {
+                setTimeout(() => window.close(), 200);
+            }
+        } catch (e) {
+            console.error('Error opening external URL:', e);
+            window.open(url, '_blank');
+        }
+    } else {
+        window.open(url, '_blank');
+    }
+}
+
+function openDictionary() {
+    console.log('Dictionary button clicked - opening sidebar dictionary tab');
+    if (isExtensionContext) {
+        try {
+            chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+                if (tabs && tabs[0]) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        action: 'openDictionary'
+                    }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            console.error('Error sending dictionary message:', chrome.runtime.lastError);
+                            alert('無法開啟法律辭典。請重新載入頁面後再試。');
+                        }
+                    });
+                }
+            });
+            if (typeof window.close === 'function') {
+                setTimeout(() => window.close(), 300);
+            }
+        } catch (e) {
+            console.error('Error in openDictionary:', e);
+        }
+    }
 }
 
 function openBookmarks() {

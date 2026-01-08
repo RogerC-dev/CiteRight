@@ -1,28 +1,79 @@
 /**
- * CiteRight 台灣法源探測器樣式
- * Chrome Extension Content Script 樣式
+ * CiteRight Content Script Styles
+ * Unified design with ExamQuestionBank
  */
 
-/* 確保不干擾頁面佈局 */
+/* Design System Variables */
+:root {
+  --cr-primary: #476996;
+  --cr-primary-hover: #35527a;
+  --cr-primary-soft: #EEF2FF;
+  --cr-text-primary: #1E293B;
+  --cr-text-secondary: #64748B;
+  --cr-surface: #FFFFFF;
+  --cr-surface-muted: #E2E8F0;
+  --cr-border: #CBD5E1;
+  --cr-success: #22c55e;
+  --cr-warning: #f59e0b;
+  --cr-destructive: #ef4444;
+  --cr-radius: 12px;
+  --cr-radius-sm: 8px;
+}
+
+/* Dark Mode Variables - Class-based (syncs with manual toggle) */
+:root.dark,
+html[data-bs-theme="dark"],
+body.dark {
+  --cr-primary: #60a5fa;
+  --cr-primary-hover: #3b82f6;
+  --cr-primary-soft: rgba(96, 165, 250, 0.15);
+  --cr-text-primary: #f1f5f9;
+  --cr-text-secondary: #94a3b8;
+  --cr-surface: #1e293b;
+  --cr-surface-muted: #334155;
+  --cr-border: #475569;
+  --cr-success: #4ade80;
+  --cr-warning: #fbbf24;
+  --cr-destructive: #f87171;
+}
+
+/* Dark Mode Variables - System preference fallback */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not([data-bs-theme="light"]) {
+    --cr-primary: #60a5fa;
+    --cr-primary-hover: #3b82f6;
+    --cr-primary-soft: rgba(96, 165, 250, 0.15);
+    --cr-text-primary: #f1f5f9;
+    --cr-text-secondary: #94a3b8;
+    --cr-surface: #1e293b;
+    --cr-surface-muted: #334155;
+    --cr-border: #475569;
+    --cr-success: #4ade80;
+    --cr-warning: #fbbf24;
+    --cr-destructive: #f87171;
+  }
+}
+
+/* Container - Don't affect page layout */
 #citeright-vue-container {
   all: initial;
   position: relative !important;
   z-index: 2147483647 !important;
   pointer-events: none !important;
-  font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif !important;
+  font-family: "Inter", "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif !important;
 }
 
-/* 法條高亮樣式 */
+/* Legal Citation Highlight Styles */
 .citeright-link {
-  background: linear-gradient(120deg, #e6f7ff 0%, #f0f9ff 100%) !important;
-  border-bottom: 2px dotted #1890ff !important;
+  background: linear-gradient(120deg, var(--cr-primary-soft) 0%, rgba(71, 105, 150, 0.08) 100%) !important;
+  border-bottom: 2px dotted var(--cr-primary) !important;
   cursor: pointer !important;
-  transition: all 0.3s ease !important;
+  transition: all 0.2s ease !important;
   padding: 2px 4px !important;
   border-radius: 4px !important;
   position: relative !important;
   font-weight: 500 !important;
-  box-shadow: 0 1px 3px rgba(24, 144, 255, 0.1) !important;
+  box-shadow: 0 1px 3px rgba(71, 105, 150, 0.1) !important;
   pointer-events: auto !important;
   display: inline !important;
   text-decoration: none !important;
@@ -30,46 +81,46 @@
 }
 
 .citeright-link:hover {
-  background: linear-gradient(120deg, #bae7ff 0%, #e6f7ff 100%) !important;
-  border-bottom: 2px solid #1890ff !important;
+  background: linear-gradient(120deg, rgba(71, 105, 150, 0.2) 0%, var(--cr-primary-soft) 100%) !important;
+  border-bottom: 2px solid var(--cr-primary) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2) !important;
+  box-shadow: 0 2px 8px rgba(71, 105, 150, 0.2) !important;
 }
 
-/* 不同類型的法條高亮 */
+/* Different highlight types */
 .citeright-link[data-case-type="法條"] {
-  border-bottom-color: #52c41a !important;
-  background: linear-gradient(120deg, #f6ffed 0%, #f0f9ff 100%) !important;
+  border-bottom-color: var(--cr-success) !important;
+  background: linear-gradient(120deg, rgba(34, 197, 94, 0.1) 0%, var(--cr-primary-soft) 100%) !important;
 }
 
 .citeright-link[data-case-type="釋字"] {
-  border-bottom-color: #722ed1 !important;
-  background: linear-gradient(120deg, #f9f0ff 0%, #f0f9ff 100%) !important;
+  border-bottom-color: #8b5cf6 !important;
+  background: linear-gradient(120deg, rgba(139, 92, 246, 0.1) 0%, var(--cr-primary-soft) 100%) !important;
 }
 
 .citeright-link[data-case-type="法律"] {
-  border-bottom-color: #13c2c2 !important;
-  background: linear-gradient(120deg, #e6fffb 0%, #f0f9ff 100%) !important;
+  border-bottom-color: #06b6d4 !important;
+  background: linear-gradient(120deg, rgba(6, 182, 212, 0.1) 0%, var(--cr-primary-soft) 100%) !important;
 }
 
-/* 懸停提示 */
+/* Hover Tooltip */
 .citeright-link:hover::after {
   content: attr(title) !important;
   position: absolute !important;
   bottom: 100% !important;
   left: 50% !important;
   transform: translateX(-50%) !important;
-  background: rgba(0, 0, 0, 0.8) !important;
+  background: var(--cr-text-primary) !important;
   color: white !important;
-  padding: 6px 10px !important;
-  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  border-radius: var(--cr-radius-sm) !important;
   font-size: 12px !important;
   white-space: nowrap !important;
   z-index: 10000 !important;
   pointer-events: none !important;
   font-weight: normal !important;
-  backdrop-filter: blur(4px) !important;
-  font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  font-family: "Inter", "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif !important;
 }
 
 .citeright-link:hover::before {
@@ -78,25 +129,25 @@
   bottom: 100% !important;
   left: 50% !important;
   transform: translateX(-50%) translateY(100%) !important;
-  border: 5px solid transparent !important;
-  border-top-color: rgba(0, 0, 0, 0.8) !important;
+  border: 6px solid transparent !important;
+  border-top-color: var(--cr-text-primary) !important;
   z-index: 10000 !important;
   pointer-events: none !important;
 }
 
-/* 確保彈出元素有正確的指針事件 */
+/* Popup and Sidebar elements need pointer events */
 #citeright-popover,
 #citeright-tool-panel,
 #citeright-sidebar-background {
   pointer-events: auto !important;
 }
 
-/* 重置可能的干擾樣式 */
+/* Reset potentially inherited styles */
 .citeright-link * {
   all: unset !important;
 }
 
-/* 高對比模式支援 */
+/* High Contrast Mode Support */
 @media (prefers-contrast: high) {
   .citeright-link {
     border-bottom-width: 3px !important;
@@ -109,30 +160,95 @@
   }
 }
 
-/* 深色模式支援 */
+/* Dark Mode Support - Class-based (syncs with manual toggle) */
+html.dark .citeright-link,
+html[data-bs-theme="dark"] .citeright-link,
+body.dark .citeright-link {
+  background: linear-gradient(120deg, rgba(96, 165, 250, 0.15) 0%, rgba(96, 165, 250, 0.08) 100%) !important;
+  border-bottom-color: #60a5fa !important;
+  color: inherit !important;
+}
+
+html.dark .citeright-link:hover,
+html[data-bs-theme="dark"] .citeright-link:hover,
+body.dark .citeright-link:hover {
+  background: linear-gradient(120deg, rgba(96, 165, 250, 0.25) 0%, rgba(96, 165, 250, 0.15) 100%) !important;
+  border-bottom-color: #93c5fd !important;
+}
+
+html.dark .citeright-link:hover::after,
+html[data-bs-theme="dark"] .citeright-link:hover::after,
+body.dark .citeright-link:hover::after {
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+html.dark .citeright-link:hover::before,
+html[data-bs-theme="dark"] .citeright-link:hover::before,
+body.dark .citeright-link:hover::before {
+  border-top-color: #f1f5f9 !important;
+}
+
+html.dark .citeright-link[data-case-type="法條"],
+html[data-bs-theme="dark"] .citeright-link[data-case-type="法條"],
+body.dark .citeright-link[data-case-type="法條"] {
+  border-bottom-color: #4ade80 !important;
+  background: linear-gradient(120deg, rgba(74, 222, 128, 0.15) 0%, rgba(96, 165, 250, 0.08) 100%) !important;
+}
+
+html.dark .citeright-link[data-case-type="釋字"],
+html[data-bs-theme="dark"] .citeright-link[data-case-type="釋字"],
+body.dark .citeright-link[data-case-type="釋字"] {
+  border-bottom-color: #a78bfa !important;
+  background: linear-gradient(120deg, rgba(167, 139, 250, 0.15) 0%, rgba(96, 165, 250, 0.08) 100%) !important;
+}
+
+html.dark .citeright-link[data-case-type="法律"],
+html[data-bs-theme="dark"] .citeright-link[data-case-type="法律"],
+body.dark .citeright-link[data-case-type="法律"] {
+  border-bottom-color: #22d3ee !important;
+  background: linear-gradient(120deg, rgba(34, 211, 238, 0.15) 0%, rgba(96, 165, 250, 0.08) 100%) !important;
+}
+
+/* Dark Mode Support - System preference fallback */
 @media (prefers-color-scheme: dark) {
   .citeright-link {
-    background: linear-gradient(120deg, rgba(24, 144, 255, 0.15) 0%, rgba(24, 144, 255, 0.1) 100%) !important;
-    border-bottom-color: #91d5ff !important;
+    background: linear-gradient(120deg, rgba(96, 165, 250, 0.15) 0%, rgba(96, 165, 250, 0.08) 100%) !important;
+    border-bottom-color: #60a5fa !important;
     color: inherit !important;
   }
   
   .citeright-link:hover {
-    background: linear-gradient(120deg, rgba(24, 144, 255, 0.25) 0%, rgba(24, 144, 255, 0.15) 100%) !important;
-    border-bottom-color: #69c0ff !important;
+    background: linear-gradient(120deg, rgba(96, 165, 250, 0.25) 0%, rgba(96, 165, 250, 0.15) 100%) !important;
+    border-bottom-color: #93c5fd !important;
   }
   
   .citeright-link:hover::after {
-    background: rgba(255, 255, 255, 0.9) !important;
-    color: #000000 !important;
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
   }
   
   .citeright-link:hover::before {
-    border-top-color: rgba(255, 255, 255, 0.9) !important;
+    border-top-color: #f1f5f9 !important;
+  }
+
+  .citeright-link[data-case-type="法條"] {
+    border-bottom-color: #4ade80 !important;
+    background: linear-gradient(120deg, rgba(74, 222, 128, 0.15) 0%, rgba(96, 165, 250, 0.08) 100%) !important;
+  }
+
+  .citeright-link[data-case-type="釋字"] {
+    border-bottom-color: #a78bfa !important;
+    background: linear-gradient(120deg, rgba(167, 139, 250, 0.15) 0%, rgba(96, 165, 250, 0.08) 100%) !important;
+  }
+
+  .citeright-link[data-case-type="法律"] {
+    border-bottom-color: #22d3ee !important;
+    background: linear-gradient(120deg, rgba(34, 211, 238, 0.15) 0%, rgba(96, 165, 250, 0.08) 100%) !important;
   }
 }
 
-/* 減少動畫偏好 */
+/* Reduced Motion Preference */
 @media (prefers-reduced-motion: reduce) {
   .citeright-link {
     transition: none !important;
@@ -143,9 +259,8 @@
   }
 }
 
-/* 確保在各種網站上都能正常顯示 */
+/* Ensure visibility on various websites */
 .citeright-link {
-  /* 重置可能的繼承樣式 */
   line-height: normal !important;
   letter-spacing: normal !important;
   word-spacing: normal !important;
@@ -155,19 +270,14 @@
   font-variant: normal !important;
   font-stretch: normal !important;
   vertical-align: baseline !important;
-  
-  /* 確保可見性 */
   opacity: 1 !important;
   visibility: visible !important;
-  
-  /* 防止被其他樣式覆蓋 */
   outline: none !important;
   box-sizing: border-box !important;
 }
 
-/* 防止與常見 CSS 框架衝突 */
+/* Increase selector specificity to avoid framework conflicts */
 .citeright-link.citeright-link {
-  /* 提高選擇器權重 */
   margin: 0 !important;
   border-left: none !important;
   border-right: none !important;
@@ -180,21 +290,22 @@
   max-height: none !important;
 }
 
-/* 確保在 iframe 中也能正常工作 */
+/* Iframe compatibility */
 iframe .citeright-link {
   position: relative !important;
   z-index: 999999 !important;
 }
 
-/* 針對特定網站的兼容性調整 */
+/* Framework-specific compatibility */
 [class*="bootstrap"] .citeright-link,
 [class*="mui"] .citeright-link,
-[class*="ant"] .citeright-link {
+[class*="ant"] .citeright-link,
+[class*="tailwind"] .citeright-link {
   box-sizing: border-box !important;
-  font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif !important;
+  font-family: "Inter", "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif !important;
 }
 
-/* 確保在表格中正常顯示 */
+/* Table cell display */
 table .citeright-link,
 td .citeright-link,
 th .citeright-link {
@@ -202,20 +313,19 @@ th .citeright-link {
   vertical-align: baseline !important;
 }
 
-/* 在 flex 容器中的調整 */
+/* Flex container display */
 .citeright-link {
   flex: none !important;
   align-self: auto !important;
 }
 
-/* 在 grid 容器中的調整 */
+/* Grid container display */
 .citeright-link {
   grid-area: auto !important;
   justify-self: auto !important;
-  align-self: auto !important;
 }
 
-/* 禁用特定區域的法條高亮 - 供閱讀和搜尋使用，不需高亮功能 */
+/* Disable highlights in specific areas (for reading/searching) */
 #tab-content-dictionary .citeright-link,
 #tab-content-bookmarks .citeright-link,
 .bookmark-preview .citeright-link,
@@ -250,4 +360,24 @@ th .citeright-link {
   transform: none !important;
   box-shadow: none !important;
   border: none !important;
+}
+
+/* Bootstrap Icons Font Face (for content script) */
+@font-face {
+  font-family: 'bootstrap-icons';
+  src: url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/fonts/bootstrap-icons.woff2') format('woff2');
+  font-display: swap;
+}
+
+.bi::before,
+[class^="bi-"]::before,
+[class*=" bi-"]::before {
+  font-family: 'bootstrap-icons' !important;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

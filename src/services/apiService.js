@@ -1,366 +1,404 @@
 /**
- * API 服務模組 - 負責與後端 API 的通訊
+ * API Service for ExamQuestionBank Integration
+ * Provides methods to interact with the ExamQuestionBank backend
  */
 
-const API_BASE_URL = 'http://localhost:3000'
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
-/**
- * 檢查是否在 Chrome 擴充功能環境中
- */
-function isChromeExtension() {
-  return typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id
-}
-
-/**
- * 透過背景腳本代理 API 請求（用於內容腳本，避免 CORS 問題）
- */
-async function apiRequestViaBackground(url, options = {}) {
-  return new Promise((resolve, reject) => {
-    // 從完整 URL 中提取端點路徑
-    let endpoint = url
-    if (url.startsWith(API_BASE_URL)) {
-      endpoint = url.replace(API_BASE_URL, '')
-    }
-    // 確保端點以 / 開頭
-    if (!endpoint.startsWith('/')) {
-      endpoint = '/' + endpoint
-    }
-
-    chrome.runtime.sendMessage(
-      {
-        type: 'API_REQUEST',
-        endpoint: endpoint,
-        method: options.method || 'GET',
-        body: options.body,
-        headers: options.headers
-      },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message))
-          return
-        }
-
-        if (response && response.success) {
-          resolve(response.data)
-        } else {
-          reject(new Error(response?.error || 'API request failed'))
-        }
-      }
-    )
-  })
-}
-
-/**
- * 基礎 fetch 包裝器，包含錯誤處理
- * 在內容腳本環境中會自動使用背景腳本代理以避免 CORS 問題
- * @param {string} url - API 端點
- * @param {Object} options - fetch 選項
- * @returns {Promise} - API 回應
- */
-async function apiRequest(url, options = {}) {
-  try {
-    // 如果在 Chrome 擴充功能環境中，使用背景腳本代理
-    if (isChromeExtension()) {
-      try {
-        return await apiRequestViaBackground(url, options)
-      } catch (proxyError) {
-        console.warn('背景腳本代理失敗，嘗試直接請求:', proxyError)
-        // 如果代理失敗，回退到直接請求（可能會遇到 CORS 錯誤）
-      }
-    }
-
-    // 直接 fetch 請求（用於非內容腳本環境）
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
-      ...options
-    })
-
-    if (!response.ok) {
-      throw new Error(`API 請求失敗: ${response.status} ${response.statusText}`)
-    }
-
-    return await response.json()
-  } catch (error) {
-    console.error('API 請求錯誤:', error)
-    throw error
+class ApiService {
+  constructor() {
+    this.baseUrl = API_BASE_URL;
+    this.token = null;
+    this.refreshToken = null;
   }
-}
 
-/**
- * 載入法律名稱列表
- * @returns {Promise<Array>} - 法律名稱陣列
- */
-export async function loadLegalNames() {
-  try {
-    const response = await apiRequest(`${API_BASE_URL}/api/laws`)
-    return response.data || []
-  } catch (error) {
-    console.error('載入法律名稱失敗:', error)
-    throw new Error('無法載入法律資料，請檢查伺服器是否運行')
-  }
-}
-
-/**
- * 查詢釋字資料
- * @param {string} number - 釋字號碼
- * @returns {Promise<Object>} - 釋字資料
- */
-export async function fetchInterpretation(number) {
-  try {
-    const params = new URLSearchParams({
-      'caseType': '釋字',
-      'number': number
-    })
-
-    const response = await apiRequest(`${API_BASE_URL}/api/case?${params.toString()}`)
-
-    return response
-  } catch (error) {
-    console.error('載入釋字資料失敗:', error)
-    throw new Error('無法載入釋字內容')
-  }
-}
-
-/**
- * 查詢法條資料
- * @param {string} lawName - 法律名稱
- * @param {string} article - 條文號碼
- * @param {string} paragraph - 項款目（可選）
- * @returns {Promise<Object>} - 法條資料
- */
-export async function fetchLawArticle(lawName, article, paragraph = '') {
-  try {
-    // 從後端取得整個法條物件（包含 Articles 陣列）
-    const response = await apiRequest(`${API_BASE_URL}/api/laws/${encodeURIComponent(lawName)}`)
-
-    // 後端回傳結構參考: 包含 Articles: [{ CaptionTitle, ArticleNo, Article }]
-    const articles = response.Articles || response.articles || []
-
-    // 找到對應的 ArticleNo（後端 ArticleNo 可能含有前綴或空白，做寬鬆比對）
-    const target = articles.find(a => {
-      if (!a || !a.ArticleNo) return false
-      // 移除非數字文字後比對數字或完整相等
-      const normalized = a.ArticleNo.replace(/[^0-9一二三四五六七八九十百千零壹貳參肆伍陸柒捌玖拾]/g, '')
-      const reqNormalized = String(article).replace(/[^0-9一二三四五六七八九十百千零壹貳參肆伍陸柒捌玖拾]/g, '')
-      return a.ArticleNo.trim() === String(article).trim() || normalized === reqNormalized
-    })
-
-    let contentText = ''
-    let captionTitle = ''
-
-    if (target && target.Article) {
-      contentText = target.Article
-      captionTitle = target.CaptionTitle || ''
-
-      // 若要求特定項款（paragraph），嘗試解析並擷取相應段落
-      if (paragraph) {
-        // 常見格式: '第 1 項' 或 '1' 或 '1-2' 等，嘗試建立 regex
-        const numMatch = paragraph.match(/(\d+|[一二三四五六七八九十百千零壹貳參肆伍陸柒捌玖拾]+)/)
-        if (numMatch) {
-          const p = numMatch[0]
-          // 建立簡單的項目分段規則：以 '項' 分隔或以換行 + 項號標記
-          const parts = contentText.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
-          // 嘗試在每段中尋找包含 '第 p 項' 或 '（p）' 或 '（第p項）' 的段落
-          const found = parts.find(part => new RegExp(`第\\s*${p}\\s*項`).test(part) || new RegExp(`^\\(${p}\\)`).test(part) || new RegExp(`（\\s*${p}\\s*）`).test(part))
-          if (found) {
-            contentText = found
-          } else {
-            // 若無精準段落，嘗試找出第 n 號段（數字序列）
-            const numericParts = parts.filter(part => /^\d+\./.test(part) || /^\d+、/.test(part))
-            if (numericParts.length > 0) {
-              const idx = parseInt(p, 10) - 1
-              if (!isNaN(idx) && numericParts[idx]) contentText = numericParts[idx]
-            }
-          }
-        }
-      }
+  // Token management
+  setTokens(accessToken, refreshToken = null) {
+    this.token = accessToken;
+    this.refreshToken = refreshToken;
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({
+        'examqb_access_token': accessToken,
+        'examqb_refresh_token': refreshToken
+      });
     } else {
-      contentText = '無法載入條文內容'
+      localStorage.setItem('examqb_access_token', accessToken);
+      if (refreshToken) {
+        localStorage.setItem('examqb_refresh_token', refreshToken);
+      }
+    }
+  }
+
+  async loadTokens() {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      return new Promise((resolve) => {
+        chrome.storage.local.get(['examqb_access_token', 'examqb_refresh_token'], (result) => {
+          this.token = result.examqb_access_token || null;
+          this.refreshToken = result.examqb_refresh_token || null;
+          resolve({ token: this.token, refreshToken: this.refreshToken });
+        });
+      });
+    } else {
+      this.token = localStorage.getItem('examqb_access_token');
+      this.refreshToken = localStorage.getItem('examqb_refresh_token');
+      return { token: this.token, refreshToken: this.refreshToken };
+    }
+  }
+
+  clearTokens() {
+    this.token = null;
+    this.refreshToken = null;
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.remove(['examqb_access_token', 'examqb_refresh_token']);
+    } else {
+      localStorage.removeItem('examqb_access_token');
+      localStorage.removeItem('examqb_refresh_token');
+    }
+  }
+
+  isAuthenticated() {
+    return !!this.token;
+  }
+
+  // Base request method
+  async request(endpoint, options = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
     }
 
-    return response
-  } catch (error) {
-    console.error('載入法條資料失敗:', error)
-    throw new Error('無法載入法條內容')
-  }
-}
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        ...options,
+        headers,
+      });
 
-/**
- * 查詢法律資訊
- * @param {string} lawName - 法律名稱
- * @returns {Promise<Object>} - 法律資訊
- */
-/**
- * 正規化法律名稱，處理不同變體的法律名稱映射
- * @param {string} lawName - 原始法律名稱
- * @returns {string} - 正規化後的法律名稱
- */
-function normalizeLawName(lawName) {
-  // 法律名稱映射表 - 將不同變體映射到數據庫中的標準名稱
-  const lawNameMap = {
-    '刑法': '中華民國刑法', // 映射到數據庫中的完整名稱
-    '民法': '民法', // 民法保持不變
-    '中華民國憲法': '中華民國憲法', // 憲法保持完整名稱
-    // 可以繼續添加其他映射
-  }
-
-  return lawNameMap[lawName] || lawName
-}
-
-export async function fetchLawInfo(lawName) {
-  try {
-    // 正規化法律名稱
-    const normalizedLawName = normalizeLawName(lawName)
-    console.log('🔄 正規化法律名稱:', lawName, '->', normalizedLawName)
-
-    const response = await apiRequest(`${API_BASE_URL}/api/laws/${encodeURIComponent(normalizedLawName)}`)
-
-    return response
-  } catch (error) {
-    console.error('載入法律資訊失敗:', error)
-    throw new Error('無法載入法律資訊')
-  }
-}
-
-/**
- * 查詢判決資料
- * @param {string} year - 年度
- * @param {string} caseType - 案件類型
- * @param {string} number - 案件號碼
- * @returns {Promise<Object>} - 判決資料
- */
-export async function fetchJudgment(year, caseType, number) {
-  try {
-    const params = new URLSearchParams({
-      year: year,
-      caseType: caseType,
-      number: number
-    })
-
-    const response = await apiRequest(`${API_BASE_URL}/api/judgment?${params.toString()}`)
-
-    return {
-      title: response.title || `${year}年${caseType}字第${number}號`,
-      content: response.content || '無法載入判決內容',
-      date: response.date,
-      court: response.court,
-      rawData: response
-    }
-  } catch (error) {
-    console.error('載入判決資料失敗:', error)
-    throw new Error('無法載入判決內容')
-  }
-}
-
-/**
- * 搜尋法律資料
- * @param {string} query - 搜尋關鍵字
- * @param {Object} options - 搜尋選項
- * @returns {Promise<Array>} - 搜尋結果
- */
-export async function searchLegalData(query, options = {}) {
-  try {
-    // 先嘗試載入法律名稱列表進行模糊搜尋
-    const lawNames = await loadLegalNames()
-
-    // 過濾包含關鍵字的法律
-    const matchedLaws = lawNames.filter(law =>
-      law.LawName && law.LawName.includes(query)
-    )
-
-    // 如果找到匹配的法律，為每個法律創建結果
-    if (matchedLaws.length > 0) {
-      const results = []
-
-      for (const law of matchedLaws.slice(0, 5)) { // 限制最多5個結果
-        try {
-          // 載入法律內容
-          const lawContent = await fetchLawInfo(law.LawName)
-
-          if (lawContent && lawContent.Articles) {
-            // 搜尋包含關鍵字的條文
-            const matchedArticles = lawContent.Articles.filter(article =>
-              article.Article && article.Article.includes(query)
-            ).slice(0, 3) // 每個法律最多顯示3條相關條文
-
-            if (matchedArticles.length > 0) {
-              // 為每個匹配的條文創建結果
-              matchedArticles.forEach(article => {
-                results.push({
-                  LawName: law.LawName,
-                  title: `${law.LawName} ${article.ArticleNo}`,
-                  ArticleNo: article.ArticleNo,
-                  Article: article.Article,
-                  CaptionTitle: article.CaptionTitle,
-                  description: `${article.Article.substring(0, 100)}...`,
-                  LawUrl: law.LawUrl,
-                  lawName: law.LawName,
-                  article: article.ArticleNo?.replace(/[^0-9]/g, ''), // 提取數字
-                  type: 'law'
-                })
-              })
-            } else {
-              // 如果沒找到特定條文，返回整部法律
-              results.push({
-                LawName: law.LawName,
-                title: `${law.LawName} - ${query}相關法規`,
-                description: `${law.LawName}中關於「${query}」的相關規定`,
-                LawUrl: law.LawUrl,
-                lawName: law.LawName,
-                type: 'law'
-              })
-            }
+      // Handle 401 - try to refresh token
+      if (response.status === 401 && this.refreshToken) {
+        const refreshed = await this.refreshAccessToken();
+        if (refreshed) {
+          // Retry the request with new token
+          headers['Authorization'] = `Bearer ${this.token}`;
+          const retryResponse = await fetch(`${this.baseUrl}${endpoint}`, {
+            ...options,
+            headers,
+          });
+          if (!retryResponse.ok) {
+            throw new Error(`API Error: ${retryResponse.status}`);
           }
-        } catch (lawError) {
-          console.warn(`載入法律 ${law.LawName} 失敗:`, lawError)
-          // 即使載入失敗，也提供基本資訊
-          results.push({
-            LawName: law.LawName,
-            title: `${law.LawName} - ${query}相關法規`,
-            description: `${law.LawName}中關於「${query}」的相關規定`,
-            LawUrl: law.LawUrl,
-            lawName: law.LawName,
-            type: 'law'
-          })
+          return retryResponse.json();
         }
       }
 
-      return results
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || errorData.detail || `API Error: ${response.status}`);
+      }
+
+      // Handle empty responses
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
+    } catch (error) {
+      console.error('API Request failed:', error);
+      throw error;
+    }
+  }
+
+  async refreshAccessToken() {
+    if (!this.refreshToken) return false;
+
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/token/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh: this.refreshToken }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.setTokens(data.access, data.refresh || this.refreshToken);
+        return true;
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
     }
 
-    return []
-  } catch (error) {
-    console.error('搜尋法律資料失敗:', error)
-    throw new Error('搜尋功能暫時無法使用')
+    this.clearTokens();
+    return false;
+  }
+
+  // Authentication endpoints
+  async login(username, password) {
+    const response = await this.request('/auth/token/', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+    if (response && response.access) {
+      this.setTokens(response.access, response.refresh);
+    }
+    return response;
+  }
+
+  async logout() {
+    this.clearTokens();
+    return true;
+  }
+
+  async register(userData) {
+    return this.request('/auth/register/', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async getCurrentUser() {
+    return this.request('/auth/user/');
+  }
+
+  // Flashcard endpoints
+  async getFlashcards(filter = '') {
+    const query = filter ? `?filter=${encodeURIComponent(filter)}` : '';
+    return this.request(`/flashcards/${query}`);
+  }
+
+  async getFlashcard(flashcardId) {
+    return this.request(`/flashcards/${flashcardId}/`);
+  }
+
+  async getDueFlashcards() {
+    return this.request('/flashcards/due/');
+  }
+
+  async createFlashcard(data) {
+    return this.request('/flashcards/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateFlashcard(flashcardId, data) {
+    return this.request(`/flashcards/${flashcardId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteFlashcard(flashcardId) {
+    return this.request(`/flashcards/${flashcardId}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  async reviewFlashcard(flashcardId, quality) {
+    return this.request(`/flashcards/${flashcardId}/review/`, {
+      method: 'POST',
+      body: JSON.stringify({ quality }),
+    });
+  }
+
+  async getFlashcardStats() {
+    return this.request('/flashcards/stats/');
+  }
+
+  // Quiz endpoints
+  async getQuizStats() {
+    return this.request('/quiz/stats/');
+  }
+
+  async startPracticeSession(mode, filters = {}) {
+    return this.request('/quiz/start-session/', {
+      method: 'POST',
+      body: JSON.stringify({ mode, filters }),
+    });
+  }
+
+  async submitAnswer(sessionId, questionId, answer) {
+    return this.request(`/quiz/sessions/${sessionId}/submit/`, {
+      method: 'POST',
+      body: JSON.stringify({ question_id: questionId, answer }),
+    });
+  }
+
+  // Analytics endpoints
+  async getAnalyticsProgress(timeRange = '7d') {
+    return this.request(`/analytics/progress/?time_range=${timeRange}`);
+  }
+
+  async getAnalyticsSubjectBreakdown() {
+    return this.request('/analytics/subject-breakdown/');
+  }
+
+  async getAnalyticsWrongQuestions(limit = 10) {
+    return this.request(`/analytics/wrong-questions/?limit=${limit}`);
+  }
+
+  async getAnalyticsDashboard() {
+    return this.request('/analytics/dashboard/');
+  }
+
+  // AI Chat endpoints
+  async sendChatMessage(message, conversationId = null) {
+    return this.request('/ai/chat/', {
+      method: 'POST',
+      body: JSON.stringify({
+        message,
+        conversation_id: conversationId,
+      }),
+    });
+  }
+
+  async getChatHistory(conversationId) {
+    return this.request(`/ai/chat/history/${conversationId}/`);
+  }
+
+  async getConversations() {
+    return this.request('/ai/conversations/');
+  }
+
+  async createConversation(title = null) {
+    return this.request('/ai/conversations/', {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    });
+  }
+
+  async deleteConversation(conversationId) {
+    return this.request(`/ai/conversations/${conversationId}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Questions endpoints
+  async getQuestions(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/questions/${query ? '?' + query : ''}`);
+  }
+
+  async getQuestion(questionId) {
+    return this.request(`/questions/${questionId}/`);
+  }
+
+  // Subjects endpoints
+  async getSubjects() {
+    return this.request('/subjects/');
+  }
+
+  // Precedent API endpoints (for legal data - uses different base URL)
+  async fetchInterpretation(number) {
+    // Use Precedent API server (port 3000) instead of ExamQuestionBank
+    const PRECEDENT_API_URL = 'http://localhost:3000';
+    try {
+      const response = await fetch(`${PRECEDENT_API_URL}/api/case?caseType=釋字&number=${encodeURIComponent(number)}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || errorData.detail || `API Error: ${response.status}`);
+      }
+      const data = await response.json();
+      // Return the data in the expected format
+      return data.data || data;
+    } catch (error) {
+      console.error('Fetch interpretation error:', error);
+      throw error;
+    }
+  }
+
+  async fetchLawInfo(lawName) {
+    // Use Precedent API server (port 3000) instead of ExamQuestionBank
+    const PRECEDENT_API_URL = 'http://localhost:3000';
+    try {
+      // Try direct law name lookup first
+      let response = await fetch(`${PRECEDENT_API_URL}/api/laws/${encodeURIComponent(lawName)}`);
+      
+      // If not found, try search endpoint
+      if (!response.ok && response.status === 404) {
+        response = await fetch(`${PRECEDENT_API_URL}/api/laws/search?q=${encodeURIComponent(lawName)}`);
+        if (response.ok) {
+          const searchData = await response.json();
+          // If search returns results, use the first match
+          if (searchData.success && searchData.data && searchData.data.length > 0) {
+            const firstMatch = searchData.data[0];
+            // Try to get full details using the law name from search result
+            response = await fetch(`${PRECEDENT_API_URL}/api/laws/${encodeURIComponent(firstMatch.lawName || firstMatch.name || lawName)}`);
+          }
+        }
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || errorData.detail || `API Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      // Return the data in the expected format
+      return data.data || data;
+    } catch (error) {
+      console.error('Fetch law info error:', error);
+      throw error;
+    }
+  }
+
+  async loadLegalNames() {
+    // Use Precedent API server (port 3000) instead of ExamQuestionBank
+    const PRECEDENT_API_URL = 'http://localhost:3000';
+    try {
+      const response = await fetch(`${PRECEDENT_API_URL}/api/laws/`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || errorData.detail || `API Error: ${response.status}`);
+      }
+      const data = await response.json();
+      // API returns { success: true, data: [array of law name strings] }
+      // Return array of strings for the highlighter
+      return data.success && data.data ? data.data : [];
+    } catch (error) {
+      console.error('Load legal names error:', error);
+      // Return empty array on error to allow graceful degradation
+      return [];
+    }
+  }
+
+  async searchLegalData(query, options = {}) {
+    // Use Precedent API server (port 3000) instead of ExamQuestionBank
+    const PRECEDENT_API_URL = 'http://localhost:3000';
+    try {
+      const { type = 'law' } = options;
+      let response;
+      
+      if (type === 'law') {
+        // Search laws
+        response = await fetch(`${PRECEDENT_API_URL}/api/laws/search?q=${encodeURIComponent(query)}`);
+      } else if (type === 'interpretation' || type === '釋字') {
+        // Search interpretations
+        response = await fetch(`${PRECEDENT_API_URL}/api/case/search?q=${encodeURIComponent(query)}&type=interpretation`);
+      } else {
+        throw new Error(`Unsupported search type: ${type}`);
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || errorData.detail || `API Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      // Return the data array
+      return data.success && data.data ? data.data : [];
+    } catch (error) {
+      console.error('Search legal data error:', error);
+      throw error;
+    }
   }
 }
 
-/**
- * 取得伺服器健康狀態
- * @returns {Promise<Object>} - 伺服器狀態
- */
-export async function getServerHealth() {
-  try {
-    const response = await apiRequest(`${API_BASE_URL}/api/health`)
-    return response
-  } catch (error) {
-    console.error('無法連接到伺服器:', error)
-    return { status: 'error', message: '伺服器連接失敗' }
-  }
-}
+// Export singleton instance
+export const apiService = new ApiService();
+export default apiService;
 
-/**
- * 檢查 API 是否可用
- * @returns {Promise<boolean>} - API 是否可用
- */
-export async function isApiAvailable() {
-  try {
-    await getServerHealth()
-    return true
-  } catch (error) {
-    return false
-  }
-}
+// Export individual functions for backward compatibility
+export const fetchInterpretation = (number) => apiService.fetchInterpretation(number);
+export const fetchLawInfo = (lawName) => apiService.fetchLawInfo(lawName);
+export const loadLegalNames = () => apiService.loadLegalNames();
+export const searchLegalData = (query, options) => apiService.searchLegalData(query, options);
