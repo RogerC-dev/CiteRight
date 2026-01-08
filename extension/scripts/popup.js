@@ -82,6 +82,19 @@ document.addEventListener('DOMContentLoaded', function () {
         dictionaryButton.addEventListener('click', openDictionary);
     }
 
+    // Toggle help button
+    const toggleHelpBtn = document.getElementById('toggleHelpBtn');
+    const toggleDescription = document.getElementById('toggleDescription');
+    if (toggleHelpBtn && toggleDescription) {
+        toggleHelpBtn.addEventListener('click', () => {
+            const isHidden = toggleDescription.style.display === 'none';
+            toggleDescription.style.display = isHidden ? 'block' : 'none';
+            // Optional: toggle icon style to indicate active state
+            toggleHelpBtn.classList.toggle('text-primary');
+            toggleHelpBtn.classList.toggle('text-secondary');
+        });
+    }
+
     // Add entrance animations
     const elements = document.querySelectorAll('.toggle-section, .action-button');
     elements.forEach((el, index) => {
