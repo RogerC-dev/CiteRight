@@ -3,7 +3,7 @@
     <!-- Search Section -->
     <div class="dictionary-search-container">
       <h3 class="search-title">
-        🔍 法規智慧搜尋
+        <i class="bi bi-search"></i> 法規智慧搜尋
       </h3>
       <div class="dictionary-search-box">
         <input
@@ -23,13 +23,13 @@
         </button>
       </div>
       <div class="search-hint">
-        💡 <strong>搜尋提示：</strong>您可以搜尋完整法規名稱如「民法」，或使用關鍵字組合如「勞動基準法 加班」、「刑法 詐欺」來精準定位相關條文。
+        <i class="bi bi-lightbulb"></i> <strong>搜尋提示：</strong>您可以搜尋完整法規名稱如「民法」，或使用關鍵字組合如「勞動基準法 加班」、「刑法 詐欺」來精準定位相關條文。
       </div>
     </div>
 
     <!-- Quick Access Panel -->
     <div class="quick-access-panel">
-      <div class="quick-access-title">⚡ 快速查詢</div>
+      <div class="quick-access-title"><i class="bi bi-lightning-charge"></i> 快速查詢</div>
       <div class="recent-searches">
         <span
           v-for="term in recentSearches"
@@ -68,7 +68,7 @@
         class="category-section"
       >
         <div class="category-title">
-          {{ category.title }}
+          <i :class="category.icon || 'bi bi-file-earmark-text'"></i> {{ category.title }}
         </div>
         <div class="law-links">
           <a
@@ -172,17 +172,17 @@ onMounted(() => {
 
 /* Search Section */
 .dictionary-search-container {
-  background: linear-gradient(135deg, #f0f9ff, #e6f7ff);
+  background: var(--cr-surface-muted);
   padding: 20px;
   border-radius: 12px;
   margin-bottom: 24px;
-  border: 1px solid #91d5ff;
+  border: 1px solid var(--cr-border);
 }
 
 .search-title {
   margin: 0 0 12px 0;
   font-size: 16px;
-  color: #096dd9;
+  color: var(--cr-primary);
   font-weight: 600;
 }
 
@@ -194,18 +194,20 @@ onMounted(() => {
 .dictionary-search-input {
   width: 100%;
   padding: 12px 48px 12px 16px;
-  border: 2px solid #1890ff;
+  border: 2px solid var(--cr-primary);
   border-radius: 8px;
   font-size: 14px;
   font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
   transition: all 0.3s;
   box-sizing: border-box;
+  background: var(--cr-surface);
+  color: var(--cr-text-primary);
 }
 
 .dictionary-search-input:focus {
   outline: none;
-  border-color: #096dd9;
-  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
+  border-color: var(--cr-primary-hover);
+  box-shadow: 0 0 0 3px var(--cr-primary-soft);
 }
 
 .dictionary-search-btn {
@@ -213,7 +215,7 @@ onMounted(() => {
   right: 4px;
   top: 50%;
   transform: translateY(-50%);
-  background: #1890ff;
+  background: var(--cr-primary);
   color: white;
   border: none;
   padding: 8px 16px;
@@ -224,7 +226,7 @@ onMounted(() => {
 }
 
 .dictionary-search-btn:hover:not(:disabled) {
-  background: #096dd9;
+  background: var(--cr-primary-hover);
 }
 
 .dictionary-search-btn:disabled {
@@ -234,9 +236,9 @@ onMounted(() => {
 
 .search-hint {
   font-size: 12px;
-  color: #666;
+  color: var(--cr-text-secondary);
   line-height: 1.6;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--cr-surface);
   padding: 8px 12px;
   border-radius: 6px;
   margin-top: 8px;
@@ -244,17 +246,17 @@ onMounted(() => {
 
 /* Quick Access Panel */
 .quick-access-panel {
-  background: linear-gradient(135deg, #fff7e6, #fffbe6);
+  background: var(--cr-surface-muted);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 16px;
-  border: 1px solid #ffd591;
+  border: 1px solid var(--cr-border);
 }
 
 .quick-access-title {
   font-size: 13px;
   font-weight: 600;
-  color: #fa8c16;
+  color: var(--cr-warning);
   margin-bottom: 8px;
 }
 
@@ -266,17 +268,17 @@ onMounted(() => {
 
 .recent-search-tag {
   padding: 4px 8px;
-  background: white;
-  border: 1px solid #ffd591;
+  background: var(--cr-surface);
+  border: 1px solid var(--cr-warning);
   border-radius: 12px;
   font-size: 12px;
-  color: #fa8c16;
+  color: var(--cr-warning);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .recent-search-tag:hover {
-  background: #fff7e6;
+  background: var(--cr-surface-muted);
   transform: translateY(-1px);
 }
 
@@ -286,10 +288,10 @@ onMounted(() => {
 }
 
 .results-header {
-  background: #f0f9ff;
+  background: var(--cr-surface-muted);
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid #91d5ff;
+  border: 1px solid var(--cr-border);
   margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
@@ -297,7 +299,7 @@ onMounted(() => {
 }
 
 .results-title {
-  color: #1890ff;
+  color: var(--cr-primary);
   margin: 0;
   font-size: 16px;
   font-weight: 600;
@@ -305,52 +307,54 @@ onMounted(() => {
 
 .clear-results-btn {
   padding: 4px 8px;
-  background: white;
-  border: 1px solid #d9d9d9;
+  background: var(--cr-surface);
+  border: 1px solid var(--cr-border);
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
+  color: var(--cr-text-secondary);
 }
 
 .clear-results-btn:hover {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: var(--cr-primary);
+  color: var(--cr-primary);
 }
 
 .result-item {
-  background: white;
+  background: var(--cr-surface);
   padding: 12px;
   margin-bottom: 8px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--cr-border);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .result-item:hover {
-  border-color: #1890ff;
-  background: #f0f9ff;
+  border-color: var(--cr-primary);
+  background: var(--cr-primary-soft);
   transform: translateY(-1px);
 }
 
 .result-title {
   font-weight: 600;
-  color: #1890ff;
+  color: var(--cr-primary);
   margin-bottom: 4px;
   font-size: 14px;
 }
 
 .result-preview {
   font-size: 13px;
-  color: #666;
+  color: var(--cr-text-secondary);
   line-height: 1.5;
   margin-bottom: 4px;
 }
 
 .result-source {
   font-size: 11px;
-  color: #999;
+  color: var(--cr-text-secondary);
+  opacity: 0.8;
 }
 
 /* Law Categories */
@@ -360,22 +364,22 @@ onMounted(() => {
 }
 
 .category-section {
-  background: #fafafa;
+  background: var(--cr-surface);
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--cr-border);
   transition: all 0.2s;
 }
 
 .category-section:hover {
-  border-color: #1890ff;
-  background: #f0f9ff;
+  border-color: var(--cr-primary);
+  background: var(--cr-primary-soft);
 }
 
 .category-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1890ff;
+  color: var(--cr-primary);
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -390,10 +394,10 @@ onMounted(() => {
 
 .law-link {
   padding: 6px 12px;
-  background: white;
-  border: 1px solid #d9d9d9;
+  background: var(--cr-surface);
+  border: 1px solid var(--cr-border);
   border-radius: 4px;
-  color: #333;
+  color: var(--cr-text-primary);
   text-decoration: none;
   font-size: 13px;
   transition: all 0.2s;
@@ -401,9 +405,9 @@ onMounted(() => {
 }
 
 .law-link:hover {
-  border-color: #1890ff;
-  color: #1890ff;
-  background: #f0f9ff;
+  border-color: var(--cr-primary);
+  color: var(--cr-primary);
+  background: var(--cr-primary-soft);
   transform: translateY(-1px);
 }
 
@@ -413,16 +417,18 @@ onMounted(() => {
 }
 
 .dictionary-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--cr-surface-muted);
   border-radius: 3px;
 }
 
 .dictionary-container::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--cr-text-secondary);
   border-radius: 3px;
+  opacity: 0.5;
 }
 
 .dictionary-container::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
+  background: var(--cr-text-primary);
+  opacity: 0.7;
 }
 </style>

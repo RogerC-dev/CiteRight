@@ -3,14 +3,14 @@
     <!-- 標題區域 -->
     <div class="content-header">
       <h3 class="section-title">
-        📚 我的法律書籤 ({{ bookmarkStore.bookmarkCount }})
+        <i class="bi bi-bookmark-star-fill"></i> 我的法律書籤 ({{ bookmarkStore.bookmarkCount }})
       </h3>
       <div v-if="bookmarkStore.hasBookmarks" class="header-actions">
         <button class="action-btn export-btn" @click="exportBookmarks">
-          📤 匯出
+          <i class="bi bi-upload"></i> 匯出
         </button>
         <button class="action-btn import-btn" @click="triggerImport">
-          📥 匯入
+          <i class="bi bi-download"></i> 匯入
         </button>
         <input
           ref="fileInputRef"
@@ -30,7 +30,7 @@
 
     <!-- 空狀態 -->
     <div v-else-if="!bookmarkStore.hasBookmarks" class="empty-state">
-      <div class="empty-icon">📚</div>
+      <div class="empty-icon"><i class="bi bi-bookmark"></i></div>
       <div class="empty-title">尚未儲存任何書籤</div>
       <div class="empty-subtitle">在法條詳情中點擊「加入書籤」來儲存</div>
     </div>
@@ -61,21 +61,21 @@
               @click.stop="viewBookmark(bookmark)"
               title="查看詳情"
             >
-              👁️
+              <i class="bi bi-eye"></i>
             </button>
             <button
               class="action-btn edit-btn"
               @click.stop="editBookmark(bookmark)"
               title="編輯"
             >
-              ✏️
+              <i class="bi bi-pencil"></i>
             </button>
             <button
               class="action-btn delete-btn"
               @click.stop="deleteBookmark(bookmark)"
               title="刪除"
             >
-              🗑️
+              <i class="bi bi-trash"></i>
             </button>
           </div>
         </div>
@@ -370,7 +370,7 @@ onMounted(() => {
 .section-title {
   margin: 0;
   font-size: 16px;
-  color: #1890ff;
+  color: var(--cr-primary);
   word-break: keep-all;
   white-space: nowrap;
 }
@@ -387,29 +387,29 @@ onMounted(() => {
   cursor: pointer;
   font-size: 11px;
   transition: all 0.2s;
-  background: white;
+  background: var(--cr-surface);
 }
 
 .export-btn, .import-btn {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: var(--cr-primary);
+  color: var(--cr-primary);
 }
 
 .export-btn:hover, .import-btn:hover {
-  background: #f0f9ff;
+  background: var(--cr-primary-soft);
 }
 
 .loading-state {
   text-align: center;
   padding: 40px 20px;
-  color: #666;
+  color: var(--cr-text-secondary);
 }
 
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #1890ff;
+  border: 2px solid var(--cr-surface-muted);
+  border-top: 2px solid var(--cr-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 12px;
@@ -422,13 +422,22 @@ onMounted(() => {
 
 .empty-state {
   text-align: center;
-  color: #999;
+  color: var(--cr-text-secondary);
   padding: 40px 20px;
 }
 
 .empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon i {
+  font-size: 48px;
+  color: var(--cr-text-secondary);
+  opacity: 0.5;
 }
 
 .empty-title {
@@ -446,11 +455,11 @@ onMounted(() => {
 }
 
 .bookmark-item {
-  background: white;
+  background: var(--cr-surface);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 12px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--cr-border);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -460,8 +469,9 @@ onMounted(() => {
 }
 
 .bookmark-item:hover {
-  border-color: #1890ff;
+  border-color: var(--cr-primary);
   box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+  background: var(--cr-primary-soft);
 }
 
 .bookmark-main {
@@ -471,25 +481,26 @@ onMounted(() => {
 
 .bookmark-title {
   font-weight: 600;
-  color: #1890ff;
+  color: var(--cr-primary);
   margin-bottom: 8px;
   word-break: break-word;
 }
 
 .bookmark-meta {
   font-size: 12px;
-  color: #666;
+  color: var(--cr-text-secondary);
   margin-bottom: 8px;
 }
 
 .bookmark-preview {
   font-size: 13px;
-  color: #555;
+  color: var(--cr-text-secondary);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  opacity: 0.9;
 }
 
 .bookmark-actions {
@@ -499,30 +510,30 @@ onMounted(() => {
 }
 
 .view-btn {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: var(--cr-primary);
+  color: var(--cr-primary);
 }
 
 .view-btn:hover {
-  background: #f0f9ff;
+  background: var(--cr-primary-soft);
 }
 
 .edit-btn {
-  border-color: #52c41a;
-  color: #52c41a;
+  border-color: var(--cr-success);
+  color: var(--cr-success);
 }
 
 .edit-btn:hover {
-  background: #f6ffed;
+  background: rgba(82, 196, 26, 0.1);
 }
 
 .delete-btn {
-  border-color: #ff4d4f;
-  color: #ff4d4f;
+  border-color: var(--cr-destructive);
+  color: var(--cr-destructive);
 }
 
 .delete-btn:hover {
-  background: #fff2f0;
+  background: rgba(255, 77, 79, 0.1);
 }
 
 /* 編輯對話框 */
@@ -540,7 +551,7 @@ onMounted(() => {
 }
 
 .edit-dialog {
-  background: white;
+  background: var(--cr-surface);
   border-radius: 8px;
   width: 90%;
   max-width: 500px;
@@ -552,7 +563,7 @@ onMounted(() => {
 
 .edit-header {
   padding: 16px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--cr-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -560,7 +571,7 @@ onMounted(() => {
 
 .edit-header h4 {
   margin: 0;
-  color: #1890ff;
+  color: var(--cr-primary);
 }
 
 .close-btn {
@@ -568,7 +579,7 @@ onMounted(() => {
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: #666;
+  color: var(--cr-text-secondary);
 }
 
 .edit-body {
@@ -585,27 +596,29 @@ onMounted(() => {
   display: block;
   margin-bottom: 4px;
   font-weight: 500;
-  color: #333;
+  color: var(--cr-text-primary);
 }
 
 .form-control {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--cr-border);
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
+  background: var(--cr-surface);
+  color: var(--cr-text-primary);
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  border-color: var(--cr-primary);
+  box-shadow: 0 0 0 2px var(--cr-primary-soft);
 }
 
 .edit-footer {
   padding: 16px;
-  border-top: 1px solid #e8e8e8;
+  border-top: 1px solid var(--cr-border);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
@@ -621,24 +634,25 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  border-color: #d9d9d9;
-  color: #666;
-  background: white;
+  border-color: var(--cr-border);
+  color: var(--cr-text-secondary);
+  background: var(--cr-surface);
 }
 
 .btn-secondary:hover {
-  border-color: #bbb;
+  border-color: var(--cr-text-secondary);
+  color: var(--cr-text-primary);
 }
 
 .btn-primary {
-  border-color: #1890ff;
+  border-color: var(--cr-primary);
   color: white;
-  background: #1890ff;
+  background: var(--cr-primary);
 }
 
 .btn-primary:hover {
-  background: #096dd9;
-  border-color: #096dd9;
+  background: var(--cr-primary-hover);
+  border-color: var(--cr-primary-hover);
 }
 
 /* 動畫 */

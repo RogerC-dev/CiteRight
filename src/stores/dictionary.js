@@ -13,23 +13,28 @@ export const useDictionaryStore = defineStore('dictionary', () => {
   // Law categories configuration
   const lawCategories = ref([
     {
-      title: '⚖️ 民事法規',
+      title: '民事法規',
+      icon: 'bi bi-scale',
       laws: ['民法', '民事訴訟法', '家事事件法', '消費者保護法', '公寓大廈管理條例']
     },
     {
-      title: '🚨 刑事法規',
+      title: '刑事法規',
+      icon: 'bi bi-shield-exclamation',
       laws: ['刑法', '刑事訴訟法', '少年事件處理法', '毒品危害防制條例']
     },
     {
-      title: '📋 行政法規',
+      title: '行政法規',
+      icon: 'bi bi-file-earmark-text',
       laws: ['行政程序法', '行政訴訟法', '訴願法', '國家賠償法']
     },
     {
-      title: '💼 商事法規',
+      title: '商事法規',
+      icon: 'bi bi-briefcase',
       laws: ['公司法', '票據法', '證券交易法', '保險法', '海商法']
     },
     {
-      title: '👷 勞動法規',
+      title: '勞動法規',
+      icon: 'bi bi-person-badge',
       laws: ['勞動基準法', '勞工保險條例', '勞工退休金條例', '職業安全衛生法']
     }
   ])

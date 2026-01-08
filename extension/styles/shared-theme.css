@@ -11,16 +11,16 @@
   --bg-page: #F8FAFC;
   --surface: #FFFFFF;
   --surface-muted: #E2E8F0;
-  
+
   /* Primary Brand Color - Calm, Authoritative Blue */
   --primary: #476996;
   --primary-hover: #35527a;
   --primary-soft: #EEF2FF;
-  
+
   /* Text Colors */
   --text-primary: #1E293B;
   --text-secondary: #64748B;
-  
+
   /* Status Colors */
   --success: #22c55e;
   --success-soft: #dcfce7;
@@ -28,7 +28,7 @@
   --warning-soft: #fef3c7;
   --destructive: #ef4444;
   --destructive-soft: #fee2e2;
-  
+
   /* Borders & Shadows */
   --border: #CBD5E1;
   --shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -1px rgba(15, 23, 42, 0.06);
@@ -36,22 +36,22 @@
   --shadow-card: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
   --shadow-elegant: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
   --shadow-glow: 0 0 20px rgba(71, 105, 150, 0.15);
-  
+
   /* Radius */
   --radius: 12px;
   --radius-sm: 8px;
   --radius-lg: 16px;
   --radius-full: 9999px;
-  
+
   /* Gradients */
   --gradient-hero: linear-gradient(135deg, rgba(71, 105, 150, 0.08) 0%, #EEF2FF 50%, #E2E8F0 100%);
   --gradient-card: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
   --gradient-primary: linear-gradient(135deg, #476996 0%, #35527a 100%);
-  
+
   /* Glass Effect */
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(255, 255, 255, 0.3);
-  
+
   /* Icon Color Palettes */
   --icon-blue-bg: #eff6ff;
   --icon-blue-fg: #3b82f6;
@@ -65,6 +65,20 @@
   --icon-amber-fg: #f59e0b;
   --icon-red-bg: #fef2f2;
   --icon-red-fg: #ef4444;
+
+  /* Compatibility Aliases for Shared Components */
+  --cr-primary: var(--primary);
+  --cr-primary-hover: var(--primary-hover);
+  --cr-primary-soft: var(--primary-soft);
+  --cr-text-primary: var(--text-primary);
+  --cr-text-secondary: var(--text-secondary);
+  --cr-surface: var(--surface);
+  --cr-surface-muted: var(--surface-muted);
+  --cr-border: var(--border);
+  --cr-success: var(--success);
+  --cr-warning: var(--warning);
+  --cr-destructive: var(--destructive);
+  --cr-radius: var(--radius);
 }
 
 /* ============================================
@@ -79,40 +93,40 @@ body.dark,
   --bg-page: #0f172a;
   --surface: #1e293b;
   --surface-muted: #334155;
-  
+
   /* Primary colors - softer blue for eye comfort */
   --primary: #60a5fa;
   --primary-hover: #3b82f6;
   --primary-soft: #1e3a5f;
-  
+
   /* Header gradient - darker, more eye-friendly */
   --header-gradient: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
-  
+
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
-  
+
   --success: #4ade80;
   --success-soft: #14532d;
   --warning: #fbbf24;
   --warning-soft: #713f12;
   --destructive: #f87171;
   --destructive-soft: rgba(239, 68, 68, 0.15);
-  
+
   --border: #334155;
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
   --shadow-hover: 0 20px 40px -10px rgba(96, 165, 250, 0.15), 0 8px 16px -4px rgba(0, 0, 0, 0.3);
   --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
   --shadow-elegant: 0 4px 20px -2px rgba(0, 0, 0, 0.3), 0 2px 8px -2px rgba(0, 0, 0, 0.2);
   --shadow-glow: 0 0 20px rgba(96, 165, 250, 0.2);
-  
+
   --gradient-hero: linear-gradient(135deg, rgba(96, 165, 250, 0.1) 0%, #1e293b 50%, #0f172a 100%);
   --gradient-card: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   /* Primary gradient - darker for headers in dark mode */
   --gradient-primary: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
-  
+
   --glass-bg: rgba(30, 41, 59, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
-  
+
   /* Icon Color Palettes (Dark) */
   --icon-blue-bg: rgba(59, 130, 246, 0.15);
   --icon-blue-fg: #60a5fa;
@@ -156,16 +170,32 @@ body {
 /* ============================================
    TYPOGRAPHY
    ============================================ */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--text-primary);
   font-weight: 600;
   line-height: 1.3;
 }
 
-h1 { font-size: 28px; }
-h2 { font-size: 22px; }
-h3 { font-size: 18px; }
-h4 { font-size: 16px; }
+h1 {
+  font-size: 28px;
+}
+
+h2 {
+  font-size: 22px;
+}
+
+h3 {
+  font-size: 18px;
+}
+
+h4 {
+  font-size: 16px;
+}
 
 p {
   color: var(--text-secondary);
@@ -272,7 +302,9 @@ p {
 /* ============================================
    FORMS
    ============================================ */
-input, select, textarea {
+input,
+select,
+textarea {
   width: 100%;
   padding: 12px 16px;
   background: var(--surface);
@@ -283,13 +315,16 @@ input, select, textarea {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--text-secondary);
 }
 
@@ -427,8 +462,15 @@ input::placeholder, textarea::placeholder {
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* ============================================
@@ -546,8 +588,13 @@ input::placeholder, textarea::placeholder {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* ============================================
@@ -627,8 +674,13 @@ input::placeholder, textarea::placeholder {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -636,6 +688,7 @@ input::placeholder, textarea::placeholder {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -650,11 +703,11 @@ input::placeholder, textarea::placeholder {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
-  
+
   .stat-box {
     padding: 12px;
   }
-  
+
   .stat-number {
     font-size: 20px;
   }

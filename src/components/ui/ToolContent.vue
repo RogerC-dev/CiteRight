@@ -1,7 +1,7 @@
 <template>
   <div id="tool-content" class="tool-content">
     <div v-if="!hasCurrentData" class="empty-state">
-      <div class="empty-icon">🔧</div>
+      <div class="empty-icon"><i class="bi bi-wrench"></i></div>
       <div class="empty-title">請點擊法律條文來查看詳細資訊</div>
       <div class="empty-subtitle">按 Ctrl 啟動懸停模式</div>
     </div>
@@ -26,11 +26,11 @@
             :disabled="isBookmarking"
             title="加入書籤"
           >
-            📚 {{ isAlreadyBookmarked ? '已收藏' : '加入書籤' }}
+            <i :class="isAlreadyBookmarked ? 'bi bi-bookmark-check-fill' : 'bi bi-bookmark-plus'"></i> {{ isAlreadyBookmarked ? '已收藏' : '加入書籤' }}
           </button>
         </div>
         <div class="content-meta">
-          📝 {{ displayData.type }}
+          <i class="bi bi-file-text"></i> {{ displayData.type }}
           <span v-if="displayData.number">
             · 第{{ displayData.number }}{{ displayData.type === '釋字' ? '號' : '條' }}
           </span>
@@ -52,7 +52,7 @@
             @click="handleBookmark"
             :disabled="isBookmarking"
           >
-            📚 {{ isAlreadyBookmarked ? '已收藏' : '加入書籤' }}
+            <i :class="isAlreadyBookmarked ? 'bi bi-bookmark-check-fill' : 'bi bi-bookmark-plus'"></i> {{ isAlreadyBookmarked ? '已收藏' : '加入書籤' }}
           </button>
           
           <button
@@ -60,14 +60,14 @@
             class="action-btn link-btn"
             @click="openOfficialLink"
           >
-            🔗 官方頁面
+            <i class="bi bi-link-45deg"></i> 官方頁面
           </button>
           
           <button
             class="action-btn share-btn"
             @click="shareContent"
           >
-            📤 分享
+            <i class="bi bi-share"></i> 分享
           </button>
         </div>
       </div>
@@ -445,13 +445,22 @@ defineExpose({
 
 .empty-state {
   text-align: center;
-  color: #999;
+  color: var(--cr-text-secondary);
   padding: 40px 20px;
 }
 
 .empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon i {
+  font-size: 48px;
+  color: var(--cr-text-secondary);
+  opacity: 0.5;
 }
 
 .empty-title {
@@ -470,9 +479,9 @@ defineExpose({
 .content-header {
   margin-bottom: 16px;
   padding: 16px;
-  background: linear-gradient(135deg, #f0f9ff, #e6f7ff);
+  background: var(--cr-surface-muted);
   border-radius: 8px;
-  border-left: 4px solid #1890ff;
+  border-left: 4px solid var(--cr-primary);
 }
 
 .title-row {
@@ -484,7 +493,7 @@ defineExpose({
 
 .content-title {
   margin: 0;
-  color: #1890ff;
+  color: var(--cr-primary);
   font-size: 18px;
   font-weight: 600;
   flex-shrink: 0;
@@ -496,15 +505,15 @@ defineExpose({
 
 .content-meta {
   font-size: 13px;
-  color: #666;
+  color: var(--cr-text-secondary);
 }
 
 .main-content {
-  background: white;
+  background: var(--cr-surface);
   padding: 20px;
   border-radius: 8px;
-  border: 1px solid #e8e8e8;
-  color: #333;
+  border: 1px solid var(--cr-border);
+  color: var(--cr-text-primary);
   line-height: 1.8;
   font-size: 15px;
   min-height: 200px;
@@ -513,7 +522,7 @@ defineExpose({
 
 .action-area {
   padding: 12px;
-  background: #fafafa;
+  background: var(--cr-surface-muted);
   border-radius: 6px;
 }
 
@@ -530,16 +539,16 @@ defineExpose({
   cursor: pointer;
   font-size: 12px;
   transition: all 0.2s;
-  background: white;
+  background: var(--cr-surface);
 }
 
 .bookmark-btn {
-  border-color: #52c41a;
-  color: #52c41a;
+  border-color: var(--cr-success);
+  color: var(--cr-success);
 }
 
 .bookmark-btn:hover:not(:disabled) {
-  background: #f6ffed;
+  background: rgba(82, 196, 26, 0.1);
 }
 
 .bookmark-btn:disabled {
@@ -548,12 +557,12 @@ defineExpose({
 }
 
 .link-btn {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: var(--cr-primary);
+  color: var(--cr-primary);
 }
 
 .link-btn:hover {
-  background: #f0f9ff;
+  background: var(--cr-primary-soft);
 }
 
 .share-btn {
@@ -599,7 +608,7 @@ defineExpose({
 :deep(.interpretation-section) {
   margin-bottom: 24px;
   padding: 16px;
-  background: #fafafa;
+  background: var(--cr-surface-muted);
   border-radius: 6px;
   border-left: 4px solid #722ed1;
 }
@@ -614,21 +623,21 @@ defineExpose({
 :deep(.interpretation-section p) {
   margin: 0;
   line-height: 1.8;
-  color: #333;
+  color: var(--cr-text-primary);
 }
 
 /* 法律內容區塊樣式 */
 :deep(.law-header) {
   margin-bottom: 24px;
   padding: 16px;
-  background: linear-gradient(135deg, #f0f9ff, #e6f7ff);
+  background: var(--cr-surface-muted);
   border-radius: 8px;
-  border-left: 4px solid #1890ff;
+  border-left: 4px solid var(--cr-primary);
 }
 
 :deep(.law-header h3) {
   margin: 0 0 8px 0;
-  color: #1890ff;
+  color: var(--cr-primary);
   font-size: 18px;
   font-weight: 600;
 }
@@ -636,42 +645,42 @@ defineExpose({
 :deep(.last-amended) {
   margin: 0;
   font-size: 12px;
-  color: #666;
+  color: var(--cr-text-secondary);
 }
 
 :deep(.law-article) {
   margin-bottom: 20px;
   padding: 16px;
-  background: #fafafa;
+  background: var(--cr-surface-muted);
   border-radius: 6px;
-  border-left: 4px solid #52c41a;
+  border-left: 4px solid var(--cr-success);
 }
 
 :deep(.article-number) {
   font-weight: 600;
-  color: #52c41a;
+  color: var(--cr-success);
   margin-bottom: 8px;
   font-size: 14px;
 }
 
 :deep(.article-caption) {
   font-weight: 600;
-  color: #1890ff;
+  color: var(--cr-primary);
   margin-bottom: 12px;
   font-size: 15px;
 }
 
 :deep(.article-content) {
   line-height: 1.8;
-  color: #333;
+  color: var(--cr-text-primary);
 }
 
 :deep(.error-message) {
   padding: 16px;
-  background: #fff2f0;
-  border: 1px solid #ffccc7;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--cr-destructive);
   border-radius: 6px;
-  color: #cf1322;
+  color: var(--cr-destructive);
 }
 
 :deep(.error-message ul) {
@@ -719,7 +728,7 @@ defineExpose({
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1890ff, #096dd9);
+  background: var(--cr-primary);
   color: white;
   border: none;
   font-size: 9px;
@@ -734,7 +743,7 @@ defineExpose({
 }
 
 .compact-en-btn:hover {
-  background: linear-gradient(135deg, #096dd9, #0050b3);
+  background: var(--cr-primary-hover);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(24, 144, 255, 0.35);
 }

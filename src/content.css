@@ -3,6 +3,8 @@
  * Unified design with ExamQuestionBank
  */
 
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+
 /* Design System Variables */
 :root {
   --cr-primary: #476996;
@@ -154,7 +156,7 @@ body.dark {
     background: #ffffff !important;
     border-bottom-color: #000000 !important;
   }
-  
+
   .citeright-link:hover {
     background: #f0f0f0 !important;
   }
@@ -217,17 +219,17 @@ body.dark .citeright-link[data-case-type="法律"] {
     border-bottom-color: #60a5fa !important;
     color: inherit !important;
   }
-  
+
   .citeright-link:hover {
     background: linear-gradient(120deg, rgba(96, 165, 250, 0.25) 0%, rgba(96, 165, 250, 0.15) 100%) !important;
     border-bottom-color: #93c5fd !important;
   }
-  
+
   .citeright-link:hover::after {
     background: #f1f5f9 !important;
     color: #1e293b !important;
   }
-  
+
   .citeright-link:hover::before {
     border-top-color: #f1f5f9 !important;
   }
@@ -253,7 +255,7 @@ body.dark .citeright-link[data-case-type="法律"] {
   .citeright-link {
     transition: none !important;
   }
-  
+
   .citeright-link:hover {
     transform: none !important;
   }

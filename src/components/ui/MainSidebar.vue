@@ -970,6 +970,36 @@ onUnmounted(() => {
   color: #f1f5f9;
 }
 
+.tool-panel-split.dark-mode .search-title i {
+  color: #60a5fa;
+  margin-right: 8px;
+}
+
+.tool-panel-split.dark-mode .quick-access-panel {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
+  border-color: #78350f;
+}
+
+.tool-panel-split.dark-mode .quick-access-title i {
+  color: #fbbf24;
+  margin-right: 6px;
+}
+
+.tool-panel-split.dark-mode .category-section {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.tool-panel-split.dark-mode .category-title i {
+  color: #60a5fa;
+  margin-right: 8px;
+}
+
+.tool-panel-split.dark-mode .section-title i {
+  color: #60a5fa;
+  margin-right: 8px;
+}
+
 .tool-panel-split.dark-mode .dictionary-search-input {
   background: #0f172a;
   border-color: #334155;
@@ -1090,7 +1120,8 @@ onUnmounted(() => {
 }
 
 /* ===== BOOKMARKS CONTENT DARK MODE ===== */
-.tool-panel-split.dark-mode .bookmark-content {
+.tool-panel-split.dark-mode .bookmark-content,
+.tool-panel-split.dark-mode .active-bookmark-content {
   background: #1e293b;
   color: #f1f5f9;
 }
@@ -1155,6 +1186,14 @@ onUnmounted(() => {
 
 .tool-panel-split.dark-mode .empty-state {
   color: #94a3b8;
+}
+
+.tool-panel-split.dark-mode .empty-icon {
+  color: #64748b;
+}
+
+.tool-panel-split.dark-mode .empty-icon i {
+  color: #64748b;
 }
 
 .tool-panel-split.dark-mode .empty-title {
@@ -1335,10 +1374,38 @@ onUnmounted(() => {
   color: #94a3b8;
 }
 
-.tool-panel-split.dark-mode .main-content {
-  background: #0f172a;
+.tool-panel-split.dark-mode .main-content,
+.tool-panel-split.dark-mode #tool-main-content {
+  background: #0f172a !important;
   border-color: #334155;
   color: #f1f5f9;
+}
+
+/* Ensure main-content children also have dark backgrounds */
+.tool-panel-split.dark-mode .main-content *,
+.tool-panel-split.dark-mode #tool-main-content * {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .main-content p,
+.tool-panel-split.dark-mode #tool-main-content p {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .main-content h1,
+.tool-panel-split.dark-mode .main-content h2,
+.tool-panel-split.dark-mode .main-content h3,
+.tool-panel-split.dark-mode .main-content h4,
+.tool-panel-split.dark-mode #tool-main-content h1,
+.tool-panel-split.dark-mode #tool-main-content h2,
+.tool-panel-split.dark-mode #tool-main-content h3,
+.tool-panel-split.dark-mode #tool-main-content h4 {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .content-meta i {
+  color: #60a5fa;
+  margin-right: 4px;
 }
 
 .tool-panel-split.dark-mode .action-area {
@@ -1386,6 +1453,14 @@ onUnmounted(() => {
 
 .tool-panel-split.dark-mode .empty-state {
   color: #94a3b8;
+}
+
+.tool-panel-split.dark-mode .empty-icon {
+  color: #64748b;
+}
+
+.tool-panel-split.dark-mode .empty-icon i {
+  color: #64748b;
 }
 
 .tool-panel-split.dark-mode .empty-title {
