@@ -17,7 +17,7 @@ async function checkDatabaseConnection() {
         const response = await fetchWithRetry(`${API_BASE_URL}/health`);
         const healthData = await response.json();
 
-        databaseStatus.connected = healthData.status === 'OK' && healthData.database?.connected;
+        databaseStatus.connected = healthData.status === 'ok' && healthData.database === 'connected';
         databaseStatus.lastChecked = new Date();
 
         if (databaseStatus.connected) {
@@ -169,16 +169,111 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return true; // Keep message channel open for async response
     }
 
-    // Handle API proxy requests from content scripts (bypasses CORS)
+    // Handle API proxy requests from content scripts (bypasses CORS/PNA)
     if (msg.type === 'API_REQUEST') {
         handleApiRequest(msg, sendResponse);
         return true; // Keep message channel open for async response
+    }
+
+    // Handle fetchInterpretation from content scripts (bypasses CORS/PNA)
+    if (msg.action === 'fetchInterpretation') {
+        handleFetchInterpretation(msg, sendResponse);
+        return true;
+    }
+
+    // Handle fetchLawInfo from content scripts (bypasses CORS/PNA)
+    if (msg.action === 'fetchLawInfo') {
+        handleFetchLawInfoRequest(msg, sendResponse);
+        return true;
+    }
+
+    // Handle loadLegalNames from content scripts (bypasses CORS/PNA)
+    if (msg.action === 'loadLegalNames') {
+        handleLoadLegalNames(msg, sendResponse);
+        return true;
     }
 
     // Handle other message types synchronously
     handleOtherMessages(msg, sendResponse);
     return true; // Keep message channel open for async response
 });
+
+// Handler for fetchInterpretation - proxies API call to localhost
+async function handleFetchInterpretation(msg, sendResponse) {
+    const { number } = msg;
+    console.log(`Background: Fetching interpretation ${number}`);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/case?caseType=釋字&number=${encodeURIComponent(number)}`);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: response.statusText }));
+            throw new Error(errorData.message || errorData.error || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(`Background: Successfully fetched interpretation ${number}`);
+        sendResponse({ data: data.data || data });
+    } catch (error) {
+        console.error(`Background: Error fetching interpretation ${number}:`, error);
+        sendResponse({ error: error.message });
+    }
+}
+
+// Handler for fetchLawInfo - proxies API call to localhost
+async function handleFetchLawInfoRequest(msg, sendResponse) {
+    const { lawName } = msg;
+    console.log(`Background: Fetching law info for ${lawName}`);
+
+    try {
+        let response = await fetch(`${API_BASE_URL}/api/laws/${encodeURIComponent(lawName)}`);
+
+        // If not found, try search endpoint
+        if (!response.ok && response.status === 404) {
+            response = await fetch(`${API_BASE_URL}/api/laws/search?q=${encodeURIComponent(lawName)}`);
+            if (response.ok) {
+                const searchData = await response.json();
+                if (searchData.success && searchData.results && searchData.results.length > 0) {
+                    const firstMatch = searchData.results[0];
+                    response = await fetch(`${API_BASE_URL}/api/laws/${encodeURIComponent(firstMatch.LawName || lawName)}`);
+                }
+            }
+        }
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: response.statusText }));
+            throw new Error(errorData.message || errorData.error || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(`Background: Successfully fetched law info for ${lawName}`);
+        sendResponse({ data: data.data || data });
+    } catch (error) {
+        console.error(`Background: Error fetching law info for ${lawName}:`, error);
+        sendResponse({ error: error.message });
+    }
+}
+
+// Handler for loadLegalNames - proxies API call to localhost
+async function handleLoadLegalNames(msg, sendResponse) {
+    console.log('Background: Loading legal names');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/laws/`);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: response.statusText }));
+            throw new Error(errorData.message || errorData.error || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(`Background: Successfully loaded ${data.data?.length || 0} legal names`);
+        sendResponse({ data: data.data || data });
+    } catch (error) {
+        console.error('Background: Error loading legal names:', error);
+        sendResponse({ error: error.message });
+    }
+}
 
 // Async handler for GET_CASE_LINK
 async function handleCaseLinkRequest(msg, sendResponse) {

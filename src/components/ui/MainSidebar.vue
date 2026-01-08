@@ -963,6 +963,7 @@ onUnmounted(() => {
 
 .tool-panel-split.dark-mode .dictionary-search-container {
   background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+  border-color: #334155;
 }
 
 .tool-panel-split.dark-mode .search-title {
@@ -1058,6 +1059,10 @@ onUnmounted(() => {
   color: #64748b;
 }
 
+.tool-panel-split.dark-mode .law-categories {
+  background: transparent;
+}
+
 .tool-panel-split.dark-mode .category-section {
   background: #0f172a;
   border-color: #334155;
@@ -1085,6 +1090,35 @@ onUnmounted(() => {
 }
 
 /* ===== BOOKMARKS CONTENT DARK MODE ===== */
+.tool-panel-split.dark-mode .bookmark-content {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .content-header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+  border-color: #334155;
+}
+
+.tool-panel-split.dark-mode .section-title {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .header-actions {
+  background: transparent;
+}
+
+.tool-panel-split.dark-mode .header-actions .action-btn {
+  background: rgba(96, 165, 250, 0.15);
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+.tool-panel-split.dark-mode .header-actions .action-btn:hover {
+  background: rgba(96, 165, 250, 0.25);
+  border-color: #93c5fd;
+}
+
 .tool-panel-split.dark-mode .bookmark-item {
   background: #0f172a;
   border-color: #334155;
@@ -1105,7 +1139,7 @@ onUnmounted(() => {
 
 .tool-panel-split.dark-mode .bookmark-preview {
   color: #94a3b8;
-  background: #1e293b;
+  background: transparent;
 }
 
 .tool-panel-split.dark-mode .bookmark-actions button {
@@ -1119,7 +1153,249 @@ onUnmounted(() => {
   border-color: #60a5fa;
 }
 
+.tool-panel-split.dark-mode .empty-state {
+  color: #94a3b8;
+}
+
+.tool-panel-split.dark-mode .empty-title {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .empty-subtitle {
+  color: #64748b;
+}
+
+.tool-panel-split.dark-mode .loading-state {
+  color: #94a3b8;
+}
+
+.tool-panel-split.dark-mode .spinner {
+  border-color: #334155;
+  border-top-color: #60a5fa;
+}
+
+.tool-panel-split.dark-mode .edit-modal {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.tool-panel-split.dark-mode .edit-dialog {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.tool-panel-split.dark-mode .edit-header {
+  border-color: #334155;
+}
+
+.tool-panel-split.dark-mode .edit-header h4 {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .close-btn {
+  color: #94a3b8;
+}
+
+.tool-panel-split.dark-mode .close-btn:hover {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .edit-body {
+  background: #1e293b;
+}
+
+.tool-panel-split.dark-mode .form-group label {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .form-control {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .form-control:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+}
+
+.tool-panel-split.dark-mode .form-control::placeholder {
+  color: #64748b;
+}
+
+.tool-panel-split.dark-mode .edit-footer {
+  border-color: #334155;
+}
+
+.tool-panel-split.dark-mode .btn-secondary {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .btn-secondary:hover {
+  background: #334155;
+  border-color: #60a5fa;
+}
+
+.tool-panel-split.dark-mode .btn-primary {
+  background: #60a5fa;
+  border-color: #60a5fa;
+  color: #0f172a;
+}
+
+.tool-panel-split.dark-mode .btn-primary:hover {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+/* Deep content styles for ToolContent */
+.tool-panel-split.dark-mode :deep(.interpretation-section) {
+  background: #1e293b;
+  border-left-color: #a78bfa;
+}
+
+.tool-panel-split.dark-mode :deep(.interpretation-section h4) {
+  color: #a78bfa;
+}
+
+.tool-panel-split.dark-mode :deep(.interpretation-section p) {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode :deep(.law-header) {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+  border-left-color: #60a5fa;
+}
+
+.tool-panel-split.dark-mode :deep(.law-header h3) {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode :deep(.last-amended) {
+  color: #94a3b8;
+}
+
+.tool-panel-split.dark-mode :deep(.law-article) {
+  background: #1e293b;
+  border-left-color: #4ade80;
+}
+
+.tool-panel-split.dark-mode :deep(.article-number) {
+  color: #4ade80;
+}
+
+.tool-panel-split.dark-mode :deep(.article-caption) {
+  color: #60a5fa;
+}
+
+.tool-panel-split.dark-mode :deep(.article-content) {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode :deep(.error-message) {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.tool-panel-split.dark-mode :deep(.english-section) {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+  border-left-color: #60a5fa;
+}
+
+.tool-panel-split.dark-mode :deep(.english-section h4) {
+  color: #60a5fa;
+}
+
+.tool-panel-split.dark-mode :deep(.highlight-section) {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border-left-color: #fbbf24;
+}
+
+.tool-panel-split.dark-mode :deep(.highlight-section h4) {
+  color: #fbbf24;
+}
+
 /* ===== TOOL CONTENT DARK MODE ===== */
+.tool-panel-split.dark-mode .tool-content {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .content-header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+  border-left-color: #60a5fa;
+}
+
+.tool-panel-split.dark-mode .content-title {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .content-meta {
+  color: #94a3b8;
+}
+
+.tool-panel-split.dark-mode .main-content {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .action-area {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.tool-panel-split.dark-mode .action-area .action-btn {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .action-area .action-btn:hover {
+  background: #334155;
+  border-color: #60a5fa;
+}
+
+.tool-panel-split.dark-mode .action-area .bookmark-btn {
+  border-color: #4ade80;
+  color: #4ade80;
+}
+
+.tool-panel-split.dark-mode .action-area .bookmark-btn:hover {
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.tool-panel-split.dark-mode .action-area .link-btn {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+.tool-panel-split.dark-mode .action-area .link-btn:hover {
+  background: rgba(96, 165, 250, 0.15);
+}
+
+.tool-panel-split.dark-mode .action-area .share-btn {
+  border-color: #a78bfa;
+  color: #a78bfa;
+}
+
+.tool-panel-split.dark-mode .action-area .share-btn:hover {
+  background: rgba(167, 139, 250, 0.15);
+}
+
+.tool-panel-split.dark-mode .empty-state {
+  color: #94a3b8;
+}
+
+.tool-panel-split.dark-mode .empty-title {
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .empty-subtitle {
+  color: #64748b;
+}
+
 .tool-panel-split.dark-mode .tool-section {
   background: #0f172a;
   border-color: #334155;
@@ -1274,6 +1550,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Dark mode for header actions */
+.tool-panel-split.dark-mode .header-actions {
+  background: transparent;
 }
 
 .header-btn {

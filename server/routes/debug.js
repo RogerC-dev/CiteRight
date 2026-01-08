@@ -38,42 +38,42 @@ router.get('/', asyncHandler(async (req, res) => {
     }
     
     // Get comprehensive database statistics using correct table names
-    const [lawCount] = await database.query('SELECT COUNT(*) as total FROM Law');
-    const [articleCount] = await database.query('SELECT COUNT(*) as total FROM LawArticle');
-    const [captionCount] = await database.query('SELECT COUNT(*) as total FROM LawCaption');
+    const lawCount = await database.query('SELECT COUNT(*) as total FROM Law');
+    const articleCount = await database.query('SELECT COUNT(*) as total FROM LawArticle');
+    const captionCount = await database.query('SELECT COUNT(*) as total FROM LawCaption');
 
-    // Get sample data
-    const [sampleLaws] = await database.query('SELECT id, law_name, law_level FROM Law LIMIT 5');
-    const [sampleArticles] = await database.query('SELECT article_number, article_content FROM LawArticle LIMIT 3');
+    // Get sample data - SQL Server uses TOP instead of LIMIT
+    const sampleLaws = await database.query('SELECT TOP 5 Id, LawName, LawLevel FROM Law');
+    const sampleArticles = await database.query('SELECT TOP 3 ArticleNo, ArticleContent FROM LawArticle');
 
     // Check if JudicialCase table exists
     let casesCount = 0;
     let sampleCases = [];
     try {
-        const [caseCountResult] = await database.query('SELECT COUNT(*) as total FROM JudicialCase');
-        casesCount = caseCountResult[0].total;
+        const caseCountResult = await database.query('SELECT COUNT(*) as total FROM JudicialCase');
+        casesCount = caseCountResult.recordset[0].total;
         if (casesCount > 0) {
-            const [sampleCasesResult] = await database.query('SELECT case_number, case_type, court_name FROM JudicialCase LIMIT 3');
-            sampleCases = sampleCasesResult;
+            const sampleCasesResult = await database.query('SELECT TOP 3 case_number, case_type, court_name FROM JudicialCase');
+            sampleCases = sampleCasesResult.recordset;
         }
     } catch (error) {
-        console.log('JudicialCase table not found');
+        // JudicialCase table might not exist yet
     }
 
     res.json({
         status: 'connected',
         database: { connected: true },
         statistics: {
-            laws: lawCount[0].total,
-            articles: articleCount[0].total,
-            captions: captionCount[0].total,
+            laws: lawCount.recordset[0].total,
+            articles: articleCount.recordset[0].total,
+            captions: captionCount.recordset[0].total,
             cases: casesCount
         },
         sampleData: {
-            laws: sampleLaws,
-            articles: sampleArticles.map(row => ({
-                number: row.article_number,
-                content: row.article_content.substring(0, 100) + '...'
+            laws: sampleLaws.recordset,
+            articles: sampleArticles.recordset.map(row => ({
+                number: row.ArticleNo,
+                content: row.ArticleContent ? row.ArticleContent.substring(0, 100) + '...' : ''
             })),
             cases: sampleCases
         },

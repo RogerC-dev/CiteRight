@@ -288,8 +288,29 @@ class ApiService {
   }
 
   // Precedent API endpoints (for legal data - uses different base URL)
+  // These use message passing to background script to avoid Private Network Access blocking
   async fetchInterpretation(number) {
-    // Use Precedent API server (port 3000) instead of ExamQuestionBank
+    // Route through background script to avoid CORS/PNA issues
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(
+          { action: 'fetchInterpretation', number: number },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else if (response && response.error) {
+              reject(new Error(response.error));
+            } else if (response && response.data) {
+              resolve(response.data);
+            } else {
+              reject(new Error('Invalid response from background script'));
+            }
+          }
+        );
+      });
+    }
+
+    // Fallback for non-extension context (direct fetch)
     const PRECEDENT_API_URL = 'http://localhost:3000';
     try {
       const response = await fetch(`${PRECEDENT_API_URL}/api/case?caseType=釋字&number=${encodeURIComponent(number)}`);
@@ -298,7 +319,6 @@ class ApiService {
         throw new Error(errorData.message || errorData.detail || `API Error: ${response.status}`);
       }
       const data = await response.json();
-      // Return the data in the expected format
       return data.data || data;
     } catch (error) {
       console.error('Fetch interpretation error:', error);
@@ -307,21 +327,37 @@ class ApiService {
   }
 
   async fetchLawInfo(lawName) {
-    // Use Precedent API server (port 3000) instead of ExamQuestionBank
+    // Route through background script to avoid CORS/PNA issues
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(
+          { action: 'fetchLawInfo', lawName: lawName },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else if (response && response.error) {
+              reject(new Error(response.error));
+            } else if (response && response.data) {
+              resolve(response.data);
+            } else {
+              reject(new Error('Invalid response from background script'));
+            }
+          }
+        );
+      });
+    }
+
+    // Fallback for non-extension context (direct fetch)
     const PRECEDENT_API_URL = 'http://localhost:3000';
     try {
-      // Try direct law name lookup first
       let response = await fetch(`${PRECEDENT_API_URL}/api/laws/${encodeURIComponent(lawName)}`);
       
-      // If not found, try search endpoint
       if (!response.ok && response.status === 404) {
         response = await fetch(`${PRECEDENT_API_URL}/api/laws/search?q=${encodeURIComponent(lawName)}`);
         if (response.ok) {
           const searchData = await response.json();
-          // If search returns results, use the first match
           if (searchData.success && searchData.data && searchData.data.length > 0) {
             const firstMatch = searchData.data[0];
-            // Try to get full details using the law name from search result
             response = await fetch(`${PRECEDENT_API_URL}/api/laws/${encodeURIComponent(firstMatch.lawName || firstMatch.name || lawName)}`);
           }
         }
@@ -333,7 +369,6 @@ class ApiService {
       }
       
       const data = await response.json();
-      // Return the data in the expected format
       return data.data || data;
     } catch (error) {
       console.error('Fetch law info error:', error);
@@ -342,7 +377,27 @@ class ApiService {
   }
 
   async loadLegalNames() {
-    // Use Precedent API server (port 3000) instead of ExamQuestionBank
+    // Route through background script to avoid CORS/PNA issues
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(
+          { action: 'loadLegalNames' },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else if (response && response.error) {
+              reject(new Error(response.error));
+            } else if (response && response.data) {
+              resolve(response.data);
+            } else {
+              reject(new Error('Invalid response from background script'));
+            }
+          }
+        );
+      });
+    }
+
+    // Fallback for non-extension context (direct fetch)
     const PRECEDENT_API_URL = 'http://localhost:3000';
     try {
       const response = await fetch(`${PRECEDENT_API_URL}/api/laws/`);

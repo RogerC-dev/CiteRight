@@ -10,8 +10,13 @@
     "tabs"
   ],
   "host_permissions": [
+    "http://localhost/*",
     "http://localhost:3000/*",
-    "https://aomp.judicial.gov.tw/*"
+    "http://127.0.0.1/*",
+    "http://127.0.0.1:3000/*",
+    "https://aomp.judicial.gov.tw/*",
+    "https://cons.judicial.gov.tw/*",
+    "https://*.judicial.gov.tw/*"
   ],
   "content_scripts": [
     {

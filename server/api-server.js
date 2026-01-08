@@ -51,31 +51,47 @@ const swaggerOptions = {
 const specs = swaggerJsdoc(swaggerOptions);
 
 // Middleware
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.url} [Origin: ${req.headers.origin || 'none'}]`);
+  next();
+});
+
+// Handle preflight requests for Private Network Access (Chrome security feature)
+// This is required when making requests from HTTPS sites to localhost
+app.use((req, res, next) => {
+  // Set Private Network Access headers for preflight requests
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Private-Network', 'true');
+  }
+  next();
+});
+
 // CORS configuration - allow Chrome extensions and localhost origins
 app.use(cors({
   origin: function (origin, callback) {
+    console.log(`🔐 CORS check for origin: ${origin || 'none'}`);
     // Allow requests with no origin (like mobile apps, curl, Postman, or Chrome extensions)
     // Chrome extensions may not send an origin header
     if (!origin) {
       return callback(null, true);
     }
-    // Allow localhost and Chrome extension origins
-    if (origin.startsWith('chrome-extension://') ||
-      origin.startsWith('http://localhost') ||
-      origin.startsWith('http://127.0.0.1') ||
-      origin.includes('judicial.gov.tw')) {
-      return callback(null, true);
-    }
-    // For development, allow all origins
-    if (process.env.NODE_ENV !== 'production') {
-      return callback(null, true);
-    }
-    callback(new Error('Not allowed by CORS'));
+    // Allow all origins in development for Chrome extension compatibility
+    // This is needed for content scripts running on any website
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Access-Control-Request-Private-Network'],
+  exposedHeaders: ['Access-Control-Allow-Private-Network']
 }));
+
+// Add Private Network Access header to all responses
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Private-Network', 'true');
+  next();
+});
+
 app.use(express.json());
 
 // Serve static files from extension directory
@@ -131,8 +147,8 @@ async function startServer() {
       process.exit(1);
     }
 
-    // Start server
-    const server = app.listen(config.port, () => {
+    // Start server - explicitly listen on all interfaces
+    const server = app.listen(config.port, '0.0.0.0', () => {
       console.log(`✅ Server running on http://localhost:${config.port}`);
       console.log('🔗 Available endpoints:');
       console.log(`  📖 API Documentation: http://localhost:${config.port}/api-docs`);
