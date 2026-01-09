@@ -5,7 +5,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
   // State
   const isOpen = ref(false)
   const width = ref(420) // Default width
-  const currentTab = ref('tool') // 'tool' | 'bookmarks' | 'dictionary' | 'flashcard'
+  const currentTab = ref('tool') // 'tool' | 'bookmarks' | 'dictionary' | 'chat' | 'flashcard'
 
   // Constants
   const MIN_WIDTH = 320
@@ -30,7 +30,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
       console.log('✅ Sidebar closed')
     }
   }
-  
+
   function setWidth(newWidth) {
     if (isNaN(newWidth) || typeof newWidth !== 'number') {
       console.warn('⚠️ Invalid width:', newWidth)
@@ -40,15 +40,15 @@ export const useSidebarStore = defineStore('sidebar', () => {
     // Constrain width
     const constrainedWidth = Math.max(minWidth.value, Math.min(newWidth, maxWidth.value))
     width.value = constrainedWidth
-    
+
     // Save to localStorage
     saveWidth(constrainedWidth)
-    
+
     console.log('📏 Sidebar width updated:', constrainedWidth + 'px')
   }
-  
+
   function setCurrentTab(tab) {
-    if (['tool', 'bookmarks', 'dictionary', 'flashcard'].includes(tab)) {
+    if (['tool', 'bookmarks', 'dictionary', 'chat', 'flashcard'].includes(tab)) {
       currentTab.value = tab
       console.log('📑 Switched to tab:', tab)
     }
@@ -68,7 +68,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
       console.error('Failed to load saved width:', error)
     }
   }
-  
+
   function saveWidth(widthToSave) {
     try {
       localStorage.setItem('citeright-panel-width', widthToSave.toString())
@@ -76,7 +76,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
       console.error('Failed to save width:', error)
     }
   }
-  
+
   return {
     // State
     isOpen,

@@ -217,8 +217,28 @@ function openHome() {
 }
 
 function openAIChat() {
-    console.log('AI Chat button clicked - opening ExamQuestionBank AI chat');
-    openExternalUrl(`${EXAM_QUESTION_BANK_URL}/ai-chat`);
+    console.log('AI Chat button clicked - opening sidebar chat tab');
+    if (isExtensionContext) {
+        try {
+            chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+                if (tabs && tabs[0]) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        action: 'openChat'
+                    }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            console.error('Error sending chat message:', chrome.runtime.lastError);
+                            alert('無法開啟 AI 助手。請重新載入頁面後再試。');
+                        }
+                    });
+                }
+            });
+            if (typeof window.close === 'function') {
+                setTimeout(() => window.close(), 300);
+            }
+        } catch (e) {
+            console.error('Error in openAIChat:', e);
+        }
+    }
 }
 
 function openPractice() {

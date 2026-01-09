@@ -86,56 +86,7 @@
           </div>
         </div>
 
-        <!-- Flashcard Tab -->
-        <div
-          v-show="currentTab === 'flashcard'"
-          id="tab-content-flashcard"
-          class="tab-content"
-        >
-          <div class="tab-content-inner flashcard-content">
-            <!-- Flashcard Stats -->
-            <div class="flashcard-stats">
-              <div class="stat-card">
-                <div class="stat-value">{{ flashcardStore.stats.total }}</div>
-                <div class="stat-label">Total</div>
-              </div>
-              <div class="stat-card due">
-                <div class="stat-value">{{ flashcardStore.stats.due }}</div>
-                <div class="stat-label">Due</div>
-              </div>
-              <div class="stat-card mastered">
-                <div class="stat-value">{{ flashcardStore.stats.mastered }}</div>
-                <div class="stat-label">Mastered</div>
-              </div>
-            </div>
 
-            <!-- Mode Toggle -->
-            <div class="mode-toggle">
-              <button
-                @click="showStudyMode = false"
-                :class="['mode-btn', { active: !showStudyMode }]"
-              >
-                <i class="bi bi-gear"></i> Manage
-              </button>
-              <button
-                @click="showStudyMode = true"
-                :class="['mode-btn', { active: showStudyMode }]"
-              >
-                <i class="bi bi-mortarboard"></i> Study
-              </button>
-            </div>
-
-            <!-- Study Mode -->
-            <div v-if="showStudyMode" class="mode-content">
-              <StudySession @create-deck="handleCreateDeck" />
-            </div>
-
-            <!-- Manage Mode -->
-            <div v-else class="mode-content">
-              <FlashcardManager @start-study="handleStartStudy" />
-            </div>
-          </div>
-        </div>
 
         <!-- AI Chat Tab -->
         <div
@@ -162,12 +113,28 @@
 
             <!-- Chat Panel -->
             <div v-if="chatSubTab === 'chat'" class="chat-panel">
+              <!-- Server Status Indicator -->
+              <div v-if="chatStore.serverStatus !== 'online'" class="server-status-banner" :class="chatStore.serverStatus">
+                <i :class="chatStore.serverStatus === 'checking' ? 'bi bi-hourglass-split' : 'bi bi-exclamation-triangle'"></i>
+                <span v-if="chatStore.serverStatus === 'checking'">正在連線到 AI 伺服器...</span>
+                <span v-else>AI 伺服器離線。請啟動後端服務 (cd server && npm start)</span>
+                <button v-if="chatStore.serverStatus === 'offline'" @click="chatStore.checkServerStatus" class="retry-btn">
+                  <i class="bi bi-arrow-clockwise"></i> 重試
+                </button>
+              </div>
+
               <div class="chat-messages" ref="messagesContainer">
                 <!-- 歡迎訊息 -->
                 <div v-if="!chatStore.hasMessages" class="welcome-message">
                   <i class="bi bi-robot"></i>
                   <h3>AI 法律助手</h3>
                   <p>有任何法律、案例或法律概念的問題，歡迎隨時詢問。</p>
+                  <div class="example-prompts">
+                    <p class="prompts-title">試試這些問題：</p>
+                    <button @click="useExamplePrompt('什麼是民法第184條的侵權行為？')">什麼是民法第184條的侵權行為？</button>
+                    <button @click="useExamplePrompt('解釋刑法上的正當防衛')">解釋刑法上的正當防衛</button>
+                    <button @click="useExamplePrompt('公司設立需要哪些程序？')">公司設立需要哪些程序？</button>
+                  </div>
                 </div>
                 
                 <!-- Messages -->
@@ -291,9 +258,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import ToolContent from './ToolContent.vue'
 import BookmarkContent from './BookmarkContent.vue'
 import DictionaryContent from './DictionaryContent.vue'
-import FlashcardManager from './FlashcardManager.vue'
-import StudySession from './StudySession.vue'
-import { useFlashcardStore } from '../../stores/flashcard'
+
 import { useChatStore } from '../../stores/chat'
 
 // Props
@@ -312,7 +277,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'resize', 'tab-change', 'dictionary-result', 'law-content'])
 
 // Stores
-const flashcardStore = useFlashcardStore()
+
 const chatStore = useChatStore()
 
 // Refs
@@ -325,7 +290,7 @@ const chatInputRef = ref(null)
 const isResizing = ref(false)
 const resizeStartX = ref(0)
 const resizeStartWidth = ref(0)
-const showStudyMode = ref(false)
+
 const isDarkMode = ref(false)
 const chatSubTab = ref('chat')
 const chatInputMessage = ref('')
@@ -343,7 +308,7 @@ const tabs = [
   { id: 'tool', label: '工具', icon: 'bi bi-wrench' },
   { id: 'bookmarks', label: '書籤', icon: 'bi bi-bookmark-star' },
   { id: 'dictionary', label: '法規搜尋', icon: 'bi bi-book' },
-  { id: 'flashcard', label: '快閃卡', icon: 'bi bi-layers' },
+
   { id: 'chat', label: 'AI 助手', icon: 'bi bi-robot' }
 ]
 
@@ -562,13 +527,7 @@ function handleLawLoaded(lawData) {
   emit('law-content', lawData)
 }
 
-function handleStartStudy(deck) {
-  showStudyMode.value = true
-}
 
-function handleCreateDeck() {
-  showStudyMode.value = false
-}
 
 // Chat functions
 async function handleSendMessage() {
@@ -582,6 +541,11 @@ async function handleSendMessage() {
   nextTick(() => {
     scrollToBottom()
   })
+}
+
+function useExamplePrompt(prompt) {
+  chatInputMessage.value = prompt
+  handleSendMessage()
 }
 
 function scrollToBottom() {
@@ -746,9 +710,7 @@ onMounted(async () => {
   applySplitView()
   
   // Initialize stores
-  await flashcardStore.initializeApi()
-  await flashcardStore.loadFlashcards()
-  await flashcardStore.updateStats()
+
   await chatStore.initialize()
 })
 
@@ -934,6 +896,28 @@ onUnmounted(() => {
 
 .tool-panel-split.dark-mode .welcome-message i {
   color: #60a5fa;
+}
+
+/* Example prompts dark mode */
+.tool-panel-split.dark-mode .example-prompts button {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.tool-panel-split.dark-mode .example-prompts button:hover {
+  background: rgba(96, 165, 250, 0.15);
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+/* Server status dark mode */
+.tool-panel-split.dark-mode .server-status-banner.checking {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.2), rgba(59, 130, 246, 0.15));
+}
+
+.tool-panel-split.dark-mode .server-status-banner.offline {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.15));
 }
 
 /* Scrollbar dark mode */
@@ -1928,6 +1912,86 @@ onUnmounted(() => {
 .welcome-message p {
   margin: 0;
   font-size: 14px;
+}
+
+/* Example Prompts */
+.example-prompts {
+  margin-top: 20px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.example-prompts .prompts-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.example-prompts button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.example-prompts button:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Server Status Banner */
+.server-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.server-status-banner.checking {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(59, 130, 246, 0.1));
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+
+.server-status-banner.offline {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1));
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.server-status-banner i {
+  font-size: 16px;
+}
+
+.server-status-banner .retry-btn {
+  margin-left: auto;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.server-status-banner .retry-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .message {

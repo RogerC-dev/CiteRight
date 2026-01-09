@@ -1,4 +1,7 @@
-require('dotenv').config();
+const path = require('path');
+
+// Load .env from server directory
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const requiredEnvVars = [
     'DB_HOST',

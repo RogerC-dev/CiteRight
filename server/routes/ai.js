@@ -33,7 +33,7 @@ const axios = require('axios');
  *         description: Server error
  */
 router.post('/chat', asyncHandler(async (req, res) => {
-    const { message, conversationId, model = 'gpt-3.5-turbo' } = req.body;
+    const { message, conversationId, model = 'gpt-4o-mini', context = [] } = req.body;
 
     if (!message) {
         return res.status(400).json({
@@ -66,10 +66,10 @@ router.post('/chat', asyncHandler(async (req, res) => {
             }
         }
 
-        // Call AI API (OpenAI, Gemini, or Claude)
+        // Call AI API (OpenAI, Gemini, or Claude) with context
         let aiResponse;
         try {
-            aiResponse = await callAIAPI(message, model);
+            aiResponse = await callAIAPI(message, model, context);
         } catch (aiError) {
             console.error('AI API error:', aiError);
 
@@ -123,7 +123,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
 /**
  * Call AI API based on model
  */
-async function callAIAPI(message, model) {
+async function callAIAPI(message, model, context = []) {
     const openaiApiKey = process.env.OPENAI_API_KEY;
     const geminiApiKey = process.env.GEMINI_API_KEY;
     const claudeApiKey = process.env.CLAUDE_API_KEY;
@@ -132,15 +132,18 @@ async function callAIAPI(message, model) {
     const systemPrompt = `You are a legal research assistant specializing in Taiwan law. 
 Provide accurate, well-cited responses about legal matters. 
 When discussing laws, cite specific articles and sources. 
+Respond in Traditional Chinese (zh-TW) unless the user writes in another language.
 If you're unsure, say so rather than guessing.`;
 
     switch (model) {
         case 'gpt-4':
+        case 'gpt-4o':
+        case 'gpt-4o-mini':
         case 'gpt-3.5-turbo':
             if (!openaiApiKey) {
-                throw new Error('OpenAI API key not configured');
+                throw new Error('OpenAI API key not configured. Please check server/.env file.');
             }
-            return await callOpenAI(message, systemPrompt, model);
+            return await callOpenAI(message, systemPrompt, model, context);
 
         case 'gemini':
             if (!geminiApiKey) {
@@ -155,22 +158,42 @@ If you're unsure, say so rather than guessing.`;
             return await callClaude(message, systemPrompt);
 
         default:
-            throw new Error(`Unsupported model: ${model}`);
+            // Default to gpt-4o-mini if model not recognized
+            if (!openaiApiKey) {
+                throw new Error('OpenAI API key not configured. Please check server/.env file.');
+            }
+            return await callOpenAI(message, systemPrompt, 'gpt-4o-mini', context);
     }
 }
 
 /**
- * Call OpenAI API
+ * Call OpenAI API with conversation context
  */
-async function callOpenAI(message, systemPrompt, model) {
+async function callOpenAI(message, systemPrompt, model, context = []) {
+    // Build messages array with context
+    const messages = [
+        { role: 'system', content: systemPrompt }
+    ];
+
+    // Add conversation context (last 10 messages to save tokens)
+    const recentContext = context.slice(-10);
+    for (const msg of recentContext) {
+        if (msg.role && msg.content) {
+            messages.push({
+                role: msg.role,
+                content: msg.content
+            });
+        }
+    }
+
+    // Add current user message
+    messages.push({ role: 'user', content: message });
+
     const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
             model: model,
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: message }
-            ],
+            messages: messages,
             temperature: 0.7,
             max_tokens: 2000
         },
