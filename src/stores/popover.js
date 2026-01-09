@@ -22,6 +22,9 @@ export const usePopoverStore = defineStore('popover', () => {
   // 動作
   function show(data = null, element = null) {
     if (popupCooldown.value) return
+    
+    // Don't show new popover during resize/drag operations
+    if (isResizing.value || isDragging.value) return
 
     // 清除任何待處理的隱藏操作
     clearTimeout(hideTimeout.value)

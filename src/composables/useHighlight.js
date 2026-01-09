@@ -341,37 +341,83 @@ export function useHighlight() {
   
   /**
    * 移除重疊的匹配，保留較長/更具體的匹配
+   * 優先順序：
+   * 1. 包含法律名稱的完整引用 (dynamic_law_articles, simple_law_articles)
+   * 2. 較長的匹配
+   * 3. 較早出現的匹配
    */
   function removeOverlappingMatches(matches) {
     if (matches.length === 0) return matches
     
     console.log(`🔍 處理 ${matches.length} 個匹配的重疊移除`)
     
-    // 按位置排序，然後按長度排序（同位置時較長的優先）
+    // 定義優先順序（較低的數字優先級更高）
+    const patternPriority = {
+      'interpretation': 1,
+      'dynamic_law_articles': 2,
+      'simple_law_articles': 3,
+      'law_name_only': 4,
+      'subarticle_pattern': 5,
+      'universal_legal_pattern': 6,
+      'simple_article_only': 7
+    }
+    
+    // 按優先順序排序，然後按長度排序（較長優先），最後按位置排序
     matches.sort((a, b) => {
-      if (a.start !== b.start) return a.start - b.start
-      return b.text.length - a.text.length
+      // 首先按優先順序
+      const priorityA = patternPriority[a.key] || 99
+      const priorityB = patternPriority[b.key] || 99
+      if (priorityA !== priorityB) return priorityA - priorityB
+      
+      // 然後按長度（較長優先）
+      if (a.text.length !== b.text.length) return b.text.length - a.text.length
+      
+      // 最後按位置
+      return a.start - b.start
     })
     
     const result = []
     
     for (const match of matches) {
       let hasOverlap = false
+      let shouldReplace = false
+      let replaceIndex = -1
       
       // 檢查與已接受的匹配是否重疊
-      for (const accepted of result) {
+      for (let i = 0; i < result.length; i++) {
+        const accepted = result[i]
+        
+        // 檢查是否重疊
         if (match.start < accepted.end && match.end > accepted.start) {
-          console.log(`🚫 拒絕重疊匹配: "${match.text}" (${match.start}-${match.end}) 與 "${accepted.text}" (${accepted.start}-${accepted.end}) 重疊`)
-          hasOverlap = true
+          // 確定哪個匹配應該被保留
+          const matchPriority = patternPriority[match.key] || 99
+          const acceptedPriority = patternPriority[accepted.key] || 99
+          
+          // 如果新匹配優先級更高，或者同優先級但更長，則替換
+          if (matchPriority < acceptedPriority || 
+              (matchPriority === acceptedPriority && match.text.length > accepted.text.length)) {
+            shouldReplace = true
+            replaceIndex = i
+            console.log(`🔄 將用 "${match.text}" (${match.key}) 替換 "${accepted.text}" (${accepted.key})`)
+          } else {
+            console.log(`🚫 拒絕重疊匹配: "${match.text}" (${match.key}, ${match.start}-${match.end}) 與 "${accepted.text}" (${accepted.key}, ${accepted.start}-${accepted.end}) 重疊`)
+            hasOverlap = true
+          }
           break
         }
       }
       
-      if (!hasOverlap) {
+      if (shouldReplace && replaceIndex !== -1) {
+        result[replaceIndex] = match
+        console.log(`✅ 替換後接受匹配: "${match.text}" (${match.key}, ${match.start}-${match.end})`)
+      } else if (!hasOverlap) {
         result.push(match)
         console.log(`✅ 接受匹配: "${match.text}" (${match.key}, ${match.start}-${match.end})`)
       }
     }
+    
+    // 最終按位置排序以便正確應用高亮
+    result.sort((a, b) => a.start - b.start)
     
     console.log(`📊 最終結果: ${matches.length} → ${result.length} 個匹配`)
     return result

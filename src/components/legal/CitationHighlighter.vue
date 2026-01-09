@@ -74,13 +74,27 @@ function handleMouseOut(e) {
 function handleClickOutside(e) {
   // 如果正在調整大小或拖曳中，不要關閉彈出視窗
   if (popoverStore.isResizing || popoverStore.isDragging) {
+    console.log('⏸️ 跳過關閉：正在調整大小或拖曳中')
     return
   }
   
-  // 檢查點擊是否在彈出視窗外且不是法條連結
-  if (popoverStore.isVisible &&
-      !e.target.closest('#citeright-popover') &&
-      !e.target.classList.contains('citeright-link')) {
+  // Don't close if clicking on resize handles
+  if (e.target.closest('.resize-handle')) {
+    return
+  }
+  
+  // Don't close if clicking on the popover itself
+  if (e.target.closest('#citeright-popover')) {
+    return
+  }
+  
+  // Don't close if clicking on a law citation link (will trigger new popover)
+  if (e.target.classList.contains('citeright-link') || e.target.closest('.citeright-link')) {
+    return
+  }
+  
+  // Close the popover when clicking elsewhere
+  if (popoverStore.isVisible) {
     popoverStore.hide()
     console.log('❌ 彈出視窗已關閉 (點擊外部)')
   }

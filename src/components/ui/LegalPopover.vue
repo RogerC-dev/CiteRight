@@ -24,10 +24,25 @@
             <i :class="isAlreadyBookmarked ? 'bi bi-bookmark-check-fill' : 'bi bi-bookmark-plus'"></i>
             {{ isAlreadyBookmarked ? '已收藏' : '收藏' }}
           </button>
+          <button 
+            class="action-btn pin-btn" 
+            :class="{ 'pinned': isPinned }"
+            @click="togglePin" 
+            :title="isPinned ? '取消固定位置' : '固定位置'"
+          >
+            <i :class="isPinned ? 'bi bi-pin-fill' : 'bi bi-pin-angle'"></i>
+          </button>
+          <button 
+            class="action-btn reset-btn" 
+            @click="resetSize" 
+            title="重設大小"
+          >
+            <i class="bi bi-aspect-ratio"></i>
+          </button>
           <button class="action-btn expand-btn" @click="$emit('expand')" title="展開至側邊面板">
             <i class="bi bi-arrows-angle-expand"></i> 展開
           </button>
-          <button class="action-btn close-btn" @click="$emit('close')" title="關閉">
+          <button class="action-btn close-btn" @click="handleClose" title="關閉">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
@@ -187,7 +202,12 @@ const popoverSize = ref({ width: 480, height: 320 })
 const MIN_WIDTH = 320
 const MAX_WIDTH = 800
 const MIN_HEIGHT = 200
-const MAX_HEIGHT = 600
+const MAX_HEIGHT = 900 // Allow tall popovers for long content
+
+// Position state for manual positioning after drag/resize
+const manualPosition = ref(null) // { left, top } when user has moved the popover
+const isPinned = ref(false) // Whether popover is pinned to a position
+const RESIZE_PADDING = 100 // Minimum space on right/bottom for resizing
 
 // Theme detection and sync
 async function loadThemePreference() {
@@ -300,41 +320,65 @@ const popoverStyle = computed(() => {
     width: `${popoverSize.value.width}px`
   }
 
+  // If user has manually positioned the popover (after dragging), use that position
+  if (manualPosition.value) {
+    return {
+      ...baseStyle,
+      left: `${manualPosition.value.left}px`,
+      top: `${manualPosition.value.top}px`
+    }
+  }
+
+  // Default center-left position if no trigger element
   if (!props.triggerElement) {
     return {
       ...baseStyle,
-      left: '100px',
+      left: '50px',
       top: '100px'
     }
   }
 
   const rect = props.triggerElement.getBoundingClientRect()
-  let left = rect.left
-  let top = rect.bottom + 5
-
   const popoverWidth = popoverSize.value.width
   const popoverHeight = popoverSize.value.height
 
+  // Calculate available space considering sidebar
   const sidebarElement = document.getElementById('citeright-tool-panel')
   let availableWidth = window.innerWidth
+  let availableHeight = window.innerHeight
 
   if (sidebarElement) {
     const sidebarRect = sidebarElement.getBoundingClientRect()
-    const sidebarWidth = sidebarRect.width
     if (sidebarRect.left < window.innerWidth) {
-      availableWidth = Math.max(400, window.innerWidth - sidebarWidth - 20)
+      availableWidth = Math.max(400, sidebarRect.left - 20)
     }
   }
 
-  if (left + popoverWidth > availableWidth) {
-    left = Math.max(10, availableWidth - popoverWidth - 10)
-  }
-  if (left < 10) left = 10
+  // Smart positioning: ensure room for resizing
+  // Start with position near the trigger, but ensure resize padding
+  let left = rect.left
+  let top = rect.bottom + 8
 
-  if (top + popoverHeight > window.innerHeight) {
-    top = rect.top - popoverHeight - 5
-    if (top < 10) top = 10
+  // Ensure minimum space on the right for horizontal resize
+  const maxLeft = availableWidth - popoverWidth - RESIZE_PADDING
+  if (left > maxLeft) {
+    left = Math.max(10, maxLeft)
   }
+
+  // Ensure minimum space at the bottom for vertical resize
+  const maxTop = availableHeight - popoverHeight - RESIZE_PADDING
+  if (top > maxTop) {
+    // Try positioning above the trigger instead
+    top = rect.top - popoverHeight - 8
+    if (top < 10) {
+      // If still not enough space, position at top with scroll room
+      top = Math.min(10, maxTop)
+    }
+  }
+
+  // Final bounds check
+  left = Math.max(10, Math.min(left, availableWidth - popoverWidth - 10))
+  top = Math.max(10, top)
 
   return {
     ...baseStyle,
@@ -343,8 +387,10 @@ const popoverStyle = computed(() => {
   }
 })
 
+const HEADER_HEIGHT = 52 // Approximate header height in pixels
+
 const contentStyle = computed(() => ({
-  maxHeight: `${popoverSize.value.height}px`
+  maxHeight: `${popoverSize.value.height - HEADER_HEIGHT}px`
 }))
 
 const isAlreadyBookmarked = computed(() => {
@@ -382,6 +428,30 @@ watch(
     await loadContent(newData)
   },
   { immediate: true }
+)
+
+// Reset manual position when showing a new popover (different trigger)
+watch(
+  () => props.triggerElement,
+  (newTrigger, oldTrigger) => {
+    if (newTrigger !== oldTrigger && newTrigger) {
+      // Only reset if not pinned, or if it's a completely new element
+      if (!isPinned.value) {
+        manualPosition.value = null
+      }
+    }
+  }
+)
+
+// Reset position when popover is hidden
+watch(
+  () => props.show,
+  (show) => {
+    if (!show) {
+      // Keep pinned position for quick re-open, but reset if hidden for a while
+      // Don't reset immediately - user might want to re-trigger same citation
+    }
+  }
 )
 
 watch(
@@ -464,15 +534,30 @@ function handleDrag(e) {
   let left = e.clientX - dragOffset.value.x
   let top = e.clientY - dragOffset.value.y
   const popoverRect = popoverRef.value.getBoundingClientRect()
-  left = Math.max(0, Math.min(left, window.innerWidth - popoverRect.width))
-  top = Math.max(0, Math.min(top, window.innerHeight - 50))
+  
+  // Constrain to viewport with resize padding
+  left = Math.max(10, Math.min(left, window.innerWidth - popoverRect.width - RESIZE_PADDING))
+  top = Math.max(10, Math.min(top, window.innerHeight - popoverRect.height - RESIZE_PADDING))
+  
   popoverRef.value.style.left = left + 'px'
   popoverRef.value.style.top = top + 'px'
 }
 
 function stopDrag() {
   isDragging.value = false
-  popoverStore.setDragging(false) // Notify store that dragging stopped
+  
+  // Save the manual position so it persists
+  if (popoverRef.value) {
+    const rect = popoverRef.value.getBoundingClientRect()
+    manualPosition.value = { left: rect.left, top: rect.top }
+    isPinned.value = true
+  }
+  
+  // Small delay before allowing click-outside to close
+  setTimeout(() => {
+    popoverStore.setDragging(false)
+  }, 100)
+  
   document.removeEventListener('mousemove', handleDrag)
   document.removeEventListener('mouseup', stopDrag)
 }
@@ -514,12 +599,18 @@ function handleResize(e) {
 
 function stopResize() {
   isResizing.value = false
-  popoverStore.setResizing(false) // Notify store that resizing stopped
   resizeDirection.value = ''
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
+  
+  // Save the current position as manual position to prevent jumping
+  if (popoverRef.value) {
+    const rect = popoverRef.value.getBoundingClientRect()
+    manualPosition.value = { left: rect.left, top: rect.top }
+    isPinned.value = true
+  }
   
   // Save size preference
   try {
@@ -527,6 +618,11 @@ function stopResize() {
   } catch (e) {
     console.warn('Failed to save popover size:', e)
   }
+  
+  // Delay before allowing click-outside to close - prevents accidental closure
+  setTimeout(() => {
+    popoverStore.setResizing(false)
+  }, 200)
 }
 
 function getCursorForDirection(direction) {
@@ -554,6 +650,41 @@ function loadSavedSize() {
   } catch (e) {
     console.warn('Failed to load popover size:', e)
   }
+}
+
+function togglePin() {
+  if (isPinned.value) {
+    // Unpin - reset to auto positioning
+    isPinned.value = false
+    manualPosition.value = null
+  } else {
+    // Pin current position
+    if (popoverRef.value) {
+      const rect = popoverRef.value.getBoundingClientRect()
+      manualPosition.value = { left: rect.left, top: rect.top }
+      isPinned.value = true
+    }
+  }
+}
+
+const DEFAULT_WIDTH = 480
+const DEFAULT_HEIGHT = 320
+
+function resetSize() {
+  popoverSize.value = { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT }
+  // Clear saved size preference
+  try {
+    localStorage.removeItem('citeright-popover-size')
+  } catch (e) {
+    console.warn('Failed to clear popover size:', e)
+  }
+}
+
+function handleClose() {
+  // Reset pin state when explicitly closing
+  isPinned.value = false
+  manualPosition.value = null
+  emit('close')
 }
 
 function getInterpretationUrl(number) {
@@ -695,13 +826,38 @@ async function handleBookmark() {
   font-size: 14px;
 }
 
+.pin-btn {
+  padding: 6px 8px;
+}
+
+.pin-btn.pinned {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.pin-btn.pinned i {
+  color: #fbbf24;
+}
+
+.reset-btn {
+  padding: 6px 8px;
+}
+
+.reset-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .citeright-content {
   padding: 18px;
-  max-height: 320px;
+  padding-right: 12px;
+  padding-bottom: 24px;
+  /* max-height controlled by inline style from contentStyle computed */
   overflow-y: auto;
   background: var(--surface);
   border-radius: 0 0 10px 10px;
   line-height: 1.6;
+  position: relative;
+  z-index: 1;
 }
 
 .citeright-content::-webkit-scrollbar {
@@ -823,8 +979,8 @@ async function handleBookmark() {
 
 /* Law Articles */
 .law-articles-container {
-  max-height: 250px;
-  overflow-y: auto;
+  /* No max-height - let parent container control scrolling */
+  overflow-y: visible;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-muted);
@@ -949,64 +1105,74 @@ async function handleBookmark() {
 /* Resize Handles */
 .resize-handle {
   position: absolute;
-  z-index: 10;
+  z-index: 20;
+  transition: background 0.15s ease;
 }
 
 .resize-handle-e {
   top: 50px;
-  right: 0;
-  width: 6px;
-  height: calc(100% - 60px);
+  right: -6px;
+  width: 8px;
+  height: calc(100% - 80px);
   cursor: ew-resize;
   background: transparent;
+  z-index: 20;
 }
 
-.resize-handle-e:hover {
-  background: linear-gradient(to right, transparent, rgba(71, 105, 150, 0.3));
+.resize-handle-e:hover,
+.resize-handle-e:active {
+  background: linear-gradient(to right, transparent 30%, rgba(71, 105, 150, 0.4) 100%);
 }
 
 .resize-handle-s {
   bottom: 0;
-  left: 10px;
-  width: calc(100% - 40px);
-  height: 6px;
+  left: 0;
+  right: 30px;
+  width: auto;
+  height: 16px;
   cursor: ns-resize;
   background: transparent;
+  border-radius: 0 0 8px 0;
+  z-index: 15;
 }
 
-.resize-handle-s:hover {
-  background: linear-gradient(to bottom, transparent, rgba(71, 105, 150, 0.3));
+.resize-handle-s:hover,
+.resize-handle-s:active {
+  background: linear-gradient(to bottom, transparent 0%, rgba(71, 105, 150, 0.35) 100%);
 }
 
 .resize-handle-se {
   bottom: 0;
   right: 0;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   cursor: nwse-resize;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, transparent 40%, var(--primary-soft) 40%);
+  background: linear-gradient(135deg, transparent 50%, var(--primary-soft) 50%);
   border-radius: 0 0 var(--radius) 0;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
+  z-index: 25;
 }
 
 .resize-handle-se i {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--primary);
-  opacity: 0.6;
+  opacity: 0.5;
   transform: rotate(90deg);
   position: absolute;
-  bottom: 3px;
-  right: 3px;
+  bottom: 4px;
+  right: 4px;
 }
 
-.resize-handle-se:hover {
-  background: linear-gradient(135deg, transparent 30%, var(--primary-soft) 30%);
+.resize-handle-se:hover,
+.resize-handle-se:active {
+  background: linear-gradient(135deg, transparent 40%, rgba(71, 105, 150, 0.5) 40%);
 }
 
-.resize-handle-se:hover i {
+.resize-handle-se:hover i,
+.resize-handle-se:active i {
   opacity: 1;
 }
 
@@ -1039,4 +1205,15 @@ async function handleBookmark() {
 .citeright-popover.dark-mode .resize-handle-se i {
   color: #60a5fa;
 }
+
+/* Dark mode pin button */
+.citeright-popover.dark-mode .pin-btn.pinned {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.citeright-popover.dark-mode .pin-btn.pinned i {
+  color: #fbbf24;
+}
+
 </style>

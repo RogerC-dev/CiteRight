@@ -242,13 +242,16 @@ export class TaiwanLegalPatterns {
       law_name_only: null, // Will be dynamically generated
 
       // 第271條之1第1項 - sub-articles with 之: 第X條之X第X項
-      subarticle_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條之\\s*(${CHINESE_NUMBER_PATTERN})(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?`, 'g'),
+      // Only match if not preceded by a law name (法/條例/規則/辦法/細則)
+      subarticle_pattern: new RegExp(`(?<![法例則])\\s*第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條之\\s*(${CHINESE_NUMBER_PATTERN})(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?`, 'g'),
 
       // 第184條, 第四條 - generic articles with complex structure
-      universal_legal_pattern: new RegExp(`第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?|第\\s*(${CHINESE_NUMBER_PATTERN})\\s*([項款目])`, 'g'),
+      // Only match standalone articles not preceded by a law name ending character
+      universal_legal_pattern: new RegExp(`(?<![法例則])\\s*第\\s*(${CHINESE_NUMBER_PATTERN})\\s*條(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?|(?<![法例則條])\\s*第\\s*(${CHINESE_NUMBER_PATTERN})\\s*([項款目])`, 'g'),
 
       // 第四條 - simple standalone articles (fallback)
-      simple_article_only: /第\s*([一二三四五六七八九十百千萬0-9０-９]+)\s*條/g,
+      // Only match if not preceded by law name endings
+      simple_article_only: /(?<![法例則])\s*第\s*([一二三四五六七八九十百千萬0-9０-９]+)\s*條/g,
     }
   }
 
@@ -288,21 +291,21 @@ export class TaiwanLegalPatterns {
     // 建立項款目模式
     const subsectionPattern = `(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*項)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*款)?(?:第\\s*(${CHINESE_NUMBER_PATTERN})\\s*目)?`
 
-    // 動態添加所有法律的基本模式
+    // 動態添加所有法律的基本模式 - 允許法律名稱和"第"之間有可選空格
     this.patterns.dynamic_law_articles = new RegExp(
-      `(${legalNamesPattern})第\\s*(${articleNumberPattern})\\s*條${subsectionPattern}`, 
+      `(${legalNamesPattern})\\s*第\\s*(${articleNumberPattern})\\s*條${subsectionPattern}`, 
       'g'
     )
 
-    // 新增僅法律名稱+條文的模式（沒有項款目）
+    // 新增僅法律名稱+條文的模式（沒有項款目）- 允許法律名稱和"第"之間有可選空格
     this.patterns.simple_law_articles = new RegExp(
-      `(${legalNamesPattern})第\\s*(${articleNumberPattern})\\s*條(?![第])`, 
+      `(${legalNamesPattern})\\s*第\\s*(${articleNumberPattern})\\s*條(?!\\s*第)`, 
       'g'
     )
 
-    // 新增法律名稱本身的高亮模式
+    // 新增法律名稱本身的高亮模式 - 只有當後面不跟著"第"時才匹配（包含可選空格）
     this.patterns.law_name_only = new RegExp(
-      `(${legalNamesPattern})(?![第])`,
+      `(${legalNamesPattern})(?!\\s*第)`,
       'g'
     )
 
