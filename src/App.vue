@@ -24,6 +24,9 @@
       @law-content="handleLawContent"
     />
     
+    <!-- 浮動按鈕 - 開啟側邊欄 -->
+    <FloatingButton v-if="extensionStore.isExtensionEnabled" />
+    
     <!-- 通知組件 -->
     <NotificationManager />
     
@@ -39,6 +42,7 @@
 import { onMounted, onUnmounted } from 'vue'
 import LegalPopover from './components/ui/LegalPopover.vue'
 import MainSidebar from './components/ui/MainSidebar.vue'
+import FloatingButton from './components/ui/FloatingButton.vue'
 import NotificationManager from './components/ui/NotificationManager.vue'
 import CitationHighlighter from './components/legal/CitationHighlighter.vue'
 import { useExtensionStore } from './stores/extension'

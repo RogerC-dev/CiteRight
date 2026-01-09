@@ -72,6 +72,11 @@ function handleMouseOut(e) {
  * 處理點擊外部事件
  */
 function handleClickOutside(e) {
+  // 如果正在調整大小或拖曳中，不要關閉彈出視窗
+  if (popoverStore.isResizing || popoverStore.isDragging) {
+    return
+  }
+  
   // 檢查點擊是否在彈出視窗外且不是法條連結
   if (popoverStore.isVisible &&
       !e.target.closest('#citeright-popover') &&

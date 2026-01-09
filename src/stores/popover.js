@@ -7,6 +7,8 @@ export const usePopoverStore = defineStore('popover', () => {
   const isLoading = ref(false)
   const currentData = ref(null)
   const triggerElement = ref(null)
+  const isResizing = ref(false) // Track when popover is being resized
+  const isDragging = ref(false) // Track when popover is being dragged
 
   // 計時器和狀態管理
   const showTimeout = ref(null)
@@ -105,6 +107,14 @@ export const usePopoverStore = defineStore('popover', () => {
   
   function setLoading(loading) {
     isLoading.value = loading
+  }
+  
+  function setResizing(resizing) {
+    isResizing.value = resizing
+  }
+  
+  function setDragging(dragging) {
+    isDragging.value = dragging
   }
   
   function updateData(data) {
@@ -411,6 +421,8 @@ export const usePopoverStore = defineStore('popover', () => {
     isLoading,
     currentData,
     triggerElement,
+    isResizing,
+    isDragging,
 
     // 計算屬性
     hasData,
@@ -419,6 +431,8 @@ export const usePopoverStore = defineStore('popover', () => {
     show,
     hide,
     setLoading,
+    setResizing,
+    setDragging,
     updateData,
     loadContent,
     extractDataFromElement

@@ -5,7 +5,7 @@
       id="citeright-popover"
       ref="popoverRef"
       :style="popoverStyle"
-      :class="['citeright-popover', { 'dark-mode': isDarkMode }]"
+      :class="['citeright-popover', { 'dark-mode': isDarkMode, 'is-resizing': isResizing }]"
       @click.stop
     >
       <!-- Header -->
@@ -34,7 +34,7 @@
       </div>
 
       <!-- Content -->
-      <div class="citeright-content">
+      <div class="citeright-content" :style="contentStyle">
         <div v-if="loading" class="loading-state">
           <div class="spinner"></div>
           <div class="loading-text">正在載入{{ loadingMessage }}...</div>
@@ -134,6 +134,13 @@
           <div class="no-data-text">尚無資料</div>
         </div>
       </div>
+
+      <!-- Resize Handles -->
+      <div class="resize-handle resize-handle-e" @mousedown="startResize($event, 'e')" title="拖曳調整寬度"></div>
+      <div class="resize-handle resize-handle-s" @mousedown="startResize($event, 's')" title="拖曳調整高度"></div>
+      <div class="resize-handle resize-handle-se" @mousedown="startResize($event, 'se')" title="拖曳調整大小">
+        <i class="bi bi-arrows-angle-expand"></i>
+      </div>
     </div>
   </Teleport>
 </template>
@@ -142,6 +149,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { fetchInterpretation, fetchLawInfo } from '../../services/apiService.js'
 import { useBookmarkStore } from '../../stores/bookmark.js'
+import { usePopoverStore } from '../../stores/popover.js'
 
 // Theme storage key - must match ThemeManager
 const THEME_STORAGE_KEY = 'precedent-theme'
@@ -160,6 +168,7 @@ const emit = defineEmits(['close', 'bookmark', 'expand'])
 
 // State
 const bookmarkStore = useBookmarkStore()
+const popoverStore = usePopoverStore()
 const popoverRef = ref(null)
 const contentData = ref(null)
 const loading = ref(false)
@@ -168,6 +177,17 @@ const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
 const isBookmarking = ref(false)
 const isDarkMode = ref(false)
+
+// Resize state
+const isResizing = ref(false)
+const resizeDirection = ref('')
+const resizeStartPos = ref({ x: 0, y: 0 })
+const resizeStartSize = ref({ width: 480, height: 320 })
+const popoverSize = ref({ width: 480, height: 320 })
+const MIN_WIDTH = 320
+const MAX_WIDTH = 800
+const MIN_HEIGHT = 200
+const MAX_HEIGHT = 600
 
 // Theme detection and sync
 async function loadThemePreference() {
@@ -231,6 +251,7 @@ function handleThemeChange(e) {
 
 onMounted(() => {
   loadThemePreference()
+  loadSavedSize()
   window.addEventListener('themeChanged', handleThemeChange)
 })
 
@@ -273,12 +294,17 @@ const loadingMessage = computed(() => {
 })
 
 const popoverStyle = computed(() => {
+  const baseStyle = {
+    position: 'fixed',
+    zIndex: 2147483650,
+    width: `${popoverSize.value.width}px`
+  }
+
   if (!props.triggerElement) {
     return {
-      position: 'fixed',
+      ...baseStyle,
       left: '100px',
-      top: '100px',
-      zIndex: 2147483650
+      top: '100px'
     }
   }
 
@@ -286,8 +312,8 @@ const popoverStyle = computed(() => {
   let left = rect.left
   let top = rect.bottom + 5
 
-  const popoverWidth = 480
-  const popoverHeight = 300
+  const popoverWidth = popoverSize.value.width
+  const popoverHeight = popoverSize.value.height
 
   const sidebarElement = document.getElementById('citeright-tool-panel')
   let availableWidth = window.innerWidth
@@ -311,12 +337,15 @@ const popoverStyle = computed(() => {
   }
 
   return {
-    position: 'fixed',
+    ...baseStyle,
     left: `${left}px`,
-    top: `${top}px`,
-    zIndex: 2147483650
+    top: `${top}px`
   }
 })
+
+const contentStyle = computed(() => ({
+  maxHeight: `${popoverSize.value.height}px`
+}))
 
 const isAlreadyBookmarked = computed(() => {
   if (!contentData.value && !props.data) return false
@@ -422,6 +451,7 @@ function handleKeyDown(e) {
 function startDrag(e) {
   if (e.target.classList?.contains('action-btn')) return
   isDragging.value = true
+  popoverStore.setDragging(true) // Notify store that dragging started
   const rect = popoverRef.value.getBoundingClientRect()
   dragOffset.value = { x: e.clientX - rect.left, y: e.clientY - rect.top }
   document.addEventListener('mousemove', handleDrag)
@@ -442,8 +472,88 @@ function handleDrag(e) {
 
 function stopDrag() {
   isDragging.value = false
+  popoverStore.setDragging(false) // Notify store that dragging stopped
   document.removeEventListener('mousemove', handleDrag)
   document.removeEventListener('mouseup', stopDrag)
+}
+
+// Resize functions
+function startResize(e, direction) {
+  e.preventDefault()
+  e.stopPropagation()
+  isResizing.value = true
+  popoverStore.setResizing(true) // Notify store that resizing started
+  resizeDirection.value = direction
+  resizeStartPos.value = { x: e.clientX, y: e.clientY }
+  resizeStartSize.value = { ...popoverSize.value }
+  
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+  document.body.style.cursor = getCursorForDirection(direction)
+  document.body.style.userSelect = 'none'
+}
+
+function handleResize(e) {
+  if (!isResizing.value) return
+  
+  const deltaX = e.clientX - resizeStartPos.value.x
+  const deltaY = e.clientY - resizeStartPos.value.y
+  
+  let newWidth = resizeStartSize.value.width
+  let newHeight = resizeStartSize.value.height
+  
+  if (resizeDirection.value.includes('e')) {
+    newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, resizeStartSize.value.width + deltaX))
+  }
+  if (resizeDirection.value.includes('s')) {
+    newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, resizeStartSize.value.height + deltaY))
+  }
+  
+  popoverSize.value = { width: newWidth, height: newHeight }
+}
+
+function stopResize() {
+  isResizing.value = false
+  popoverStore.setResizing(false) // Notify store that resizing stopped
+  resizeDirection.value = ''
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  
+  // Save size preference
+  try {
+    localStorage.setItem('citeright-popover-size', JSON.stringify(popoverSize.value))
+  } catch (e) {
+    console.warn('Failed to save popover size:', e)
+  }
+}
+
+function getCursorForDirection(direction) {
+  const cursors = {
+    'e': 'ew-resize',
+    's': 'ns-resize',
+    'se': 'nwse-resize'
+  }
+  return cursors[direction] || 'default'
+}
+
+// Load saved size on mount
+function loadSavedSize() {
+  try {
+    const saved = localStorage.getItem('citeright-popover-size')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (parsed.width && parsed.height) {
+        popoverSize.value = {
+          width: Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, parsed.width)),
+          height: Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, parsed.height))
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load popover size:', e)
+  }
 }
 
 function getInterpretationUrl(number) {
@@ -834,5 +944,99 @@ async function handleBookmark() {
 .citeright-popover.dark-mode .citeright-content::-webkit-scrollbar-thumb:hover,
 .citeright-popover.dark-mode .law-articles-container::-webkit-scrollbar-thumb:hover {
   background: #64748b;
+}
+
+/* Resize Handles */
+.resize-handle {
+  position: absolute;
+  z-index: 10;
+}
+
+.resize-handle-e {
+  top: 50px;
+  right: 0;
+  width: 6px;
+  height: calc(100% - 60px);
+  cursor: ew-resize;
+  background: transparent;
+}
+
+.resize-handle-e:hover {
+  background: linear-gradient(to right, transparent, rgba(71, 105, 150, 0.3));
+}
+
+.resize-handle-s {
+  bottom: 0;
+  left: 10px;
+  width: calc(100% - 40px);
+  height: 6px;
+  cursor: ns-resize;
+  background: transparent;
+}
+
+.resize-handle-s:hover {
+  background: linear-gradient(to bottom, transparent, rgba(71, 105, 150, 0.3));
+}
+
+.resize-handle-se {
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  cursor: nwse-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, transparent 40%, var(--primary-soft) 40%);
+  border-radius: 0 0 var(--radius) 0;
+  transition: all 0.2s;
+}
+
+.resize-handle-se i {
+  font-size: 10px;
+  color: var(--primary);
+  opacity: 0.6;
+  transform: rotate(90deg);
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+}
+
+.resize-handle-se:hover {
+  background: linear-gradient(135deg, transparent 30%, var(--primary-soft) 30%);
+}
+
+.resize-handle-se:hover i {
+  opacity: 1;
+}
+
+/* Resizing state */
+.citeright-popover.is-resizing {
+  user-select: none;
+}
+
+.citeright-popover.is-resizing .citeright-content {
+  pointer-events: none;
+}
+
+/* Dark mode resize handles */
+.citeright-popover.dark-mode .resize-handle-e:hover {
+  background: linear-gradient(to right, transparent, rgba(96, 165, 250, 0.3));
+}
+
+.citeright-popover.dark-mode .resize-handle-s:hover {
+  background: linear-gradient(to bottom, transparent, rgba(96, 165, 250, 0.3));
+}
+
+.citeright-popover.dark-mode .resize-handle-se {
+  background: linear-gradient(135deg, transparent 40%, rgba(96, 165, 250, 0.15) 40%);
+}
+
+.citeright-popover.dark-mode .resize-handle-se:hover {
+  background: linear-gradient(135deg, transparent 30%, rgba(96, 165, 250, 0.25) 30%);
+}
+
+.citeright-popover.dark-mode .resize-handle-se i {
+  color: #60a5fa;
 }
 </style>
