@@ -751,7 +751,7 @@ onUnmounted(() => {
   --primary: #60a5fa;
   --primary-hover: #3b82f6;
   --primary-soft: #1e3a5f;
-  --text-primary: #f1f5f9;
+  --text-primary: #e2e8f0;
   --text-secondary: #94a3b8;
   --surface: #1e293b;
   --surface-muted: #334155;
@@ -782,13 +782,14 @@ onUnmounted(() => {
 }
 
 /* Tab content area - ensure dark background */
+/* 使用灰藍色作為外層框架，匹配左側瀏覽器模式 */
 .tool-panel-split.dark-mode .tab-content-area {
-  background: #0f172a;
+  background: #1e293b;
 }
 
 /* Tab content inner - the main content box */
 .tool-panel-split.dark-mode .tab-content-inner {
-  background: #1e293b;
+  background: #0f172a;
   border-color: #334155;
 }
 
@@ -1282,11 +1283,12 @@ onUnmounted(() => {
 }
 
 .tool-panel-split.dark-mode :deep(.interpretation-section p) {
-  color: #f1f5f9;
+  color: #e2e8f0;
 }
 
 .tool-panel-split.dark-mode :deep(.law-header) {
-  background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+  /* 移除漸變背景，使用透明背景以匹配父容器 */
+  background: transparent;
   border-left-color: #60a5fa;
 }
 
@@ -1299,7 +1301,8 @@ onUnmounted(() => {
 }
 
 .tool-panel-split.dark-mode :deep(.law-article) {
-  background: #1e293b;
+  /* 移除孤立背景，使用透明背景以匹配父容器，消除視覺分離 */
+  background: transparent;
   border-left-color: #4ade80;
 }
 
@@ -1312,7 +1315,7 @@ onUnmounted(() => {
 }
 
 .tool-panel-split.dark-mode :deep(.article-content) {
-  color: #f1f5f9;
+  color: #e2e8f0;
 }
 
 .tool-panel-split.dark-mode :deep(.error-message) {
@@ -1341,7 +1344,8 @@ onUnmounted(() => {
 
 /* ===== TOOL CONTENT DARK MODE ===== */
 .tool-panel-split.dark-mode .tool-content {
-  background: #1e293b;
+  /* 移除灰藍色背景，使用透明背景以與父容器 tab-content-inner 融合，消除視覺分離 */
+  background: transparent;
   color: #f1f5f9;
 }
 
@@ -1351,7 +1355,7 @@ onUnmounted(() => {
 }
 
 .tool-panel-split.dark-mode .content-title {
-  color: #f1f5f9;
+  color: #e2e8f0;
 }
 
 .tool-panel-split.dark-mode .content-meta {
@@ -1362,18 +1366,18 @@ onUnmounted(() => {
 .tool-panel-split.dark-mode #tool-main-content {
   background: #0f172a !important;
   border-color: #334155;
-  color: #f1f5f9;
+  color: #e2e8f0;
 }
 
-/* Ensure main-content children also have dark backgrounds */
+/* Ensure main-content children also have dark backgrounds - 使用較柔和的灰色而非純白 */
 .tool-panel-split.dark-mode .main-content *,
 .tool-panel-split.dark-mode #tool-main-content * {
-  color: #f1f5f9;
+  color: #e2e8f0;
 }
 
 .tool-panel-split.dark-mode .main-content p,
 .tool-panel-split.dark-mode #tool-main-content p {
-  color: #f1f5f9;
+  color: #e2e8f0;
 }
 
 .tool-panel-split.dark-mode .main-content h1,
@@ -1384,7 +1388,7 @@ onUnmounted(() => {
 .tool-panel-split.dark-mode #tool-main-content h2,
 .tool-panel-split.dark-mode #tool-main-content h3,
 .tool-panel-split.dark-mode #tool-main-content h4 {
-  color: #f1f5f9;
+  color: #e2e8f0;
 }
 
 .tool-panel-split.dark-mode .content-meta i {
@@ -1400,7 +1404,7 @@ onUnmounted(() => {
 .tool-panel-split.dark-mode .action-area .action-btn {
   background: #0f172a;
   border-color: #334155;
-  color: #f1f5f9;
+  color: #e2e8f0;
 }
 
 .tool-panel-split.dark-mode .action-area .action-btn:hover {
@@ -1705,8 +1709,9 @@ onUnmounted(() => {
 .tab-content-inner {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
-  background: var(--surface);
+  padding: 20px;
+  /* 使用更柔和的背景色以減少長時間閱讀的疲勞 */
+  background: #FAFBFC;
   margin: 12px;
   border-radius: var(--radius);
   border: 1px solid var(--border);

@@ -79,6 +79,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useBookmarkStore } from '../../stores/bookmark.js'
 import { usePopoverStore } from '../../stores/popover.js'
+import { formatInterpretationText } from '../../services/textFormatter.js'
 
 const bookmarkStore = useBookmarkStore()
 const popoverStore = usePopoverStore()
@@ -388,13 +389,16 @@ function formatInterpretationContent(data, showEnglishContent = false) {
   if (showEnglishContent && data.english) {
     // 顯示英文內容
     if (data.english.issue) {
-      sections.push(`<div class="interpretation-section english-section"><h4>Issue:</h4><p>${data.english.issue}</p></div>`)
+      const formattedIssue = formatInterpretationText(data.english.issue)
+      sections.push(`<div class="interpretation-section english-section"><h4>Issue:</h4>${formattedIssue}</div>`)
     }
     if (data.english.description) {
-      sections.push(`<div class="interpretation-section english-section"><h4>Description:</h4><p>${data.english.description}</p></div>`)
+      const formattedDescription = formatInterpretationText(data.english.description)
+      sections.push(`<div class="interpretation-section english-section"><h4>Description:</h4>${formattedDescription}</div>`)
     }
     if (data.english.reasoning) {
-      sections.push(`<div class="interpretation-section english-section"><h4>Reasoning:</h4><p>${data.english.reasoning}</p></div>`)
+      const formattedReasoning = formatInterpretationText(data.english.reasoning)
+      sections.push(`<div class="interpretation-section english-section"><h4>Reasoning:</h4>${formattedReasoning}</div>`)
     }
   } else {
     // 顯示中文內容（預設）
@@ -403,13 +407,16 @@ function formatInterpretationContent(data, showEnglishContent = false) {
     const reasoning = data.chinese?.reasoning || data.reasoning || ''
 
     if (issue) {
-      sections.push(`<div class="interpretation-section highlight-section"><h4>解釋爭點：</h4><p>${issue}</p></div>`)
+      const formattedIssue = formatInterpretationText(issue)
+      sections.push(`<div class="interpretation-section highlight-section"><h4>解釋爭點：</h4>${formattedIssue}</div>`)
     }
     if (description) {
-      sections.push(`<div class="interpretation-section"><h4>解釋文：</h4><p>${description}</p></div>`)
+      const formattedDescription = formatInterpretationText(description)
+      sections.push(`<div class="interpretation-section"><h4>解釋文：</h4>${formattedDescription}</div>`)
     }
     if (reasoning) {
-      sections.push(`<div class="interpretation-section"><h4>理由書：</h4><p>${reasoning}</p></div>`)
+      const formattedReasoning = formatInterpretationText(reasoning)
+      sections.push(`<div class="interpretation-section"><h4>理由書：</h4>${formattedReasoning}</div>`)
     }
   }
 
@@ -509,15 +516,21 @@ defineExpose({
 }
 
 .main-content {
-  background: var(--cr-surface);
-  padding: 20px;
-  border-radius: 8px;
-  border: 1px solid var(--cr-border);
+  /* 移除重複的背景和邊框，因為 tab-content-inner 已經提供了 */
+  /* background: var(--cr-surface); */
+  padding: 0;
+  /* border-radius: 8px; */
+  /* border: 1px solid var(--cr-border); */
   color: var(--cr-text-primary);
   line-height: 1.8;
   font-size: 15px;
   min-height: 200px;
   margin-bottom: 20px;
+}
+
+/* 確保主要內容區域的段落有適當的間距 */
+.main-content :deep(.legal-paragraph) {
+  margin-bottom: 1.2em;
 }
 
 .action-area {
@@ -607,10 +620,15 @@ defineExpose({
 /* 解釋內容區塊樣式 */
 :deep(.interpretation-section) {
   margin-bottom: 24px;
-  padding: 16px;
-  background: var(--cr-surface-muted);
-  border-radius: 6px;
+  padding: 16px 0;
+  /* 移除灰色背景，使用透明背景以匹配官方網站風格 */
+  /* background: var(--cr-surface-muted); */
+  background: transparent;
+  /* border-radius: 6px; */
   border-left: 4px solid #722ed1;
+  padding-left: 16px;
+  /* 確保右側有足夠的內邊距，防止文字被截斷 */
+  padding-right: 16px;
 }
 
 :deep(.interpretation-section h4) {
@@ -626,13 +644,33 @@ defineExpose({
   color: var(--cr-text-primary);
 }
 
+/* 向後兼容：如果內容中仍有舊的 p 標籤，也應用段落樣式 */
+:deep(.interpretation-section > p) {
+  margin-bottom: 1.2em;
+  margin-top: 0;
+  line-height: 1.9;
+  text-align: justify;
+}
+
+:deep(.interpretation-section > p:first-child) {
+  margin-top: 0.5em;
+}
+
+:deep(.interpretation-section > p:last-child) {
+  margin-bottom: 0;
+}
+
 /* 法律內容區塊樣式 */
 :deep(.law-header) {
   margin-bottom: 24px;
-  padding: 16px;
-  background: var(--cr-surface-muted);
-  border-radius: 8px;
+  padding: 16px 0;
+  /* 移除灰色背景，使用透明背景 */
+  background: transparent;
+  /* border-radius: 8px; */
   border-left: 4px solid var(--cr-primary);
+  padding-left: 16px;
+  /* 確保右側有足夠的內邊距，防止文字被截斷 */
+  padding-right: 16px;
 }
 
 :deep(.law-header h3) {
@@ -650,10 +688,14 @@ defineExpose({
 
 :deep(.law-article) {
   margin-bottom: 20px;
-  padding: 16px;
-  background: var(--cr-surface-muted);
-  border-radius: 6px;
+  padding: 16px 0;
+  /* 移除灰色背景，使用透明背景以匹配官方網站風格 */
+  background: transparent;
+  /* border-radius: 6px; */
   border-left: 4px solid var(--cr-success);
+  padding-left: 16px;
+  /* 確保右側有足夠的內邊距，防止文字被截斷 */
+  padding-right: 16px;
 }
 
 :deep(.article-number) {
@@ -673,6 +715,51 @@ defineExpose({
 :deep(.article-content) {
   line-height: 1.8;
   color: var(--cr-text-primary);
+  /* 確保右側有足夠的內邊距，防止文字被截斷 */
+  padding-right: 16px;
+}
+
+/* 段落分明的排版 - 條文內容段落樣式 */
+:deep(.article-content .legal-paragraph) {
+  margin-bottom: 1.2em;
+  margin-top: 0;
+  line-height: 1.8;
+  text-align: justify;
+}
+
+:deep(.article-content .legal-paragraph:first-child) {
+  margin-top: 0;
+}
+
+:deep(.article-content .legal-paragraph:last-child) {
+  margin-bottom: 0;
+}
+
+/* 段落分明的排版 - 釋字內容段落樣式 */
+:deep(.interpretation-section .legal-paragraph) {
+  margin-bottom: 1.2em;
+  margin-top: 0;
+  line-height: 1.9;
+  text-align: justify;
+  color: var(--cr-text-primary);
+}
+
+/* 深色模式下的文字顏色優化 */
+.tool-panel-split.dark-mode :deep(.interpretation-section .legal-paragraph) {
+  color: #e2e8f0;
+}
+
+:deep(.interpretation-section .legal-paragraph:first-child) {
+  margin-top: 0.5em;
+}
+
+:deep(.interpretation-section .legal-paragraph:last-child) {
+  margin-bottom: 0;
+}
+
+/* 確保段落之間有足夠的視覺分隔 */
+:deep(.legal-paragraph + .legal-paragraph) {
+  margin-top: 0.8em;
 }
 
 :deep(.error-message) {
@@ -770,8 +857,11 @@ defineExpose({
 
 /* 高亮區域樣式 */
 :deep(.highlight-section) {
-  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  /* 移除漸變背景，使用更簡潔的樣式 */
+  /* background: linear-gradient(135deg, #fff3cd, #ffeaa7); */
+  background: transparent;
   border-left: 4px solid #f39c12;
+  padding-left: 16px;
 }
 
 :deep(.highlight-section h4) {

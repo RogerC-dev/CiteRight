@@ -69,17 +69,17 @@
             </div>
             <div v-if="contentData.chinese?.issue || contentData.issue" class="info-section highlight-section">
               <strong><i class="bi bi-question-circle"></i> 解釋爭點：</strong>
-              <div class="info-content">{{ contentData.chinese?.issue || contentData.issue }}</div>
+              <div class="info-content" v-html="formattedIssue"></div>
             </div>
 
             <div v-if="contentData.chinese?.description || contentData.description" class="info-section">
               <strong><i class="bi bi-file-text"></i> 解釋文：</strong>
-              <div class="info-content">{{ contentData.chinese?.description || contentData.description }}</div>
+              <div class="info-content" v-html="formattedDescription"></div>
             </div>
 
             <div v-if="contentData.chinese?.reasoning || contentData.reasoning" class="info-section">
               <strong><i class="bi bi-journal-text"></i> 理由書：</strong>
-              <div class="info-content">{{ contentData.chinese?.reasoning || contentData.reasoning }}</div>
+              <div class="info-content" v-html="formattedReasoning"></div>
             </div>
             <div class="info-section">
               <strong><i class="bi bi-link-45deg"></i> 來源：</strong>
@@ -114,7 +114,7 @@
                     <span class="article-number">{{ article.ArticleNo }}</span>
                     <span v-if="article.CaptionTitle" class="article-caption">{{ article.CaptionTitle }}</span>
                   </div>
-                  <div class="article-content">{{ article.Article }}</div>
+                  <div class="article-content" v-html="formatLawArticle(article.Article || '')"></div>
                 </div>
               </div>
             </div>
@@ -165,6 +165,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { fetchInterpretation, fetchLawInfo } from '../../services/apiService.js'
 import { useBookmarkStore } from '../../stores/bookmark.js'
 import { usePopoverStore } from '../../stores/popover.js'
+import { formatInterpretationText, formatLawArticle } from '../../services/textFormatter.js'
 
 // Theme storage key - must match ThemeManager
 const THEME_STORAGE_KEY = 'precedent-theme'
@@ -311,6 +312,22 @@ const loadingMessage = computed(() => {
   if (t === '釋字' || t === 'interpretation') return '釋字內容'
   if (t === '法律' || t === 'law') return '法律內容'
   return '內容'
+})
+
+// 格式化釋字內容的計算屬性
+const formattedIssue = computed(() => {
+  const issue = contentData.value?.chinese?.issue || contentData.value?.issue || ''
+  return issue ? formatInterpretationText(issue) : ''
+})
+
+const formattedDescription = computed(() => {
+  const description = contentData.value?.chinese?.description || contentData.value?.description || ''
+  return description ? formatInterpretationText(description) : ''
+})
+
+const formattedReasoning = computed(() => {
+  const reasoning = contentData.value?.chinese?.reasoning || contentData.value?.reasoning || ''
+  return reasoning ? formatInterpretationText(reasoning) : ''
 })
 
 const popoverStyle = computed(() => {
@@ -940,6 +957,28 @@ async function handleBookmark() {
   color: var(--text-primary);
 }
 
+/* 段落分明的排版 - 釋字內容段落樣式 */
+.info-content :deep(.legal-paragraph) {
+  margin-bottom: 1.2em;
+  margin-top: 0;
+  line-height: 1.8;
+  text-align: justify;
+  color: var(--text-primary);
+}
+
+.info-content :deep(.legal-paragraph:first-child) {
+  margin-top: 0;
+}
+
+.info-content :deep(.legal-paragraph:last-child) {
+  margin-bottom: 0;
+}
+
+/* 確保段落之間有足夠的視覺分隔 */
+.info-content :deep(.legal-paragraph + .legal-paragraph) {
+  margin-top: 0.8em;
+}
+
 .info-content a {
   color: var(--primary);
   text-decoration: none;
@@ -1039,12 +1078,33 @@ async function handleBookmark() {
   font-size: 13px;
 }
 
+/* 段落分明的排版 - 條文內容段落樣式 */
+.article-content :deep(.legal-paragraph) {
+  margin-bottom: 1.2em;
+  margin-top: 0;
+  line-height: 1.8;
+  text-align: justify;
+}
+
+.article-content :deep(.legal-paragraph:first-child) {
+  margin-top: 0;
+}
+
+.article-content :deep(.legal-paragraph:last-child) {
+  margin-bottom: 0;
+}
+
+/* 確保段落之間有足夠的視覺分隔 */
+.article-content :deep(.legal-paragraph + .legal-paragraph) {
+  margin-top: 0.8em;
+}
+
 /* Dark mode support - Applied via class */
 .citeright-popover.dark-mode {
   --primary: #60a5fa;
   --primary-hover: #3b82f6;
   --primary-soft: #1e3a5f;
-  --text-primary: #f1f5f9;
+  --text-primary: #e2e8f0;
   --text-secondary: #94a3b8;
   --surface: #1e293b;
   --surface-muted: #334155;

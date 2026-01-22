@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { formatLawArticle, formatInterpretationText } from '../services/textFormatter.js'
 
 export const usePopoverStore = defineStore('popover', () => {
   // 狀態
@@ -278,10 +279,12 @@ export const usePopoverStore = defineStore('popover', () => {
     // 添加條文內容
     lawContent.articles.forEach(article => {
       if (article.Article) {
+        // 使用文字格式化工具處理條文內容，創建段落分明的排版
+        const formattedContent = formatLawArticle(article.Article)
         sections.push(`<div class="law-article">
           <div class="article-number">${article.ArticleNo || ''}</div>
           ${article.CaptionTitle ? `<div class="article-caption">${article.CaptionTitle}</div>` : ''}
-          <div class="article-content">${article.Article}</div>
+          <div class="article-content">${formattedContent}</div>
         </div>`)
       }
     })
@@ -314,7 +317,9 @@ export const usePopoverStore = defineStore('popover', () => {
 
       sources.forEach(({ field, label }) => {
         if (field && field.trim()) {
-          parts.push(`<div class="interpretation-section"><h4>${label}</h4><p>${field.trim()}</p></div>`)
+          // 使用文字格式化工具處理內容，創建段落分明的排版
+          const formattedContent = formatInterpretationText(field.trim())
+          parts.push(`<div class="interpretation-section"><h4>${label}</h4>${formattedContent}</div>`)
         }
       })
 
@@ -324,7 +329,9 @@ export const usePopoverStore = defineStore('popover', () => {
         Object.keys(data.raw).forEach(key => {
           const value = data.raw[key]
           if (typeof value === 'string' && value.length > 10 && !key.includes('id') && !key.includes('url')) {
-            parts.push(`<div class="interpretation-section"><h4>${key}</h4><p>${value}</p></div>`)
+            // 使用文字格式化工具處理內容，創建段落分明的排版
+            const formattedContent = formatInterpretationText(value)
+            parts.push(`<div class="interpretation-section"><h4>${key}</h4>${formattedContent}</div>`)
           }
         })
       }

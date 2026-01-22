@@ -50,6 +50,7 @@ import { usePopoverStore } from './stores/popover'
 import { useSidebarStore } from './stores/sidebar'
 import { useBookmarkStore } from './stores/bookmark'
 import { useFlashcardStore } from './stores/flashcard'
+import { formatLawArticle } from './services/textFormatter.js'
 
 // 使用 stores
 const extensionStore = useExtensionStore()
@@ -175,9 +176,11 @@ function formatLawContent(lawContent) {
       if (chapter.articles && Array.isArray(chapter.articles)) {
         chapter.articles.forEach((article, articleIndex) => {
           if (article && (article.content || article.number)) {
+            // 使用文字格式化工具處理條文內容，創建段落分明的排版
+            const formattedContent = article.content ? formatLawArticle(article.content) : ''
             html += `<div class="law-article" data-article="${articleIndex}">
               ${article.number ? `<div class="article-number">第${article.number}條${article.title ? ` ${article.title}` : ''}</div>` : ''}
-              ${article.content ? `<div class="article-content">${article.content.replace(/\n/g, '<br>')}</div>` : ''}
+              ${formattedContent ? `<div class="article-content">${formattedContent}</div>` : ''}
             </div>`
           }
         })
