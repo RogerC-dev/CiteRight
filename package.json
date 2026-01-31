@@ -24,6 +24,7 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
+    "@supabase/supabase-js": "^2.93.3",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vueuse/core": "^13.9.0",
     "archiver": "^7.0.1",

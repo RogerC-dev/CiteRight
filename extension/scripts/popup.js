@@ -217,19 +217,18 @@ function openHome() {
 }
 
 function openAIChat() {
-    console.log('AI Chat button clicked - opening sidebar chat tab');
+    console.log('AI Chat button clicked - opening Side Panel');
     if (isExtensionContext) {
         try {
-            chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-                if (tabs && tabs[0]) {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        action: 'openChat'
-                    }, (response) => {
-                        if (chrome.runtime.lastError) {
-                            console.error('Error sending chat message:', chrome.runtime.lastError);
-                            alert('無法開啟 AI 助手。請重新載入頁面後再試。');
-                        }
-                    });
+            chrome.tabs.query({ active: true, currentWindow: true }, async function (tabs) {
+                if (tabs && tabs[0] && chrome.sidePanel) {
+                    try {
+                        await chrome.sidePanel.open({ tabId: tabs[0].id });
+                        console.log('Side Panel opened');
+                    } catch (error) {
+                        console.error('Failed to open Side Panel:', error);
+                        alert('無法開啟 AI 助手。請確認您的 Chrome 版本支援側邊欄功能。');
+                    }
                 }
             });
             if (typeof window.close === 'function') {

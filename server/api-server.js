@@ -20,6 +20,7 @@ const quizRoutes = require('./routes/quiz');
 const flashcardRoutes = require('./routes/flashcard');
 const analyticsRoutes = require('./routes/analytics');
 const aiRoutes = require('./routes/ai');
+// ai-chat.js deleted - session-based chat moved to Supabase Edge Functions
 const subscriptionRoutes = require('./routes/subscription');
 
 // Validate environment variables before starting
@@ -110,6 +111,7 @@ app.use('/api/quiz', quizRoutes);
 app.use('/api/flashcards', flashcardRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai', aiRoutes);
+// ai-chat routes removed - using Supabase Edge Functions
 app.use('/api/subscription', subscriptionRoutes);
 
 // 404 handler for undefined routes

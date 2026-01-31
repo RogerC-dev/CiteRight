@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const database = require('../config/database');
 const { asyncHandler } = require('../middleware/errorHandler');
 const axios = require('axios');
 
@@ -9,7 +8,7 @@ const axios = require('axios');
  * /api/ai/chat:
  *   post:
  *     summary: Send chat message to AI
- *     description: Send a message to the AI assistant and get a response
+ *     description: Send a message to the AI assistant and get a response. Requires authentication.
  *     requestBody:
  *       required: true
  *       content:
@@ -29,11 +28,23 @@ const axios = require('axios');
  *     responses:
  *       200:
  *         description: AI response received
+ *       401:
+ *         description: Authentication required
  *       500:
  *         description: Server error
  */
 router.post('/chat', asyncHandler(async (req, res) => {
     const { message, conversationId, model = 'gpt-4o-mini', context = [] } = req.body;
+
+    // REQUIRE LOGIN: Check for authenticated Supabase user
+    const supabaseUserId = req.headers['x-supabase-user-id'];
+    if (!supabaseUserId || supabaseUserId === 'anonymous') {
+        return res.status(401).json({
+            success: false,
+            error: '請先登入以使用 AI 功能',
+            requireLogin: true
+        });
+    }
 
     if (!message) {
         return res.status(400).json({
@@ -43,28 +54,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
     }
 
     try {
-        const userId = req.user?.id || 'anonymous';
-        const convId = conversationId || `conv_${Date.now()}_${userId}`;
-
-        // Save user message to database
-        if (database.isConnected()) {
-            const saveRequest = database.getRequest();
-            saveRequest.input('conversationId', convId);
-            saveRequest.input('userId', userId);
-            saveRequest.input('role', 'user');
-            saveRequest.input('content', message);
-            saveRequest.input('model', model);
-
-            try {
-                await saveRequest.query(`
-                    INSERT INTO ChatMessages (conversation_id, user_id, role, content, model, created_at)
-                    VALUES (@conversationId, @userId, @role, @content, @model, GETDATE())
-                `);
-            } catch (dbError) {
-                console.warn('Failed to save message to database:', dbError.message);
-                // Continue even if database save fails
-            }
-        }
+        const convId = conversationId || `conv_${Date.now()}_${supabaseUserId}`;
 
         // Call AI API (OpenAI, Gemini, or Claude) with context
         let aiResponse;
@@ -81,24 +71,9 @@ router.post('/chat', asyncHandler(async (req, res) => {
             };
         }
 
-        // Save AI response to database
-        if (database.isConnected() && aiResponse.content) {
-            const saveRequest = database.getRequest();
-            saveRequest.input('conversationId', convId);
-            saveRequest.input('userId', userId);
-            saveRequest.input('role', 'assistant');
-            saveRequest.input('content', aiResponse.content);
-            saveRequest.input('model', model);
-
-            try {
-                await saveRequest.query(`
-                    INSERT INTO ChatMessages (conversation_id, user_id, role, content, model, created_at)
-                    VALUES (@conversationId, @userId, @role, @content, @model, GETDATE())
-                `);
-            } catch (dbError) {
-                console.warn('Failed to save AI response to database:', dbError.message);
-            }
-        }
+        // Note: Storage is now handled by Supabase Edge Function directly
+        // This endpoint just provides the AI response
+        // The extension should call the Edge Function to save the conversation
 
         res.json({
             success: true,
@@ -291,62 +266,24 @@ async function callClaude(message, systemPrompt) {
  *         description: Server error
  */
 router.get('/history', asyncHandler(async (req, res) => {
-    const { conversationId, limit = 50 } = req.query;
+    // Chat history is now stored in Supabase and accessed via Edge Functions
+    // This endpoint is deprecated - clients should query Supabase directly
+    const userId = req.headers['x-supabase-user-id'];
 
-    if (!database.isConnected()) {
-        return res.status(503).json({
+    if (!userId || userId === 'anonymous') {
+        return res.status(401).json({
             success: false,
-            error: 'Database not connected'
+            error: '請先登入以查看對話記錄',
+            requireLogin: true
         });
     }
 
-    try {
-        const userId = req.user?.id || 'anonymous';
-        let query = `
-            SELECT 
-                id,
-                conversation_id,
-                role,
-                content,
-                model,
-                created_at
-            FROM ChatMessages
-            WHERE user_id = @userId
-        `;
-
-        const request = database.getRequest();
-        request.input('userId', userId);
-
-        if (conversationId) {
-            query += ` AND conversation_id = @conversationId`;
-            request.input('conversationId', conversationId);
-        }
-
-        query += ` ORDER BY created_at ASC`;
-        query += ` OFFSET 0 ROWS FETCH NEXT @limit ROWS ONLY`;
-        request.input('limit', parseInt(limit));
-
-        const result = await request.query(query);
-
-        res.json({
-            success: true,
-            data: result.recordset.map(msg => ({
-                id: msg.id,
-                conversationId: msg.conversation_id,
-                role: msg.role,
-                content: msg.content,
-                model: msg.model,
-                timestamp: msg.created_at
-            }))
-        });
-    } catch (error) {
-        console.error('Error fetching chat history:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch chat history',
-            message: error.message
-        });
-    }
+    // Return empty data - client should fetch from Supabase directly
+    res.json({
+        success: true,
+        data: [],
+        message: 'Chat history is now stored in Supabase. Please use the Supabase API directly.'
+    });
 }));
 
 /**

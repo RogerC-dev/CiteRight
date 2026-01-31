@@ -39,36 +39,137 @@ checkDatabaseConnection();
 
 // Create context menu on extension startup
 chrome.runtime.onStartup.addListener(createContextMenu);
-chrome.runtime.onInstalled.addListener(createContextMenu);
+chrome.runtime.onInstalled.addListener((details) => {
+    createContextMenu();
+
+    // IMPORTANT: Explicitly set openPanelOnActionClick to FALSE
+    // This ensures popup.html shows when clicking the extension icon
+    // The side panel can still be opened via context menu
+    if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+        chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false })
+            .then(() => console.log('Side Panel behavior set to NOT open on action click'))
+            .catch((error) => console.error('Failed to set side panel behavior:', error));
+    }
+
+    console.log('Extension installed/updated');
+});
+
+// Note: action.onClicked is NOT used because manifest has default_popup
+// The popup.html opens on icon click by default
 
 function createContextMenu() {
-    chrome.contextMenus.create({
-        id: "activate-citeright",
-        title: "⚖️ 啟用台灣法源探測器",
-        contexts: ["selection", "page"]
-    });
+    // Clear existing menus first
+    chrome.contextMenus.removeAll(() => {
+        chrome.contextMenus.create({
+            id: "activate-citeright",
+            title: "啟用台灣法源探測器",
+            contexts: ["selection", "page"]
+        });
 
-    chrome.contextMenus.create({
-        id: "deactivate-citeright",
-        title: "❌ 停用台灣法源探測器",
-        contexts: ["page"]
+        chrome.contextMenus.create({
+            id: "deactivate-citeright",
+            title: "停用台灣法源探測器",
+            contexts: ["page"]
+        });
+
+        // Add Side Panel option
+        chrome.contextMenus.create({
+            id: "open-side-panel",
+            title: "開啟 AI 助手側邊欄",
+            contexts: ["page"]
+        });
     });
 }
 
 // Handle context menu clicks
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (info.menuItemId === "activate-citeright") {
         chrome.tabs.sendMessage(tab.id, {
             action: "activateCiteRight",
             selectedText: info.selectionText || null
         });
-        console.log('⚖️ 透過右鍵選單啟用台灣法源探測器');
+        console.log('啟用台灣法源探測器');
     } else if (info.menuItemId === "deactivate-citeright") {
         chrome.tabs.sendMessage(tab.id, {
             action: "deactivateCiteRight"
         });
-        console.log('❌ 透過右鍵選單停用台灣法源探測器');
+        console.log('停用台灣法源探測器');
+    } else if (info.menuItemId === "open-side-panel") {
+        // Open Side Panel
+        if (chrome.sidePanel) {
+            try {
+                await chrome.sidePanel.open({ tabId: tab.id });
+                console.log('開啟 AI 助手側邊欄');
+            } catch (error) {
+                console.error('Failed to open side panel:', error);
+            }
+        }
     }
+});
+
+// =================================
+// Authentication Message Handlers
+// =================================
+// Handle auth messages from auth-content.js
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log('Background received message:', message.type);
+
+    if (message.type === 'AUTH_SUCCESS_FROM_PAGE' || message.type === 'EXISTING_SESSION_FOUND') {
+        const authData = message.data;
+
+        // Store auth data in chrome.storage.local
+        chrome.storage.local.set({
+            supabaseUserId: authData.userId,
+            supabaseUserEmail: authData.email || null,
+            supabaseDisplayName: authData.displayName || authData.username || null
+        }, () => {
+            console.log('Auth data stored in chrome.storage:', authData.userId);
+        });
+
+        sendResponse({ success: true });
+        return true;
+    }
+
+    if (message.type === 'LOGOUT') {
+        // Clear auth data
+        chrome.storage.local.remove(['supabaseUserId', 'supabaseUserEmail', 'supabaseDisplayName'], () => {
+            console.log('Auth data cleared from chrome.storage');
+        });
+
+        sendResponse({ success: true });
+        return true;
+    }
+
+    if (message.type === 'GET_AUTH_STATUS') {
+        chrome.storage.local.get(['supabaseUserId', 'supabaseUserEmail', 'supabaseDisplayName'], (result) => {
+            sendResponse({
+                isAuthenticated: !!result.supabaseUserId,
+                userId: result.supabaseUserId || null,
+                email: result.supabaseUserEmail || null,
+                displayName: result.supabaseDisplayName || null
+            });
+        });
+        return true; // Required for async sendResponse
+    }
+
+    if (message.type === 'OPEN_SIDE_PANEL') {
+        // Open Side Panel from web app request (via content script)
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+            if (tabs[0] && chrome.sidePanel) {
+                try {
+                    await chrome.sidePanel.open({ tabId: tabs[0].id });
+                    console.log('Side Panel opened from web app request');
+                    sendResponse({ success: true });
+                } catch (error) {
+                    console.error('Failed to open Side Panel:', error);
+                    sendResponse({ success: false, error: error.message });
+                }
+            }
+        });
+        return true; // Async response
+    }
+
+    return false;
 });
 
 // Enhanced fetch with retry logic
@@ -190,6 +291,40 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // Handle loadLegalNames from content scripts (bypasses CORS/PNA)
     if (msg.action === 'loadLegalNames') {
         handleLoadLegalNames(msg, sendResponse);
+        return true;
+    }
+
+    // ============================================
+    // AUTH BRIDGE MESSAGE HANDLERS
+    // ============================================
+
+    // Handle auth success from ExamQuestionBank page
+    if (msg.type === 'AUTH_SUCCESS_FROM_PAGE') {
+        handleAuthSuccessFromPage(msg.data, sendResponse);
+        return true;
+    }
+
+    // Handle existing session found on ExamQuestionBank
+    if (msg.type === 'EXISTING_SESSION_FOUND') {
+        handleExistingSessionFound(msg.data, sendResponse);
+        return true;
+    }
+
+    // Handle get auth state request from popup
+    if (msg.type === 'GET_AUTH_STATE') {
+        handleGetAuthState(sendResponse);
+        return true;
+    }
+
+    // Handle open login request from popup
+    if (msg.type === 'OPEN_LOGIN') {
+        handleOpenLogin(sendResponse);
+        return true;
+    }
+
+    // Handle logout request from popup
+    if (msg.type === 'LOGOUT') {
+        handleLogout(sendResponse);
         return true;
     }
 
@@ -524,7 +659,7 @@ async function handleFetchLawContent(msg, sendResponse) {
 // API proxy handler - allows content scripts to make API requests through background script
 async function handleApiRequest(msg, sendResponse) {
     try {
-        const { endpoint, method = 'GET', body, headers = {} } = msg;
+        const { endpoint, method = 'GET', body, headers = {}, supabaseUserId } = msg;
 
         if (!endpoint) {
             return sendResponse({
@@ -539,12 +674,39 @@ async function handleApiRequest(msg, sendResponse) {
 
         console.log(`🌐 Background: Proxying API request to ${url}`);
 
+        // Build headers with optional Supabase user ID for cloud sync
+        const requestHeaders = {
+            'Content-Type': 'application/json',
+            ...headers
+        };
+
+        // Try to get Supabase user ID - either from message or from chrome.storage
+        // Try to get Supabase user ID - either from message or from chrome.storage
+        let effectiveUserId = supabaseUserId;
+
+        // 1. Check authenticated user
+        if (!effectiveUserId) {
+            const storageResult = await chrome.storage.local.get(['precedent_supabase_user']);
+            if (storageResult.precedent_supabase_user?.userId) {
+                effectiveUserId = storageResult.precedent_supabase_user.userId;
+            }
+        }
+
+        // 2. Fallback to anonymous local user ID
+        if (!effectiveUserId) {
+            effectiveUserId = await getOrCreateLocalUserId();
+            console.log('👤 Background: Using anonymous local user ID:', effectiveUserId);
+        }
+
+        // Add User ID header (for MS SQL storage & cloud sync)
+        if (effectiveUserId) {
+            requestHeaders['x-supabase-user-id'] = effectiveUserId;
+            console.log(`🔗 Background: Adding User ID header: ${effectiveUserId}`);
+        }
+
         const fetchOptions = {
             method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                ...headers
-            }
+            headers: requestHeaders
         };
 
         if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
@@ -690,6 +852,203 @@ async function setCachedData(key, value, ttlSeconds = 3600) {
         chrome.storage.local.set({ [key]: data }, () => {
             resolve();
         });
+    });
+}
+
+// ============================================
+// AUTH BRIDGE HANDLER FUNCTIONS
+// ============================================
+
+const AUTH_STORAGE_KEYS = {
+    LOCAL_USER_ID: 'precedent_local_user_id',
+    SUPABASE_USER: 'precedent_supabase_user',
+    AUTH_STATE: 'precedent_auth_state'
+};
+
+const EXAM_BANK_URL = 'http://localhost:5173';
+
+/**
+ * Generate UUID v4
+ */
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+/**
+ * Get or create local user ID
+ */
+async function getOrCreateLocalUserId() {
+    return new Promise((resolve) => {
+        chrome.storage.local.get([AUTH_STORAGE_KEYS.LOCAL_USER_ID], (result) => {
+            if (result[AUTH_STORAGE_KEYS.LOCAL_USER_ID]) {
+                resolve(result[AUTH_STORAGE_KEYS.LOCAL_USER_ID]);
+            } else {
+                const newId = generateUUID();
+                chrome.storage.local.set({ [AUTH_STORAGE_KEYS.LOCAL_USER_ID]: newId }, () => {
+                    console.log('🔑 Generated new local user ID:', newId);
+                    resolve(newId);
+                });
+            }
+        });
+    });
+}
+
+/**
+ * Handle auth success from ExamQuestionBank page
+ */
+async function handleAuthSuccessFromPage(authData, sendResponse) {
+    console.log('🎉 Auth success received from page:', authData);
+
+    try {
+        const userObj = {
+            userId: authData.userId,
+            email: authData.email,
+            displayName: authData.displayName,
+            tier: 'free', // Default tier
+            authenticatedAt: Date.now()
+        };
+
+        // Store the user data
+        await new Promise((resolve) => {
+            chrome.storage.local.set({
+                [AUTH_STORAGE_KEYS.SUPABASE_USER]: userObj,
+                [AUTH_STORAGE_KEYS.AUTH_STATE]: 'authenticated'
+            }, resolve);
+        });
+
+        console.log('✅ Supabase user stored:', userObj.email);
+
+        // Link local sessions to Supabase user
+        const localUserId = await getOrCreateLocalUserId();
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/ai-chat/link-user`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-local-user-id': localUserId
+                },
+                body: JSON.stringify({
+                    supabaseUserId: authData.userId
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log(`✅ Linked ${result.data?.sessionsLinked || 0} sessions to Supabase user`);
+            }
+        } catch (linkError) {
+            console.warn('Could not link sessions:', linkError);
+        }
+
+        // Broadcast auth state change to all extension contexts
+        chrome.runtime.sendMessage({
+            type: 'AUTH_STATE_CHANGED',
+            isAuthenticated: true,
+            user: userObj
+        }).catch(() => { }); // Ignore if no listeners
+
+        sendResponse({ success: true, user: userObj });
+    } catch (error) {
+        console.error('Error processing auth success:', error);
+        sendResponse({ success: false, error: error.message });
+    }
+}
+
+/**
+ * Handle existing session found on ExamQuestionBank
+ */
+async function handleExistingSessionFound(sessionData, sendResponse) {
+    console.log('👤 Existing session found:', sessionData);
+
+    // Check if we already have this user stored
+    chrome.storage.local.get([AUTH_STORAGE_KEYS.SUPABASE_USER], async (result) => {
+        const existingUser = result[AUTH_STORAGE_KEYS.SUPABASE_USER];
+
+        if (existingUser && existingUser.userId === sessionData.userId) {
+            console.log('User already stored, no action needed');
+            sendResponse({ success: true, alreadyStored: true });
+            return;
+        }
+
+        // Store the new session
+        const userObj = {
+            userId: sessionData.userId,
+            email: sessionData.email,
+            displayName: sessionData.displayName,
+            tier: 'free',
+            authenticatedAt: Date.now()
+        };
+
+        chrome.storage.local.set({
+            [AUTH_STORAGE_KEYS.SUPABASE_USER]: userObj,
+            [AUTH_STORAGE_KEYS.AUTH_STATE]: 'authenticated'
+        }, () => {
+            console.log('✅ Session synced from ExamQuestionBank');
+            sendResponse({ success: true, user: userObj });
+        });
+    });
+}
+
+/**
+ * Handle get auth state request
+ */
+async function handleGetAuthState(sendResponse) {
+    const localUserId = await getOrCreateLocalUserId();
+
+    chrome.storage.local.get([
+        AUTH_STORAGE_KEYS.SUPABASE_USER,
+        AUTH_STORAGE_KEYS.AUTH_STATE
+    ], (result) => {
+        const authState = {
+            isAuthenticated: result[AUTH_STORAGE_KEYS.AUTH_STATE] === 'authenticated',
+            localUserId: localUserId,
+            supabaseUser: result[AUTH_STORAGE_KEYS.SUPABASE_USER] || null,
+            tier: result[AUTH_STORAGE_KEYS.SUPABASE_USER]?.tier || 'anonymous'
+        };
+
+        sendResponse({ success: true, authState: authState });
+    });
+}
+
+/**
+ * Handle open login request - opens ExamQuestionBank login page
+ */
+async function handleOpenLogin(sendResponse) {
+    const localUserId = await getOrCreateLocalUserId();
+
+    // Build login URL with extension source parameter
+    const loginUrl = `${EXAM_BANK_URL}?source=precedent_extension&local_user_id=${localUserId}`;
+
+    console.log('🔗 Opening login page:', loginUrl);
+
+    // Open in new tab
+    chrome.tabs.create({ url: loginUrl }, (tab) => {
+        sendResponse({ success: true, tabId: tab.id });
+    });
+}
+
+/**
+ * Handle logout request
+ */
+async function handleLogout(sendResponse) {
+    chrome.storage.local.remove([
+        AUTH_STORAGE_KEYS.SUPABASE_USER,
+        AUTH_STORAGE_KEYS.AUTH_STATE
+    ], () => {
+        console.log('🚪 User logged out');
+
+        // Broadcast logout
+        chrome.runtime.sendMessage({
+            type: 'AUTH_STATE_CHANGED',
+            isAuthenticated: false,
+            user: null
+        }).catch(() => { });
+
+        sendResponse({ success: true });
     });
 }
 

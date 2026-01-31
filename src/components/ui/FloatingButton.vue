@@ -4,12 +4,12 @@
       v-if="!sidebarStore.isOpen"
       ref="floatingBtnRef"
       class="floating-sidebar-btn"
-      :class="{ 'dark-mode': isDarkMode, 'is-dragging': isDragging }"
+      :class="{ 'is-dragging': isDragging }"
       :style="floatingBtnStyle"
       @mousedown="startDrag"
       @touchstart="startDrag"
-      aria-label="Open CiteRight Sidebar"
-      title="開啟 CiteRight 側邊欄"
+      aria-label="Ask AI"
+      title="Ask AI"
     >
       <svg class="floating-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- Magnifying glass -->
@@ -30,10 +30,6 @@ import { useSidebarStore } from '../../stores/sidebar'
 
 // Store
 const sidebarStore = useSidebarStore()
-
-// Theme
-const THEME_STORAGE_KEY = 'precedent-theme'
-const isDarkMode = ref(false)
 
 // Floating button state
 const floatingBtnRef = ref(null)
@@ -62,44 +58,6 @@ const floatingBtnStyle = computed(() => {
       : 'none'
   }
 })
-
-// Theme detection
-async function loadThemePreference() {
-  try {
-    let savedTheme = null
-    
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      savedTheme = await new Promise((resolve) => {
-        chrome.storage.local.get([THEME_STORAGE_KEY], (res) => {
-          resolve(res[THEME_STORAGE_KEY])
-        })
-      })
-    }
-    
-    if (!savedTheme) {
-      savedTheme = localStorage.getItem(THEME_STORAGE_KEY)
-    }
-    
-    isDarkMode.value = savedTheme === 'dark'
-    
-    // Listen for theme changes
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
-      chrome.storage.onChanged.addListener((changes, areaName) => {
-        if (areaName === 'local' && changes[THEME_STORAGE_KEY]) {
-          isDarkMode.value = changes[THEME_STORAGE_KEY].newValue === 'dark'
-        }
-      })
-    }
-    
-    window.addEventListener('storage', (e) => {
-      if (e.key === THEME_STORAGE_KEY && e.newValue) {
-        isDarkMode.value = e.newValue === 'dark'
-      }
-    })
-  } catch (e) {
-    isDarkMode.value = document.documentElement.classList.contains('dark')
-  }
-}
 
 // Drag handlers
 function startDrag(e) {
@@ -234,7 +192,6 @@ function handleWindowResize() {
 }
 
 onMounted(() => {
-  loadThemePreference()
   loadPosition()
   window.addEventListener('resize', handleWindowResize)
 })
@@ -259,10 +216,12 @@ onUnmounted(() => {
   width: 56px;
   height: 56px;
   padding: 0;
-  background: linear-gradient(135deg, #476996, #35527a);
+  /* Updated to match Web App PracticeView.vue exactly */
+  background: linear-gradient(135deg, #4A90D9, #3B7FCC);
+  color: #fff;
   border: none;
   border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(71, 105, 150, 0.4);
+  box-shadow: 0 4px 16px rgba(74, 144, 217, 0.4);
   cursor: grab;
   z-index: 2147483640;
   touch-action: none;
@@ -270,7 +229,7 @@ onUnmounted(() => {
 }
 
 .floating-sidebar-btn:hover {
-  box-shadow: 0 6px 24px rgba(71, 105, 150, 0.5);
+  box-shadow: 0 6px 24px rgba(74, 144, 217, 0.5);
   transform: scale(1.02);
 }
 
@@ -285,16 +244,6 @@ onUnmounted(() => {
   height: 32px;
   color: #fff;
   pointer-events: none;
-}
-
-/* Dark mode */
-.floating-sidebar-btn.dark-mode {
-  background: linear-gradient(135deg, #1e3a5f, #0f2744);
-  box-shadow: 0 4px 16px rgba(30, 58, 95, 0.6);
-}
-
-.floating-sidebar-btn.dark-mode:hover {
-  box-shadow: 0 6px 24px rgba(96, 165, 250, 0.4);
 }
 
 /* Responsive - smaller on mobile */

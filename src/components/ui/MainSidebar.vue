@@ -117,7 +117,7 @@
               <div v-if="chatStore.serverStatus !== 'online'" class="server-status-banner" :class="chatStore.serverStatus">
                 <i :class="chatStore.serverStatus === 'checking' ? 'bi bi-hourglass-split' : 'bi bi-exclamation-triangle'"></i>
                 <span v-if="chatStore.serverStatus === 'checking'">正在連線到 AI 伺服器...</span>
-                <span v-else>AI 伺服器離線。請啟動後端服務 (cd server && npm start)</span>
+                <span v-else>AI 服務暫時無法使用。請稍後再試。</span>
                 <button v-if="chatStore.serverStatus === 'offline'" @click="chatStore.checkServerStatus" class="retry-btn">
                   <i class="bi bi-arrow-clockwise"></i> 重試
                 </button>
@@ -341,35 +341,12 @@ function toggleTheme() {
     console.warn('[Sidebar] Failed to save theme:', e)
   }
   
-  // Apply locally
-  applyThemeToDocument(isDarkMode.value)
-  
   // Dispatch event for sibling components on same page
   window.dispatchEvent(new CustomEvent('themeChanged', { 
     detail: { theme: themeValue, setting: themeValue } 
   }))
   
   console.log('[Sidebar] Theme toggled to:', themeValue)
-}
-
-/**
- * Apply theme to document
- */
-function applyThemeToDocument(dark) {
-  const html = document.documentElement
-  const body = document.body
-  
-  if (dark) {
-    html.setAttribute('data-bs-theme', 'dark')
-    html.classList.add('dark')
-    body?.setAttribute('data-bs-theme', 'dark')
-    body?.classList.add('dark')
-  } else {
-    html.removeAttribute('data-bs-theme')
-    html.classList.remove('dark')
-    body?.removeAttribute('data-bs-theme')
-    body?.classList.remove('dark')
-  }
 }
 
 /**
@@ -402,8 +379,6 @@ async function loadThemePreference() {
       isDarkMode.value = window.matchMedia('(prefers-color-scheme: dark)').matches
     }
     
-    applyThemeToDocument(isDarkMode.value)
-    
     // Listen for chrome.storage changes (from popup or other tabs)
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -411,7 +386,6 @@ async function loadThemePreference() {
           const newTheme = changes[THEME_STORAGE_KEY].newValue
           console.log('[Sidebar] Storage theme changed:', newTheme)
           isDarkMode.value = newTheme === 'dark'
-          applyThemeToDocument(isDarkMode.value)
         }
       })
     }
@@ -422,7 +396,6 @@ async function loadThemePreference() {
         if (message.action === 'THEME_CHANGED') {
           console.log('[Sidebar] Theme message received:', message.theme)
           isDarkMode.value = message.effectiveTheme === 'dark' || message.theme === 'dark'
-          applyThemeToDocument(isDarkMode.value)
           sendResponse({ success: true })
         }
       })
@@ -433,7 +406,6 @@ async function loadThemePreference() {
       const newTheme = e.detail?.theme
       if (newTheme) {
         isDarkMode.value = newTheme === 'dark'
-        applyThemeToDocument(isDarkMode.value)
       }
     })
     
@@ -441,7 +413,6 @@ async function loadThemePreference() {
     window.addEventListener('storage', (e) => {
       if (e.key === THEME_STORAGE_KEY && e.newValue) {
         isDarkMode.value = e.newValue === 'dark'
-        applyThemeToDocument(isDarkMode.value)
       }
     })
     
@@ -457,7 +428,6 @@ async function loadThemePreference() {
       
       if (!savedPref || savedPref === 'system') {
         isDarkMode.value = e.matches
-        applyThemeToDocument(isDarkMode.value)
       }
     })
     
@@ -781,16 +751,68 @@ onUnmounted(() => {
   color: #60a5fa;
 }
 
-/* Tab content area - ensure dark background */
-/* 使用灰藍色作為外層框架，匹配左側瀏覽器模式 */
-.tool-panel-split.dark-mode .tab-content-area {
-  background: #1e293b;
+/* SideWrite Color Hierarchy Implementation */
+/* Layer 1: Outer Area - Lighter Blue */
+.tab-content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #EFF6FF; /* blue-50 */
+  padding: 12px; /* Spacing to reveal Layer 1 */
 }
 
-/* Tab content inner - the main content box */
+/* Layer 2: Inner Container - Navy Blue */
+.tab-content-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #172554; /* blue-950 (Navy) */
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 12px; /* Spacing to reveal Layer 2 */
+  border: 1px solid #1e40af; /* blue-800 */
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Layer 3: Most Internal Layer - Light Blue */
+/* We target the direct child of tab-content-inner which is usually the content component */
+.tab-content-inner > :first-child {
+  flex: 1;
+  background: #F0F9FF; /* sky-50 (Light Blue) */
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark Mode Overrides */
+.tool-panel-split.dark-mode {
+  --primary: #60a5fa;
+  --primary-hover: #3b82f6;
+  --primary-soft: #1e3a5f;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --surface: #1e293b;
+  --surface-muted: #334155;
+  --bg-page: #0f172a;
+  --border: #475569;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --destructive: #f87171;
+  --destructive-soft: rgba(239, 68, 68, 0.15);
+}
+
+.tool-panel-split.dark-mode .tab-content-area {
+  background: #1e293b; /* slate-800 */
+}
+
 .tool-panel-split.dark-mode .tab-content-inner {
-  background: #0f172a;
+  background: #0f172a; /* slate-900 */
   border-color: #334155;
+}
+
+.tool-panel-split.dark-mode .tab-content-inner > :first-child {
+  background: #1e293b; /* slate-800 */
 }
 
 /* Chat container dark mode */

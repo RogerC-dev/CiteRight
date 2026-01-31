@@ -7,16 +7,23 @@
     "activeTab",
     "storage",
     "contextMenus",
-    "tabs"
+    "tabs",
+    "cookies",
+    "sidePanel"
   ],
+  "side_panel": {
+    "default_path": "extension/pages/sidepanel.html"
+  },
   "host_permissions": [
     "http://localhost/*",
     "http://localhost:3000/*",
+    "http://localhost:5173/*",
     "http://127.0.0.1/*",
     "http://127.0.0.1:3000/*",
     "https://aomp.judicial.gov.tw/*",
     "https://cons.judicial.gov.tw/*",
-    "https://*.judicial.gov.tw/*"
+    "https://*.judicial.gov.tw/*",
+    "https://*.supabase.co/*"
   ],
   "content_scripts": [
     {
@@ -26,6 +33,16 @@
       "js": [
         "dist/content.js"
       ]
+    },
+    {
+      "matches": [
+        "http://localhost:5173/*",
+        "https://*.supabase.co/*"
+      ],
+      "js": [
+        "extension/scripts/auth-content.js"
+      ],
+      "run_at": "document_end"
     }
   ],
   "background": {
@@ -47,7 +64,9 @@
         "processed_data/*.json",
         "processed_data/*.js"
       ],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

@@ -30,26 +30,15 @@ class OpenAIService {
                 content: msg.content || msg.message || ''
             }));
 
-            const response = await fetch(`${this.serverUrl}/api/ai/chat`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: message.trim(),
-                    model: this.model,
-                    context: formattedContext
-                })
-            });
+            const requestData = {
+                message: message.trim(),
+                model: this.model,
+                context: formattedContext
+            };
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error('AI API Error:', errorData);
-                throw new Error(errorData.error || `API Error: ${response.status}`);
-            }
+            // Use background script proxy if in content script context (bypasses CORS/PNA)
+            const data = await this._makeApiCall('/api/ai/chat', 'POST', requestData);
 
-            const data = await response.json();
-            
             if (!data.success) {
                 throw new Error(data.error || 'Failed to get AI response');
             }
@@ -58,14 +47,83 @@ class OpenAIService {
 
         } catch (error) {
             console.error('OpenAI Service Error:', error);
-            
+
             // Check if server is not running
-            if (error.message.includes('fetch') || error.message.includes('network')) {
-                throw new Error('AI 伺服器未連線。請確認伺服器正在運行。');
+            if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed to fetch')) {
+                throw new Error('AI 服務暫時無法使用。請稍後再試。');
             }
-            
+
             throw error;
         }
+    }
+
+    /**
+     * Make API call - routes through background script if in content script context
+     * @param {string} endpoint - API endpoint (e.g., '/api/ai/chat')
+     * @param {string} method - HTTP method
+     * @param {Object} body - Request body
+     * @returns {Promise<Object>} - Response data
+     */
+    async _makeApiCall(endpoint, method = 'GET', body = null) {
+        // Get stored Supabase user ID for cloud sync (set after OAuth login)
+        let supabaseUserId = null;
+        try {
+            supabaseUserId = localStorage.getItem('precedent_supabase_user_id');
+        } catch (e) {
+            // localStorage may not be available in some contexts
+        }
+
+        // Check if we're in a content script context (chrome.runtime exists but window.location is external site)
+        const isContentScript = typeof chrome !== 'undefined' &&
+            chrome.runtime &&
+            chrome.runtime.sendMessage &&
+            window.location.protocol !== 'chrome-extension:';
+
+        if (isContentScript) {
+            // Route through background script to bypass CORS/Private Network Access
+            return new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({
+                    type: 'API_REQUEST',
+                    endpoint: endpoint,
+                    method: method,
+                    body: body,
+                    supabaseUserId: supabaseUserId // Pass to background for header injection
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                        return;
+                    }
+                    if (!response || !response.success) {
+                        reject(new Error(response?.error || 'API request failed'));
+                        return;
+                    }
+                    resolve(response.data);
+                });
+            });
+        }
+
+        // Direct fetch (popup context or non-extension)
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        // Add Supabase user ID header if available for cloud sync
+        if (supabaseUserId) {
+            headers['x-supabase-user-id'] = supabaseUserId;
+        }
+
+        const response = await fetch(`${this.serverUrl}${endpoint}`, {
+            method: method,
+            headers: headers,
+            body: body ? JSON.stringify(body) : undefined
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `API Error: ${response.status}`);
+        }
+
+        return await response.json();
     }
 
     /**
@@ -92,7 +150,7 @@ class OpenAIService {
             }
 
             const data = await response.json();
-            
+
             if (!data.success) {
                 throw new Error(data.error || 'Failed to analyze case');
             }

@@ -41,11 +41,46 @@ export const useChatStore = defineStore('chat', () => {
   async function checkServerStatus() {
     serverStatus.value = 'checking'
     try {
-      const response = await fetch('http://localhost:3000/health', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      })
-      if (response.ok) {
+      // Check if we're in a content script context
+      const isContentScript = typeof chrome !== 'undefined' &&
+        chrome.runtime &&
+        chrome.runtime.sendMessage &&
+        window.location.protocol !== 'chrome-extension:';
+
+      let healthData;
+
+      if (isContentScript) {
+        // Route through background script to bypass CORS/Private Network Access
+        healthData = await new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage({
+            type: 'API_REQUEST',
+            endpoint: '/health',
+            method: 'GET'
+          }, (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+            if (!response || !response.success) {
+              reject(new Error(response?.error || 'Health check failed'));
+              return;
+            }
+            resolve(response.data);
+          });
+        });
+      } else {
+        // Direct fetch (popup context)
+        const response = await fetch('http://localhost:3000/health', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        if (!response.ok) {
+          throw new Error('Health check failed');
+        }
+        healthData = await response.json();
+      }
+
+      if (healthData && (healthData.status === 'ok' || healthData.database === 'connected')) {
         serverStatus.value = 'online'
         isOnline.value = true
         console.log('[Chat] Backend server is online')
@@ -106,7 +141,8 @@ export const useChatStore = defineStore('chat', () => {
     if (serverStatus.value !== 'online') {
       const isUp = await checkServerStatus()
       if (!isUp) {
-        errorMessage.value = 'AI 伺服器未連線。請確認伺服器正在運行 (npm run server)'
+        errorMessage.value = 'AI 服務暫時無法使用。請稍後再試。'
+        console.warn('[Chat] Server offline - Start server with: cd server && npm start')
         return
       }
     }
@@ -151,16 +187,17 @@ export const useChatStore = defineStore('chat', () => {
 
     } catch (err) {
       console.error('[Chat] Send error:', err)
-      
+
       // Provide user-friendly error messages
       let userError = err.message || 'Failed to get response from AI'
       if (userError.includes('fetch') || userError.includes('network') || userError.includes('Failed to fetch')) {
         userError = 'AI 伺服器未連線。請確認伺服器正在運行。'
         serverStatus.value = 'offline'
       } else if (userError.includes('API key')) {
-        userError = 'OpenAI API 金鑰未設定。請檢查 server/.env 檔案。'
+        userError = 'AI 服務設定錯誤。請聯繫開發人員。'
+        console.warn('[Chat] API key issue - Check server/.env OPENAI_API_KEY')
       }
-      
+
       errorMessage.value = userError
 
       messages.value.push({
