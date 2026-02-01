@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "台灣法源探測器 (CiteRight)",
+  "name": "CiteRight",
   "version": "2.0",
   "description": "自動識別並高亮顯示台灣法律條文、釋字、判決書等法源資料，提供即時法律資訊查詢",
   "permissions": [
@@ -39,8 +39,12 @@
         "http://localhost:5173/*",
         "https://*.supabase.co/*"
       ],
+      "css": [
+        "extension/styles/floating-button.css"
+      ],
       "js": [
-        "extension/scripts/auth-content.js"
+        "extension/scripts/auth-content.js",
+        "extension/scripts/floating-button.js"
       ],
       "run_at": "document_end"
     }

@@ -20,7 +20,7 @@
     const chatView = document.getElementById('chatView');
     const loginBtn = document.getElementById('loginBtn');
     const authBadge = document.getElementById('authBadge');
-    const authBadgeText = document.getElementById('authBadgeText');
+    // authBadgeText was removed from HTML, so we handle it gracefully
     const themeToggle = document.getElementById('themeToggle');
     const messagesArea = document.getElementById('messagesArea');
     const chatInput = document.getElementById('chatInput');
@@ -62,16 +62,16 @@
      */
     function applyTheme(theme) {
         const html = document.documentElement;
-        const themeIcon = themeToggle.querySelector('i');
+        const themeIcon = themeToggle ? themeToggle.querySelector('i') : null;
 
         if (theme === 'dark') {
             html.setAttribute('data-bs-theme', 'dark');
             html.classList.add('dark');
-            themeIcon.className = 'bi bi-sun-fill';
+            if (themeIcon) themeIcon.className = 'bi bi-sun-fill';
         } else {
             html.removeAttribute('data-bs-theme');
             html.classList.remove('dark');
-            themeIcon.className = 'bi bi-moon-fill';
+            if (themeIcon) themeIcon.className = 'bi bi-moon-fill';
         }
     }
 
@@ -92,6 +92,7 @@
      */
     async function checkAuth() {
         return new Promise((resolve) => {
+            // First try getting from storage (fastest)
             chrome.storage.local.get(['supabaseUserId', 'supabaseUserEmail', 'supabaseDisplayName'], (result) => {
                 console.log('Auth check result:', result);
 
@@ -103,12 +104,25 @@
                     showChatView();
                     updateAuthBadge(true, username);
                 } else {
-                    isAuthenticated = false;
-                    userId = null;
-                    username = null;
+                    // If not found, try asking background explicitly (backup)
+                    chrome.runtime.sendMessage({ type: 'GET_AUTH_STATUS' }, (bgResult) => {
+                        if (bgResult && bgResult.isAuthenticated) {
+                            isAuthenticated = true;
+                            userId = bgResult.userId;
+                            username = bgResult.displayName || bgResult.email || 'User';
+                            showChatView();
+                            updateAuthBadge(true, username);
+                        } else {
+                            isAuthenticated = false;
+                            userId = null;
+                            username = null;
 
-                    showLoginView();
-                    updateAuthBadge(false);
+                            showLoginView();
+                            updateAuthBadge(false);
+                        }
+                        resolve();
+                    });
+                    return; // Wait for fallback
                 }
 
                 resolve();
@@ -120,12 +134,44 @@
      * Update auth badge display
      */
     function updateAuthBadge(authenticated, name = null) {
-        if (authenticated && name) {
+        if (!authBadge) return;
+
+        if (authenticated) {
             authBadge.classList.add('authenticated');
-            authBadgeText.textContent = name;
+            // Tooltip only, no extra icons
+            authBadge.title = `已登入：${name} (點擊登出)`;
+
+            // Ensure icon is correct (always person-circle, just color changes)
+            const icon = authBadge.querySelector('i');
+            if (icon) icon.className = 'bi bi-person-circle';
+
         } else {
             authBadge.classList.remove('authenticated');
-            authBadgeText.textContent = '未登入';
+            authBadge.title = '點擊登入';
+
+            const icon = authBadge.querySelector('i');
+            if (icon) icon.className = 'bi bi-person-circle';
+        }
+    }
+
+    /**
+     * Handle Auth Badge Click
+     */
+    function handleAuthClick() {
+        if (isAuthenticated) {
+            // Confirm logout
+            const confirmLogout = confirm('您確定要登出 CiteRight 嗎？'); // Simple confirm for now
+            if (confirmLogout) {
+                // Clear local extensions storage
+                chrome.runtime.sendMessage({ type: 'LOGOUT' }, (response) => {
+                    checkAuth(); // Update UI
+                    // Optional: Open web app logout page if needed, but user said "no need to go to that examweb"
+                    // chrome.tabs.create({ url: 'http://localhost:5173/logout' }); 
+                });
+            }
+        } else {
+            // Open login page
+            openLogin();
         }
     }
 
@@ -133,16 +179,23 @@
      * Show login required view
      */
     function showLoginView() {
-        loginView.style.display = 'flex';
-        chatView.style.display = 'none';
+        if (loginView) loginView.style.display = 'flex';
+        if (chatView) chatView.style.display = 'none';
+
+        // Also enable/disable chat input
+        if (chatInput) chatInput.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
     }
 
     /**
      * Show chat view
      */
     function showChatView() {
-        loginView.style.display = 'none';
-        chatView.style.display = 'flex';
+        if (loginView) loginView.style.display = 'none';
+        if (chatView) chatView.style.display = 'flex';
+
+        if (chatInput) chatInput.disabled = false;
+        if (sendBtn) sendBtn.disabled = false;
     }
 
     /**
@@ -159,10 +212,13 @@
      */
     function setupEventListeners() {
         // Login button
-        loginBtn.addEventListener('click', openLogin);
+        if (loginBtn) loginBtn.addEventListener('click', openLogin);
+
+        // Auth Badge Click
+        if (authBadge) authBadge.addEventListener('click', handleAuthClick);
 
         // Theme toggle
-        themeToggle.addEventListener('click', toggleTheme);
+        if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 
         // Tab navigation
         navBtns.forEach(btn => {
@@ -173,25 +229,27 @@
         });
 
         // Send message
-        sendBtn.addEventListener('click', sendMessage);
+        if (sendBtn) sendBtn.addEventListener('click', sendMessage);
 
         // Enter to send (Shift+Enter for new line)
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
+        if (chatInput) {
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
 
-        // Auto-resize textarea
-        chatInput.addEventListener('input', () => {
-            chatInput.style.height = 'auto';
-            chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
-        });
+            // Auto-resize textarea
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+            });
+        }
 
         // Listen for auth changes from background
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            if (message.type === 'AUTH_STATE_CHANGED') {
+            if (message.type === 'AUTH_STATE_CHANGED' || message.type === 'AUTH_SUCCESS_FROM_PAGE') {
                 checkAuth();
             }
         });
@@ -208,6 +266,8 @@
      * Switch between tabs
      */
     function switchTab(tabId) {
+        console.log('Switching to tab:', tabId);
+
         // Update nav buttons
         navBtns.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tabId);
@@ -215,7 +275,9 @@
 
         // Update tab panels
         tabPanels.forEach(panel => {
-            panel.classList.toggle('active', panel.id === `tab-${tabId}`);
+            const isActive = panel.id === `tab-${tabId}`;
+            panel.classList.toggle('active', isActive);
+            // panel.style.display = isActive ? 'flex' : 'none'; // Ensure display is updated if CSS fails
         });
     }
 
@@ -223,6 +285,8 @@
      * Send a message to AI
      */
     async function sendMessage() {
+        if (!chatInput) return;
+
         const text = chatInput.value.trim();
         if (!text) return;
 
@@ -237,8 +301,8 @@
         chatInput.style.height = 'auto';
 
         // Show loading
-        sendBtn.disabled = true;
-        loadingIndicator.classList.add('visible');
+        if (sendBtn) sendBtn.disabled = true;
+        if (loadingIndicator) loadingIndicator.classList.add('visible');
 
         try {
             // Generate conversation ID if needed
@@ -286,8 +350,8 @@
             console.error('Chat error:', error);
             addMessage('assistant', `發生錯誤：${error.message}`);
         } finally {
-            sendBtn.disabled = false;
-            loadingIndicator.classList.remove('visible');
+            if (sendBtn) sendBtn.disabled = false;
+            if (loadingIndicator) loadingIndicator.classList.remove('visible');
         }
     }
 
@@ -303,10 +367,11 @@
         msgDiv.className = `message ${role}`;
         msgDiv.textContent = content;
 
-        messagesArea.appendChild(msgDiv);
-
-        // Scroll to bottom
-        messagesArea.scrollTop = messagesArea.scrollHeight;
+        if (messagesArea) {
+            messagesArea.appendChild(msgDiv);
+            // Scroll to bottom
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
     }
 
     // Initialize

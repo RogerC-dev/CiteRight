@@ -134,6 +134,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Clear auth data
         chrome.storage.local.remove(['supabaseUserId', 'supabaseUserEmail', 'supabaseDisplayName'], () => {
             console.log('Auth data cleared from chrome.storage');
+
+            // Broadcast state change to all views
+            chrome.runtime.sendMessage({ type: 'AUTH_STATE_CHANGED' }).catch(() => {
+                // Ignore error if no listeners (e.g., no popup/sidepanel open)
+            });
         });
 
         sendResponse({ success: true });
@@ -154,18 +159,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.type === 'OPEN_SIDE_PANEL') {
         // Open Side Panel from web app request (via content script)
-        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-            if (tabs[0] && chrome.sidePanel) {
+        // Use sender.tab.id if available (direct from content script)
+        // Fallback to active tab query (from popup or other)
+        const tabId = sender.tab ? sender.tab.id : null;
+
+        const openPanel = async (tid) => {
+            if (tid && chrome.sidePanel) {
                 try {
-                    await chrome.sidePanel.open({ tabId: tabs[0].id });
-                    console.log('Side Panel opened from web app request');
+                    await chrome.sidePanel.open({ tabId: tid });
+                    console.log('Side Panel opened for tab:', tid);
                     sendResponse({ success: true });
                 } catch (error) {
                     console.error('Failed to open Side Panel:', error);
                     sendResponse({ success: false, error: error.message });
                 }
+            } else {
+                console.error('No tab ID found for side panel open');
+                sendResponse({ success: false, error: 'No tab ID' });
             }
-        });
+        };
+
+        if (tabId) {
+            openPanel(tabId);
+        } else {
+            chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+                const queryTabId = tabs[0] ? tabs[0].id : null;
+                openPanel(queryTabId);
+            });
+        }
+
         return true; // Async response
     }
 

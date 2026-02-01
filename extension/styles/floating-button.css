@@ -1,0 +1,47 @@
+/* Floating Button Container */
+.citeright-floating-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    background: linear-gradient(135deg, #4A90D9, #3B7FCC);
+    color: #fff;
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(74, 144, 217, 0.4);
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    transition: box-shadow 0.2s, transform 0.2s;
+    z-index: 2147483647;
+    /* Max z-index to stay on top */
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.citeright-floating-btn:active {
+    cursor: grabbing;
+    transform: scale(0.95);
+}
+
+.citeright-floating-btn:hover {
+    box-shadow: 0 6px 24px rgba(74, 144, 217, 0.5);
+    transform: translateY(-2px);
+}
+
+.citeright-floating-btn svg {
+    width: 32px;
+    height: 32px;
+    color: #fff;
+    pointer-events: none;
+}
+
+/* Draggable state */
+.citeright-floating-btn.dragging {
+    cursor: grabbing;
+    transition: none;
+}
