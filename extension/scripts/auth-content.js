@@ -109,23 +109,81 @@
         }
     });
 
-    // Listen for logout (localStorage changes)
+    // =================================
+    // ROBUST LOGOUT DETECTION
+    // =================================
+
+    let lastKnownUserId = localStorage.getItem('user_id');
+    console.log('Initial user_id:', lastKnownUserId);
+
+    // Method 1: Poll localStorage periodically (most reliable)
+    setInterval(() => {
+        const currentUserId = localStorage.getItem('user_id');
+
+        // Logout detected
+        if (lastKnownUserId && !currentUserId) {
+            console.log('🔴 Logout detected via polling, clearing extension auth');
+            lastKnownUserId = null;
+            chrome.runtime.sendMessage({ type: 'LOGOUT' }, (response) => {
+                console.log('Logout message sent to background');
+            });
+        }
+        // Login detected
+        else if (!lastKnownUserId && currentUserId) {
+            console.log('🟢 Login detected via polling');
+            lastKnownUserId = currentUserId;
+            checkCurrentSession();
+        }
+        // Session change (different user)
+        else if (lastKnownUserId && currentUserId && lastKnownUserId !== currentUserId) {
+            console.log('🔄 User changed, updating session');
+            lastKnownUserId = currentUserId;
+            checkCurrentSession();
+        }
+    }, 1000); // Check every second
+
+    // Method 2: Override localStorage.removeItem (backup)
+    const originalRemoveItem = localStorage.removeItem;
+    localStorage.removeItem = function (key) {
+        const result = originalRemoveItem.apply(this, arguments);
+
+        if (key === 'user_id') {
+            console.log('🔴 Logout detected via removeItem override');
+            setTimeout(() => {
+                chrome.runtime.sendMessage({ type: 'LOGOUT' }, (response) => {
+                    console.log('Logout message sent to background (override)');
+                });
+            }, 100);
+        }
+
+        return result;
+    };
+
+    // Method 3: Override localStorage.clear (in case of full clear)
+    const originalClear = localStorage.clear;
+    localStorage.clear = function () {
+        const hadUserId = !!localStorage.getItem('user_id');
+        const result = originalClear.apply(this, arguments);
+
+        if (hadUserId) {
+            console.log('🔴 Logout detected via clear()');
+            setTimeout(() => {
+                chrome.runtime.sendMessage({ type: 'LOGOUT' }, (response) => {
+                    console.log('Logout message sent to background (clear)');
+                });
+            }, 100);
+        }
+
+        return result;
+    };
+
+    // Method 4: Storage event (works for other tabs)
     window.addEventListener('storage', (event) => {
         if (event.key === 'user_id' && event.newValue === null) {
-            console.log('Logout detected, clearing extension auth');
+            console.log('🔴 Logout detected via storage event (other tab)');
             chrome.runtime.sendMessage({ type: 'LOGOUT' });
         }
     });
-
-    // Also check if user_id was removed directly (same window)
-    const originalRemoveItem = localStorage.removeItem;
-    localStorage.removeItem = function (key) {
-        if (key === 'user_id') {
-            console.log('Logout detected (same window), clearing extension auth');
-            chrome.runtime.sendMessage({ type: 'LOGOUT' });
-        }
-        originalRemoveItem.apply(this, arguments);
-    };
 
     // =================================
     // Listen for web app messages to open Side Panel
