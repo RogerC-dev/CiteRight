@@ -35,6 +35,17 @@
       v-if="extensionStore.isExtensionEnabled"
       :enabled="extensionStore.isActivated"
     />
+
+    <!-- 筆記擷取彈出視窗 -->
+    <NoteCapturePopup 
+      v-if="isPopupVisible"
+      :is-visible="isPopupVisible"
+      :position="popupPosition"
+      :initial-data="selectedData"
+      @close="closePopup"
+      @save="handleSaveNote"
+      @ask-ai="handleAskAI"
+    />
   </div>
 </template>
 
@@ -58,6 +69,31 @@ const popoverStore = usePopoverStore()
 const sidebarStore = useSidebarStore()
 const bookmarkStore = useBookmarkStore()
 const flashcardStore = useFlashcardStore()
+
+// Note Capture Logic
+import NoteCapturePopup from './components/notes/NoteCapturePopup.vue'
+import { useNoteCapture } from './composables/useNoteCapture'
+import { useNoteStore } from './stores/noteStore' // Note: Content script instance
+
+const { isPopupVisible, popupPosition, selectedData, closePopup } = useNoteCapture()
+const noteStore = useNoteStore() // Local store instance for saving
+
+async function handleSaveNote(noteData) {
+  console.log('📝 App - Saving note:', noteData)
+  await noteStore.addNote(noteData)
+  closePopup()
+  // Optional: Show success notification
+  // Optional: Sync with Side Panel via runtime message
+  chrome.runtime.sendMessage({ type: 'NOTE_SAVED' })
+}
+
+function handleAskAI(noteData) {
+  console.log('🤖 App - Ask AI:', noteData)
+  closePopup()
+  sidebarStore.open()
+  sidebarStore.setCurrentTab('ai')
+  // TODO: Send context to chat
+}
 
 // Dictionary event handlers
 async function handleDictionaryResult(result) {

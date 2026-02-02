@@ -12,7 +12,7 @@
     "sidePanel"
   ],
   "side_panel": {
-    "default_path": "extension/pages/sidepanel.html"
+    "default_path": "dist/extension/pages/sidepanel.html"
   },
   "host_permissions": [
     "http://localhost/*",
