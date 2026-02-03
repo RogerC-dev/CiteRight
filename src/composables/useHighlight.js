@@ -6,48 +6,48 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useExtensionStore } from '../stores/extension.js'
 import { usePopoverStore } from '../stores/popover.js'
 import { TaiwanLegalPatterns, findStandardLawName } from '../services/regexService.js'
-import { 
-  chineseToArabic, 
-  toHalfWidthDigits, 
-  escapeHtml, 
+import {
+  chineseToArabic,
+  toHalfWidthDigits,
+  escapeHtml,
   containsLegalKeywords,
-  generateLawIdentifier 
+  generateLawIdentifier
 } from '../services/textProcessor.js'
 
 export function useHighlight() {
   // Stores
   const extensionStore = useExtensionStore()
   const popoverStore = usePopoverStore()
-  
+
   // 狀態
   const isHighlighting = ref(false)
   const globalSeenNodes = new WeakSet()
   const legalPatterns = new TaiwanLegalPatterns()
   const legalNames = ref([])
   const lastLawName = ref('')
-  
+
   // 計時器
   let highlightTimeout = null
   let observer = null
-  
+
   // 計算屬性
   const shouldHighlight = computed(() => {
     return extensionStore.isExtensionEnabled && !isHighlighting.value
   })
-  
+
   /**
    * 初始化高亮功能
    */
   function initialize(lawNames = []) {
     console.log('🔍 初始化高亮處理模組')
-    
+
     legalNames.value = lawNames
     if (lawNames.length > 0) {
       legalPatterns.generateDynamicPatterns(lawNames)
     }
-    
+
     setupMutationObserver()
-    
+
     // 監聽擴充功能狀態變化
     watch(() => extensionStore.isExtensionEnabled, (enabled) => {
       if (enabled) {
@@ -58,7 +58,7 @@ export function useHighlight() {
       }
     })
   }
-  
+
   /**
    * 清理高亮功能
    */
@@ -71,7 +71,7 @@ export function useHighlight() {
     removeAllHighlights()
     console.log('🧹 高亮處理模組已清理')
   }
-  
+
   /**
    * 設定 MutationObserver 監聽 DOM 變化
    */
@@ -80,12 +80,12 @@ export function useHighlight() {
       document.addEventListener('DOMContentLoaded', setupMutationObserver)
       return
     }
-    
+
     observer = new MutationObserver(mutations => {
       if (!shouldHighlight.value) return
-      
+
       let shouldProcess = false
-      
+
       for (const mutation of mutations) {
         if (mutation.type === 'childList') {
           for (const node of mutation.addedNodes) {
@@ -93,15 +93,15 @@ export function useHighlight() {
             if (node.nodeType === 1 && node.classList && node.classList.contains('citeright-link')) {
               continue
             }
-            
+
             // 跳過在高亮 span 內的節點
             if (node.nodeType === 1 && node.closest && node.closest('.citeright-link')) {
               continue
             }
-            
+
             // 處理文字節點或包含文字的元素
             if (node.nodeType === Node.TEXT_NODE ||
-                (node.nodeType === 1 && node.innerText && !node.classList.contains('citeright-link'))) {
+              (node.nodeType === 1 && node.innerText && !node.classList.contains('citeright-link'))) {
               shouldProcess = true
               break
             }
@@ -110,20 +110,20 @@ export function useHighlight() {
         } else if (mutation.type === 'characterData') {
           // 跳過高亮 span 內的文字變化
           if (mutation.target.parentNode && mutation.target.parentNode.closest &&
-              mutation.target.parentNode.closest('.citeright-link')) {
+            mutation.target.parentNode.closest('.citeright-link')) {
             continue
           }
           shouldProcess = true
           break
         }
       }
-      
+
       if (shouldProcess) {
         console.log('🔍 DOM 變化，排程高亮處理...')
         safeHighlight()
       }
     })
-    
+
     try {
       observer.observe(document.body, {
         childList: true,
@@ -135,7 +135,7 @@ export function useHighlight() {
       console.warn('Observer 啟動失敗:', error.message)
     }
   }
-  
+
   /**
    * 安全的高亮處理，包含防抖和防重入
    */
@@ -144,15 +144,15 @@ export function useHighlight() {
       console.log('❌ 高亮功能已停用，跳過處理')
       return
     }
-    
+
     if (isHighlighting.value) {
       console.log('🚫 已在處理高亮，跳過...')
       return
     }
-    
+
     // 清除待處理的計時器
     clearTimeout(highlightTimeout)
-    
+
     // 防抖處理，150ms 後執行
     highlightTimeout = setTimeout(() => {
       try {
@@ -166,7 +166,7 @@ export function useHighlight() {
       }
     }, 150)
   }
-  
+
   /**
    * 主要的高亮處理函數
    */
@@ -175,11 +175,11 @@ export function useHighlight() {
       console.log('❌ 擴充功能已停用，跳過高亮處理')
       return 0
     }
-    
+
     console.log('🔍 開始全頁面法條高亮')
     return highlightCitationsInElement(document.body)
   }
-  
+
   /**
    * 在特定元素內進行高亮處理
    */
@@ -188,13 +188,13 @@ export function useHighlight() {
       console.log('❌ 擴充功能已停用，跳過元素高亮處理')
       return 0
     }
-    
+
     console.log('🔍 應用高亮到元素:', element)
-    
+
     let created = 0
     const patterns = legalPatterns.getPatterns()
     const processingOrder = legalPatterns.getProcessingOrder()
-    
+
     // 創建文字節點遍歷器，只處理包含法律關鍵字的文字
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
@@ -204,125 +204,125 @@ export function useHighlight() {
         return NodeFilter.FILTER_ACCEPT
       }
     })
-    
+
     // 收集所有要處理的文字節點
     const textNodes = []
     while (walker.nextNode()) {
       textNodes.push(walker.currentNode)
     }
-    
+
     // 處理每個文字節點
     textNodes.forEach(node => {
       if (processTextNode(node, patterns, processingOrder)) {
         created++
       }
     })
-    
+
     console.log(`✨ 完成高亮處理，共處理 ${created} 個法律引用`)
     return created
   }
-  
+
   /**
    * 處理單個文字節點
    */
   function processTextNode(node, patterns, processingOrder) {
     if (globalSeenNodes.has(node)) return false
     if (!node.parentNode) return false
-    
+
     // 跳過不適合的父元素
     const parentTag = node.parentNode.tagName
     if (['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'].includes(parentTag)) return false
     if (node.parentNode.closest && node.parentNode.closest('.citeright-link')) return false
-    
+
     // 跳過特定面板的標題區域
     if (shouldSkipElement(node)) return false
-    
+
     const originalText = node.textContent
     if (!originalText || !originalText.trim()) return false
-    
+
     const normalizedText = originalText
-    
+
     // 尋找所有潛在匹配
     const allMatches = findAllMatches(normalizedText, patterns, processingOrder)
-    
+
     // 移除重疊匹配
     const filteredMatches = removeOverlappingMatches(allMatches)
-    
+
     if (filteredMatches.length === 0) return false
-    
+
     // 應用高亮
     const success = applyLayeredHighlights(node, filteredMatches, normalizedText)
     if (success) {
       globalSeenNodes.add(node)
     }
-    
+
     return success
   }
-  
+
   /**
    * 檢查是否應該跳過此元素
    */
   function shouldSkipElement(node) {
     if (!node.parentNode.closest) return false
-    
+
     // 跳過書籤面板
     if (node.parentNode.closest('#citeright-bookmarks-panel')) return false
-    
+
     // 跳過彈出視窗標題
     if (node.parentNode.closest('.citeright-header')) return false
-    
+
     // 跳過側邊面板的標題區域
     const sidePanel = node.parentNode.closest('#citeright-tool-panel')
     if (sidePanel) {
-      const isInToolContent = node.parentNode.closest('#tool-content') || 
-                            node.parentNode.closest('#tool-main-content') ||
-                            node.parentNode.closest('.tab-content-inner')
+      const isInToolContent = node.parentNode.closest('#tool-content') ||
+        node.parentNode.closest('#tool-main-content') ||
+        node.parentNode.closest('.tab-content-inner')
       if (!isInToolContent) return true
-      
+
       // 跳過已存在的法條標題
-      if (node.parentNode.closest('span.citeright-link') || 
-          node.parentNode.closest('.bookmark-item [style*="font-weight: 600"]') ||
-          node.parentNode.closest('[style*="color: #1890ff"]')) {
+      if (node.parentNode.closest('span.citeright-link') ||
+        node.parentNode.closest('.bookmark-item [style*="font-weight: 600"]') ||
+        node.parentNode.closest('[style*="color: #1890ff"]')) {
         return true
       }
-      
+
       // 只高亮 div 內的內容
       if (!node.parentNode.closest('div')) return true
-      
+
       // 跳過標題/標頭元素
       const parentElement = node.parentNode
-      if (parentElement && parentElement.style && 
-          (parentElement.style.fontWeight === '600' || 
-           parentElement.style.color === 'rgb(24, 144, 255)' ||
-           parentElement.classList.contains('bookmark-title'))) {
+      if (parentElement && parentElement.style &&
+        (parentElement.style.fontWeight === '600' ||
+          parentElement.style.color === 'rgb(24, 144, 255)' ||
+          parentElement.classList.contains('bookmark-title'))) {
         return true
       }
     }
-    
+
     // 跳過藍色背景的標題列
     if (node.parentNode.closest('[style*="background: linear-gradient(135deg, #1890ff"]')) {
       return true
     }
-    
+
     return false
   }
-  
+
   /**
    * 在文字中尋找所有匹配
    */
   function findAllMatches(text, patterns, processingOrder) {
     const allMatches = []
-    
+
     for (const key of processingOrder) {
       const pattern = patterns[key]
       if (!pattern) continue
-      
+
       let actualPattern = new RegExp(pattern.source, pattern.flags)
       let match
-      
+
       while ((match = actualPattern.exec(text)) !== null) {
         const matchText = match[0]
-        
+
         allMatches.push({
           text: matchText,
           start: match.index,
@@ -330,15 +330,15 @@ export function useHighlight() {
           key: key,
           groups: Array.from(match).slice(1)
         })
-        
+
         // 防止無限迴圈
         if (!actualPattern.global) break
       }
     }
-    
+
     return allMatches
   }
-  
+
   /**
    * 移除重疊的匹配，保留較長/更具體的匹配
    * 優先順序：
@@ -348,54 +348,55 @@ export function useHighlight() {
    */
   function removeOverlappingMatches(matches) {
     if (matches.length === 0) return matches
-    
+
     console.log(`🔍 處理 ${matches.length} 個匹配的重疊移除`)
-    
+
     // 定義優先順序（較低的數字優先級更高）
     const patternPriority = {
       'interpretation': 1,
       'dynamic_law_articles': 2,
       'simple_law_articles': 3,
+      'short_law_articles': 3.5,
       'law_name_only': 4,
       'subarticle_pattern': 5,
       'universal_legal_pattern': 6,
       'simple_article_only': 7
     }
-    
+
     // 按優先順序排序，然後按長度排序（較長優先），最後按位置排序
     matches.sort((a, b) => {
       // 首先按優先順序
       const priorityA = patternPriority[a.key] || 99
       const priorityB = patternPriority[b.key] || 99
       if (priorityA !== priorityB) return priorityA - priorityB
-      
+
       // 然後按長度（較長優先）
       if (a.text.length !== b.text.length) return b.text.length - a.text.length
-      
+
       // 最後按位置
       return a.start - b.start
     })
-    
+
     const result = []
-    
+
     for (const match of matches) {
       let hasOverlap = false
       let shouldReplace = false
       let replaceIndex = -1
-      
+
       // 檢查與已接受的匹配是否重疊
       for (let i = 0; i < result.length; i++) {
         const accepted = result[i]
-        
+
         // 檢查是否重疊
         if (match.start < accepted.end && match.end > accepted.start) {
           // 確定哪個匹配應該被保留
           const matchPriority = patternPriority[match.key] || 99
           const acceptedPriority = patternPriority[accepted.key] || 99
-          
+
           // 如果新匹配優先級更高，或者同優先級但更長，則替換
-          if (matchPriority < acceptedPriority || 
-              (matchPriority === acceptedPriority && match.text.length > accepted.text.length)) {
+          if (matchPriority < acceptedPriority ||
+            (matchPriority === acceptedPriority && match.text.length > accepted.text.length)) {
             shouldReplace = true
             replaceIndex = i
             console.log(`🔄 將用 "${match.text}" (${match.key}) 替換 "${accepted.text}" (${accepted.key})`)
@@ -406,7 +407,7 @@ export function useHighlight() {
           break
         }
       }
-      
+
       if (shouldReplace && replaceIndex !== -1) {
         result[replaceIndex] = match
         console.log(`✅ 替換後接受匹配: "${match.text}" (${match.key}, ${match.start}-${match.end})`)
@@ -415,30 +416,30 @@ export function useHighlight() {
         console.log(`✅ 接受匹配: "${match.text}" (${match.key}, ${match.start}-${match.end})`)
       }
     }
-    
+
     // 最終按位置排序以便正確應用高亮
     result.sort((a, b) => a.start - b.start)
-    
+
     console.log(`📊 最終結果: ${matches.length} → ${result.length} 個匹配`)
     return result
   }
-  
+
   /**
    * 應用分層高亮，處理重疊問題
    */
   function applyLayeredHighlights(node, matches, normalizedText) {
     if (matches.length === 0) return false
-    
+
     // 按位置排序，較長的優先
     matches.sort((a, b) => {
       if (a.start !== b.start) return a.start - b.start
       return (b.end - b.start) - (a.end - a.start)
     })
-    
+
     // 移除完全重複的匹配
     const uniqueMatches = []
     const seen = new Set()
-    
+
     for (const match of matches) {
       const key = `${match.start}_${match.end}_${match.text}`
       if (!seen.has(key)) {
@@ -446,55 +447,55 @@ export function useHighlight() {
         uniqueMatches.push(match)
       }
     }
-    
+
     // 構建新的 HTML
     let newHTML = ''
     let lastIndex = 0
     let changed = false
-    
+
     for (const match of uniqueMatches) {
       // 跳過與已處理文字重疊的匹配
       if (match.start < lastIndex) {
         continue
       }
-      
+
       // 添加匹配前的文字
       newHTML += normalizedText.substring(lastIndex, match.start)
-      
+
       // 添加高亮 span
       const highlighted = makeSpan(match.text, match.key, match.groups)
       newHTML += highlighted
-      
+
       // 更新位置
       lastIndex = match.end
       changed = true
     }
-    
+
     // 添加剩餘文字
     newHTML += normalizedText.substring(lastIndex)
-    
+
     // 如果有變化，替換節點內容
     if (changed && newHTML !== normalizedText) {
       const wrapper = document.createElement('span')
       wrapper.innerHTML = newHTML
-      
+
       while (wrapper.firstChild) {
         node.parentNode.insertBefore(wrapper.firstChild, node)
       }
       node.parentNode.removeChild(node)
-      
+
       return true
     }
-    
+
     return false
   }
-  
+
   /**
    * 創建高亮標記的 HTML span 元素
    */
   function makeSpan(match, key, groups) {
     let caseType = '', number = '', lawName = ''
-    
+
     if (key === 'interpretation') {
       caseType = '釋字'
       number = chineseToArabic(toHalfWidthDigits(groups[0]))
@@ -523,6 +524,25 @@ export function useHighlight() {
       lawName = findStandardLawName(inputLawName, legalNames.value)
       lastLawName.value = lawName
       number = chineseToArabic(toHalfWidthDigits(groups[1]))
+      caseType = '法條'
+    } else if (key === 'short_law_articles') {
+      const inputLawName = groups[0]
+      lawName = findStandardLawName(inputLawName, legalNames.value)
+      lastLawName.value = lawName
+      // 處理可能包含 dash 的條號 (如 184-1)
+      let rawNumber = toHalfWidthDigits(groups[1])
+      // 統一 dash 符號
+      rawNumber = rawNumber.replace(/[-‐–]/g, '-')
+
+      if (rawNumber.includes('-')) {
+        const parts = rawNumber.split('-')
+        const main = chineseToArabic(parts[0])
+        const sub = chineseToArabic(parts[1])
+        number = `${main}-${sub}`
+      } else {
+        number = chineseToArabic(rawNumber)
+      }
+
       caseType = '法條'
     } else if (key === 'subarticle_pattern') {
       lawName = lastLawName.value || ''
@@ -555,26 +575,26 @@ export function useHighlight() {
       }
       caseType = '法條'
     }
-    
+
     const result = `<span class="citeright-link"
               data-case-type="${escapeHtml(caseType)}"
               data-law-name="${escapeHtml(lawName)}"
               data-number="${escapeHtml(number)}"
               style="background-color: rgba(24, 144, 255, 0.08) !important; border-bottom: 1px solid rgba(24, 144, 255, 0.3) !important; padding: 1px 2px !important; border-radius: 2px !important; cursor: pointer !important;"
               title="按住 Ctrl 並懸停查看詳情">${escapeHtml(match)}</span>`
-    
+
     return result
   }
-  
+
   /**
    * 移除所有高亮標記
    */
   function removeAllHighlights() {
     console.log('🧹 移除所有高亮標記')
-    
+
     const allHighlights = document.querySelectorAll('.citeright-link')
     let removedCount = 0
-    
+
     allHighlights.forEach(highlight => {
       const parent = highlight.parentNode
       if (parent) {
@@ -582,7 +602,7 @@ export function useHighlight() {
         removedCount++
       }
     })
-    
+
     // 正規化相鄰的文字節點
     if (removedCount > 0) {
       const walker = document.createTreeWalker(
@@ -591,29 +611,29 @@ export function useHighlight() {
         null,
         false
       )
-      
+
       const textNodes = []
       let node
       while (node = walker.nextNode()) {
         textNodes.push(node)
       }
-      
+
       textNodes.forEach(textNode => {
         if (textNode.parentNode) {
           textNode.parentNode.normalize()
         }
       })
     }
-    
+
     console.log(`✅ 已移除 ${removedCount} 個高亮標記`)
     return removedCount
   }
-  
+
   return {
     // 狀態
     isHighlighting,
     legalNames,
-    
+
     // 方法
     initialize,
     cleanup,

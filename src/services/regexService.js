@@ -18,13 +18,13 @@ const LAW_ALIASES = {
   '民法': ['民法'],
   '刑法': ['中華民國刑法', '刑法'],
   '商法': ['商事法', '公司法'],
-  
+
   // 程序法
   '民事訴訟法': ['民事訴訟法'],
   '刑事訴訟法': ['刑事訴訟法'],
   '行政程序法': ['行政程序法'],
   '行政訴訟法': ['行政訴訟法'],
-  
+
   // 特別法
   '集會遊行法': ['集會遊行法'],
   '公司法': ['公司法'],
@@ -35,16 +35,37 @@ const LAW_ALIASES = {
   '都市計畫法': ['都市計畫法'],
   '建築法': ['建築法'],
   '環保法': ['環境保護法'],
-  
+
   // 大法官相關法律
   '大法官審理案件法': ['司法院大法官審理案件法'],
   '司法院大法官審理案件法施行細則': ['司法院大法官審理案件法施行細則'],
 
   // 國安相關法律
   '國家安全法': ['國家安全法'],
-  '社會秩序維護法': ['社會秩序維護法'],
 
   // 其他常見別名
+  '社會秩序維護法': ['社會秩序維護法'],
+  '勞基法': ['勞動基準法'],
+  '兒少法': ['兒童及少年福利與權益保障法'],
+  '家暴法': ['家庭暴力防治法'],
+  '性平法': ['性別平等教育法', '性別工作平等法'],
+  '食安法': ['食品安全衛生管理法'],
+  '藥事法': ['藥事法'],
+  '醫師法': ['醫師法'],
+  '民訴': ['民事訴訟法'],
+  '刑訴': ['刑事訴訟法'],
+  '行訴': ['行政訴訟法'],
+  '大審法': ['司法院大法官審理案件法'],
+  '憲訴法': ['憲法訴訟法'],
+  '國安法': ['國家安全法'],
+  '社維法': ['社會秩序維護法'],
+  '行程法': ['行政程序法'],
+  '證交法': ['證券交易法'],
+  '強執法': ['強制執行法'],
+  '家事法': ['家事事件法'],
+  '少事法': ['少年事件處理法'],
+  '智財法': ['智慧財產案件審理法'],
+  '職安法': ['職業安全衛生法'],
   '著作權法': ['著作權法'],
   '專利法': ['專利法'],
   '商標法': ['商標法'],
@@ -84,19 +105,19 @@ function createSimplifiedLawName(fullName) {
     .replace(/^立法院/, '')
     .replace(/^考試院/, '')
     .replace(/^監察院/, '')
-  
+
   // 移除常見的後綴詞但保留核心
   simplified = simplified
     .replace(/施行細則$/, '')
     .replace(/實施辦法$/, '')
     .replace(/管理辦法$/, '')
     .replace(/作業辦法$/, '')
-  
+
   // 如果簡化後太短或沒變化，返回null
   if (simplified.length < 2 || simplified === fullName) {
     return null
   }
-  
+
   return simplified
 }
 
@@ -106,7 +127,7 @@ function createSimplifiedLawName(fullName) {
  */
 function expandLawAliases(legalNamesArray) {
   buildReverseLawAliases()
-  
+
   // 為每個Law.json中的法律名稱檢查是否需要建立別名
   for (const lawName of legalNamesArray) {
     // 檢查是否已有反向對應
@@ -124,7 +145,7 @@ function expandLawAliases(legalNamesArray) {
       }
     }
   }
-  
+
   console.log('✅ 法條別名字典擴展完成，共', Object.keys(LAW_ALIASES).length, '個別名對應')
 }
 
@@ -144,22 +165,22 @@ export function findStandardLawName(inputName, legalNames) {
       }
     }
   }
-  
+
   // 直接檢查是否在legalNames中
   if (legalNames && legalNames.includes(inputName)) {
     return inputName
   }
-  
+
   // 模糊匹配：找包含此名稱的法律
   if (legalNames) {
-    const fuzzyMatch = legalNames.find(name => 
+    const fuzzyMatch = legalNames.find(name =>
       name.includes(inputName) || inputName.includes(name)
     )
     if (fuzzyMatch) {
       return fuzzyMatch
     }
   }
-  
+
   return inputName // 找不到時返回原名稱
 }
 
@@ -188,9 +209,9 @@ export function generateLegalArticleRegex(legalNames, options = {}) {
 
   // 建立條文號碼模式 (支援中文數字和阿拉伯數字，以及條之X的模式)
   const articleNumberPattern = `${CHINESE_NUMBERS}+(?:\\s*條之\\s*${CHINESE_NUMBERS}+)?`
-  
+
   // 建立項、款、目模式（可選）
-  const subsectionPattern = supportSubsections ? 
+  const subsectionPattern = supportSubsections ?
     `(?:第\\s*(${CHINESE_NUMBERS}+(?:\\s*項第\\s*${CHINESE_NUMBERS}+)*?)\\s*[項款目])?` : ''
 
   // 建立基本模式
@@ -229,14 +250,17 @@ export function generateLegalArticleRegex(legalNames, options = {}) {
 export class TaiwanLegalPatterns {
   constructor() {
     this.patterns = {
-      // 司法院大法官解釋: 釋字第748號, 釋字第二一六號 - most specific, process first
-      interpretation: new RegExp(`釋字第\\s*(${CHINESE_NUMBER_PATTERN})\\s*號`, 'g'),
+      // 司法院大法官解釋: 釋字第748號, 釋字 748, 釋字 No. 748
+      interpretation: new RegExp(`釋字(?:\\s*No\\.|\\s*第|\\s+)?\\s*(${CHINESE_NUMBER_PATTERN})\\s*(?:號)?`, 'g'),
 
       // 民法第184條第1項 - specific law + article + subsections (dynamically generated)
       dynamic_law_articles: null, // Will be dynamically generated
 
       // 民法第184條 - specific law + article only (dynamically generated)
       simple_law_articles: null, // Will be dynamically generated
+
+      // 民法 184, 民法 184-1 - short format (dynamically generated)
+      short_law_articles: null, // Will be dynamically generated
 
       // 民法 - just law names (dynamically generated)
       law_name_only: null, // Will be dynamically generated
@@ -293,13 +317,22 @@ export class TaiwanLegalPatterns {
 
     // 動態添加所有法律的基本模式 - 允許法律名稱和"第"之間有可選空格
     this.patterns.dynamic_law_articles = new RegExp(
-      `(${legalNamesPattern})\\s*第\\s*(${articleNumberPattern})\\s*條${subsectionPattern}`, 
+      `(${legalNamesPattern})\\s*第\\s*(${articleNumberPattern})\\s*條${subsectionPattern}`,
       'g'
     )
 
     // 新增僅法律名稱+條文的模式（沒有項款目）- 允許法律名稱和"第"之間有可選空格
     this.patterns.simple_law_articles = new RegExp(
-      `(${legalNamesPattern})\\s*第\\s*(${articleNumberPattern})\\s*條(?!\\s*第)`, 
+      `(${legalNamesPattern})\\s*第\\s*(${articleNumberPattern})\\s*條(?!\\s*第)`,
+      'g'
+    )
+
+    // 新增簡短格式：法律名稱 + 空格 + 條文號碼 (民法 184, 民法 184-1)
+    // 必須有空格以區分 "民法184" (可能是誤植) 或 "民法 184"
+    // 並且限制後面不能緊接 "年" (避免匹配 "民法 100年 修訂")
+    // 增加 (?!${CHINESE_NUMBERS}) 防止回溯匹配 partial numbers (e.g. 100年 -> match 10)
+    this.patterns.short_law_articles = new RegExp(
+      `(${legalNamesPattern})\\s+(${CHINESE_NUMBER_PATTERN}(?:[-‐–]${CHINESE_NUMBER_PATTERN})?)(?!${CHINESE_NUMBERS}|\\s*[年])`,
       'g'
     )
 
@@ -329,6 +362,7 @@ export class TaiwanLegalPatterns {
       'interpretation',
       'dynamic_law_articles',
       'simple_law_articles',
+      'short_law_articles',
       'law_name_only',
       'subarticle_pattern',
       'universal_legal_pattern',
