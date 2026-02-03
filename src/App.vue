@@ -46,6 +46,13 @@
       @save="handleSaveNote"
       @ask-ai="handleAskAI"
     />
+    
+    <!-- 筆記觸發按鈕 -->
+    <NoteTriggerButton
+      :visible="isTriggerVisible"
+      :position="triggerPosition"
+      @click="activateNotePopup"
+    />
   </div>
 </template>
 
@@ -72,10 +79,19 @@ const flashcardStore = useFlashcardStore()
 
 // Note Capture Logic
 import NoteCapturePopup from './components/notes/NoteCapturePopup.vue'
+import NoteTriggerButton from './components/notes/NoteTriggerButton.vue' // New import
 import { useNoteCapture } from './composables/useNoteCapture'
 import { useNoteStore } from './stores/noteStore' // Note: Content script instance
 
-const { isPopupVisible, popupPosition, selectedData, closePopup } = useNoteCapture()
+const { 
+  isPopupVisible, 
+  popupPosition, 
+  selectedData, 
+  closePopup,
+  isTriggerVisible, // New
+  triggerPosition,  // New
+  activateNotePopup // New
+} = useNoteCapture()
 const noteStore = useNoteStore() // Local store instance for saving
 
 async function handleSaveNote(noteData) {

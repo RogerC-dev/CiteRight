@@ -6,14 +6,13 @@ export const useExtensionStore = defineStore('extension', () => {
   const isExtensionEnabled = ref(true)
   const isActivated = ref(false)
   const isCtrlPressed = ref(false)
+  const isNoteTakingEnabled = ref(true)
   const activationTimeout = ref(null)
 
   // 計算屬性
   const canShowPopover = computed(() => {
     return isExtensionEnabled.value && isActivated.value && isCtrlPressed.value
   })
-
-  // 動作
   function initialize() {
     console.log('🔍 法源探測器 (CiteRight) Vue 版本啟動')
 
@@ -151,9 +150,11 @@ export const useExtensionStore = defineStore('extension', () => {
   async function loadStoredState() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       try {
-        const result = await chrome.storage.local.get(['citeright_enabled'])
+        const result = await chrome.storage.local.get(['citeright_enabled', 'notetaking_enabled'])
         // 預設為啟用
         isExtensionEnabled.value = result.citeright_enabled !== undefined ? result.citeright_enabled : true
+        isNoteTakingEnabled.value = result.notetaking_enabled !== undefined ? result.notetaking_enabled : true
+
         console.log(isExtensionEnabled.value ? '🟢 CiteRight 擴充功能已啟用' : '🔴 CiteRight 擴充功能已停用')
       } catch (error) {
         console.error('載入擴充功能狀態失敗:', error)
@@ -204,11 +205,20 @@ export const useExtensionStore = defineStore('extension', () => {
     })
   }
 
+  function toggleNoteTaking(enabled) {
+    isNoteTakingEnabled.value = enabled
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ 'notetaking_enabled': enabled })
+    }
+    console.log(enabled ? '📝 快速筆記功能已啟用' : '📝 快速筆記功能已停用')
+  }
+
   return {
     // 狀態
     isExtensionEnabled,
     isActivated,
     isCtrlPressed,
+    isNoteTakingEnabled,
 
     // 計算屬性
     canShowPopover,
@@ -222,6 +232,7 @@ export const useExtensionStore = defineStore('extension', () => {
     setEnabled,
     openBookmarksPanel,
     openDictionaryPanel,
-    openChatPanel
+    openChatPanel,
+    toggleNoteTaking
   }
 })

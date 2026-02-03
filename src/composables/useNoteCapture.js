@@ -1,23 +1,35 @@
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useExtensionStore } from '../stores/extension'
 
 export function useNoteCapture() {
     const isPopupVisible = ref(false)
     const popupPosition = ref({ x: 0, y: 0 })
     const selectedData = ref({})
 
+    // Trigger Icon State
+    const isTriggerVisible = ref(false)
+    const triggerPosition = ref({ x: 0, y: 0 })
+
+    const extensionStore = useExtensionStore()
+
     function handleSelection(event) {
+        // Feature toggle check
+        if (!extensionStore.isNoteTakingEnabled) return
+
         const selection = window.getSelection()
         const text = selection.toString().trim()
 
-        if (text.length > 5) {
-            // Basic positioning near the mouse/selection
-            const rect = selection.getRangeAt(0).getBoundingClientRect()
-            popupPosition.value = {
-                x: rect.left + window.scrollX,
-                y: rect.bottom + window.scrollY + 10
+        if (text.length > 2 && text.length < 2000) {
+            // Position near the mouse/selection
+            let rect
+            try {
+                rect = selection.getRangeAt(0).getBoundingClientRect()
+            } catch (e) {
+                return
             }
 
-            // Simple context detection (placeholder for now)
+            // Logic: Show simple trigger button first (Grammarly style)
+            // Save data for later use
             selectedData.value = {
                 highlighted_text: text,
                 source_url: window.location.href,
@@ -25,16 +37,26 @@ export function useNoteCapture() {
                 source_id: document.title
             }
 
-            // Don't show immediately (maybe wait for button click? or show icon first?)
-            // For MVP, let's show an icon or just the popup?
-            // The spec said "Context menu or floating button appears".
-            // Let's rely on the user explicitly triggering it or a small button.
-            // For this implementation, let's show the popup directly if it's a clear selection?
-            // Or better: Show a small "trigger" button first (which is part of the Popup component logic usually).
+            // Set trigger position (near end of selection)
+            triggerPosition.value = {
+                x: rect.right + window.scrollX + 5,
+                y: rect.top + window.scrollY - 30
+            }
 
-            // Let's toggle visibility
-            isPopupVisible.value = true
+            // Show trigger, hide popup
+            isTriggerVisible.value = true
+            isPopupVisible.value = false
+        } else {
+            // Clear if selection is too small or gone
+            isTriggerVisible.value = false
         }
+    }
+
+    function activateNotePopup() {
+        isTriggerVisible.value = false
+        // Copy trigger position to popup position or center?
+        popupPosition.value = { ...triggerPosition.value, y: triggerPosition.value.y + 40 }
+        isPopupVisible.value = true
     }
 
     function detectSourceType() {
@@ -45,6 +67,7 @@ export function useNoteCapture() {
 
     function closePopup() {
         isPopupVisible.value = false
+        isTriggerVisible.value = false
         window.getSelection().removeAllRanges()
     }
 
@@ -53,6 +76,10 @@ export function useNoteCapture() {
         // If click is inside our app container, ignore?
         // This logic is tricky. For now, let's attach to document but check target.
         const container = document.getElementById('citeright-vue-container')
+
+        // If clicking trigger button, let it be handled by its click event not this
+        if (e.target.closest('.note-trigger-btn')) return
+
         if (container && container.contains(e.target)) return
 
         // Delay to let selection finalize
@@ -71,6 +98,11 @@ export function useNoteCapture() {
         isPopupVisible,
         popupPosition,
         selectedData,
-        closePopup
+        closePopup,
+
+        // Trigger exports
+        isTriggerVisible,
+        triggerPosition,
+        activateNotePopup
     }
 }
