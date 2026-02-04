@@ -16,6 +16,28 @@
     const btn = document.createElement('button');
     btn.id = 'citeright-floating-btn';
     btn.className = 'citeright-floating-btn';
+
+    // Check for saved position
+    const savedPos = localStorage.getItem('citeright_btn_pos');
+    if (savedPos) {
+        try {
+            const { left, top } = JSON.parse(savedPos);
+            // Ensure within viewport bounds (simple check)
+            const maxX = window.innerWidth - 56; // 56px is button width
+            const maxY = window.innerHeight - 56;
+
+            const safeLeft = Math.min(Math.max(0, left), maxX);
+            const safeTop = Math.min(Math.max(0, top), maxY);
+
+            btn.style.left = safeLeft + 'px';
+            btn.style.top = safeTop + 'px';
+            btn.style.right = 'auto';
+            btn.style.bottom = 'auto';
+        } catch (e) {
+            console.error('CiteRight: Error parsing saved position', e);
+        }
+    }
+
     btn.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="10" cy="10" r="6" stroke="currentColor" stroke-width="2"/>
@@ -135,6 +157,17 @@
         setTimeout(() => {
             btn.style.transition = 'none';
         }, 300);
+
+        // Save position to localStorage
+        try {
+            const pos = {
+                left: targetX,
+                top: parseInt(btn.style.top) || rect.top
+            };
+            localStorage.setItem('citeright_btn_pos', JSON.stringify(pos));
+        } catch (e) {
+            console.error('CiteRight: Error saving position', e);
+        }
     }
 
     document.body.appendChild(btn);
