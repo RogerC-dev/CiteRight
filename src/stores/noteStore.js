@@ -1,5 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { createClient } from '@supabase/supabase-js'
+
+// Initialize Supabase client
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const useNoteStore = defineStore('notes', () => {
     // State
@@ -7,72 +13,39 @@ export const useNoteStore = defineStore('notes', () => {
     const isLoading = ref(false)
     const error = ref(null)
 
-    // Mock Data (Initial State)
-    const mockNotes = [
-        {
-            id: '1',
-            title: '憲法第7條 - 平等權筆記',
-            content: '中華民國人民，無分男女、宗教、種族、階級、黨派，在法律上一律平等。\n重點：實質平等 vs 形式平等的區分。',
-            highlighted_text: '中華民國人民，無分男女...平等',
-            source_type: 'law_article',
-            source_id: '憲法',
-            source_metadata: {
-                law_level: '法律',
-                law_name: '中華民國憲法',
-                article_no: '第 7 條'
-            },
-            tags: ['憲法', '基本權'],
-            is_pinned: true,
-            created_at: new Date(Date.now() - 86400000).toISOString() // Yesterday
-        },
-        {
-            id: '2',
-            title: '刑法第271條 - 殺人罪',
-            content: '殺人罪構成要件分析：\n1. 客觀：殺人行為、死亡結果、因果關係\n2. 主觀：殺人故意',
-            highlighted_text: '殺人者，處死刑、無期徒刑 or 10年以上有期徒刑',
-            source_type: 'law_article',
-            source_id: '刑法',
-            source_metadata: {
-                law_level: '法律',
-                law_name: '中華民國刑法',
-                article_no: '第 271 條'
-            },
-            tags: ['刑法', '殺人罪'],
-            is_pinned: false,
-            created_at: new Date().toISOString() // Today
-        },
-        {
-            id: '3',
-            title: '最高法院 100 年度台上字第 1234 號刑事判決',
-            content: '判決要旨：\n正當防衛必須面對現在不法之侵害，始得為之。若侵害已過去，或預料未來將發生，均非正當防衛之情狀。',
-            highlighted_text: '正當防衛必須面對現在不法之侵害',
-            source_type: 'judgment',
-            source_id: '100台上1234',
-            source_metadata: {
-                court: '最高法院',
-                type: '刑事判決',
-                case_no: '100台上1234'
-            },
-            tags: ['刑法', '正當防衛', '判決'],
-            is_pinned: false,
-            created_at: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
-        }
-    ]
-
     // Actions
     async function fetchNotes(filters = {}) {
         isLoading.value = true
         error.value = null
         try {
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 500))
-
-            // In real implementation, this would call Supabase
-            // For now, load mock data if empty
-            if (notes.value.length === 0) {
-                notes.value = [...mockNotes]
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                console.log('No authenticated user, skipping note fetch')
+                notes.value = []
+                return
             }
 
+            let query = supabase
+                .from('legal_note')
+                .select('*')
+                .eq('is_archived', false)
+                .order('is_pinned', { ascending: false })
+                .order('created_at', { ascending: false })
+
+            // Apply filters if provided
+            if (filters.source_type) {
+                query = query.eq('source_type', filters.source_type)
+            }
+            if (filters.source_id) {
+                query = query.eq('source_id', filters.source_id)
+            }
+
+            const { data, error: fetchError } = await query
+
+            if (fetchError) throw fetchError
+
+            notes.value = data || []
+            console.log(`Loaded ${notes.value.length} legal notes from database`)
         } catch (err) {
             console.error('Failed to fetch notes:', err)
             error.value = '無法載入筆記'
@@ -83,22 +56,46 @@ export const useNoteStore = defineStore('notes', () => {
 
     async function addNote(noteData) {
         isLoading.value = true
+        error.value = null
         try {
-            await new Promise(resolve => setTimeout(resolve, 600))
-
-            const newNote = {
-                id: crypto.randomUUID(),
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                is_pinned: false,
-                is_archived: false,
-                ...noteData
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                throw new Error('User not authenticated')
             }
 
-            notes.value.unshift(newNote)
-            return newNote
+            const { data, error: insertError } = await supabase
+                .from('legal_note')
+                .insert({
+                    user_id: user.id,
+                    title: noteData.title,
+                    content: noteData.content,
+                    content_html: noteData.content_html,
+                    source_type: noteData.source_type,
+                    source_id: noteData.source_id,
+                    source_url: noteData.source_url,
+                    source_metadata: noteData.source_metadata,
+                    highlighted_text: noteData.highlighted_text,
+                    tags: noteData.tags || [],
+                    is_pinned: noteData.is_pinned || false,
+                    is_archived: false
+                })
+                .select()
+                .single()
+
+            if (insertError) throw insertError
+
+            notes.value.unshift(data)
+
+            // Generate embedding async (don't block UI)
+            generateEmbedding(data.id, data.content).catch(err => {
+                console.error('Failed to generate embedding:', err)
+            })
+
+            console.log('Legal note created:', data.id)
+            return data
         } catch (err) {
             console.error('Failed to add note:', err)
+            error.value = '無法新增筆記'
             throw err
         } finally {
             isLoading.value = false
@@ -107,19 +104,40 @@ export const useNoteStore = defineStore('notes', () => {
 
     async function updateNote(id, updates) {
         isLoading.value = true
+        error.value = null
         try {
-            await new Promise(resolve => setTimeout(resolve, 400))
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                throw new Error('User not authenticated')
+            }
+
+            const { data, error: updateError } = await supabase
+                .from('legal_note')
+                .update({
+                    ...updates,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id)
+                .eq('user_id', user.id)
+                .select()
+                .single()
+
+            if (updateError) throw updateError
 
             const index = notes.value.findIndex(n => n.id === id)
             if (index !== -1) {
-                notes.value[index] = {
-                    ...notes.value[index],
-                    ...updates,
-                    updated_at: new Date().toISOString()
-                }
+                notes.value[index] = data
             }
+
+            // Re-generate embedding if content changed
+            if (updates.content) {
+                await generateEmbedding(data.id, data.content)
+            }
+
+            console.log('Legal note updated:', data.id)
         } catch (err) {
             console.error('Failed to update note:', err)
+            error.value = '無法更新筆記'
             throw err
         } finally {
             isLoading.value = false
@@ -127,15 +145,36 @@ export const useNoteStore = defineStore('notes', () => {
     }
 
     async function deleteNote(id) {
+        isLoading.value = true
+        error.value = null
         try {
-            // Soft delete/archive
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                throw new Error('User not authenticated')
+            }
+
+            // Soft delete (archive)
+            const { error: deleteError } = await supabase
+                .from('legal_note')
+                .update({ is_archived: true })
+                .eq('id', id)
+                .eq('user_id', user.id)
+
+            if (deleteError) throw deleteError
+
+            // Remove from local state
             const index = notes.value.findIndex(n => n.id === id)
             if (index !== -1) {
-                notes.value.splice(index, 1) // Remove from local list for UI responsiveness
+                notes.value.splice(index, 1)
             }
+
+            console.log('Legal note archived:', id)
         } catch (err) {
             console.error('Failed to delete note:', err)
+            error.value = '無法刪除筆記'
             throw err
+        } finally {
+            isLoading.value = false
         }
     }
 
@@ -143,6 +182,64 @@ export const useNoteStore = defineStore('notes', () => {
         const note = notes.value.find(n => n.id === id)
         if (note) {
             await updateNote(id, { is_pinned: !note.is_pinned })
+        }
+    }
+
+    async function generateEmbedding(noteId, content) {
+        try {
+            // Call Express server endpoint for embedding generation
+            const response = await fetch('http://localhost:3000/api/notes/embed', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    note_id: noteId,
+                    content: content,
+                    table: 'legal_note'
+                })
+            })
+
+            if (!response.ok) {
+                throw new Error(`Embedding generation failed: ${response.statusText}`)
+            }
+
+            const result = await response.json()
+            console.log('Embedding generated for legal note:', noteId)
+            return result
+        } catch (err) {
+            console.error('Error generating embedding:', err)
+            // Non-blocking - don't throw error
+        }
+    }
+
+    async function searchNotes(query) {
+        isLoading.value = true
+        error.value = null
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                throw new Error('User not authenticated')
+            }
+
+            // Simple text search (could be enhanced with semantic search)
+            const { data, error: searchError } = await supabase
+                .from('legal_note')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('is_archived', false)
+                .or(`title.ilike.%${query}%,content.ilike.%${query}%,highlighted_text.ilike.%${query}%`)
+                .order('created_at', { ascending: false })
+
+            if (searchError) throw searchError
+
+            return data || []
+        } catch (err) {
+            console.error('Failed to search notes:', err)
+            error.value = '搜尋失敗'
+            return []
+        } finally {
+            isLoading.value = false
         }
     }
 
@@ -156,14 +253,21 @@ export const useNoteStore = defineStore('notes', () => {
     })
 
     return {
+        // State
         notes,
         isLoading,
         error,
+
+        // Actions
         fetchNotes,
         addNote,
         updateNote,
         deleteNote,
         togglePin,
+        generateEmbedding,
+        searchNotes,
+
+        // Getters
         pinnedNotes,
         unpinnedNotes
     }
