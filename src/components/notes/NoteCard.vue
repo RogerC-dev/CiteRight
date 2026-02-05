@@ -47,9 +47,7 @@
       </button>
       
       <div class="right-actions">
-        <button class="action-btn icon-btn" @click.stop="$emit('edit', note)" title="編輯">
-          <i class="bi bi-pencil-square"></i>
-        </button>
+
         <button class="action-btn icon-btn delete-btn" @click.stop="$emit('delete', note.id)" title="刪除">
           <i class="bi bi-trash"></i>
         </button>

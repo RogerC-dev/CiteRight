@@ -100,7 +100,12 @@ async function handleSaveNote(noteData) {
   closePopup()
   // Optional: Show success notification
   // Optional: Sync with Side Panel via runtime message
-  chrome.runtime.sendMessage({ type: 'NOTE_SAVED' })
+  chrome.runtime.sendMessage({ type: 'NOTE_SAVED' }, () => {
+    // Handle response or ignore - prevents "message channel closed" error
+    if (chrome.runtime.lastError) {
+      // Ignore - side panel might not be open
+    }
+  })
 }
 
 function handleAskAI(noteData) {

@@ -42,9 +42,7 @@
         <h3>尚無筆記</h3>
         <p v-if="searchQuery">找不到符合 "{{ searchQuery }}" 的筆記</p>
         <p v-else>選取文字即可快速建立筆記</p>
-        <button class="btn-create" @click="openEditor()">
-          <i class="bi bi-plus-lg"></i> 新增筆記
-        </button>
+
       </div>
 
       <div v-else class="note-list">
@@ -93,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useNoteStore } from '../../stores/noteStore'
 import NoteCard from './NoteCard.vue'
 import NoteEditor from './NoteEditor.vue'
@@ -168,12 +166,27 @@ function closeEditor() {
 }
 
 async function handleSaveNote(noteData) {
-  if (noteData.id) {
-    await store.updateNote(noteData.id, noteData)
-  } else {
-    await store.addNote(noteData)
+  try {
+    if (noteData.id) {
+      // Filter to only send updatable fields
+      const updates = {
+        title: noteData.title,
+        content: noteData.content,
+        content_html: noteData.content_html,
+        tags: noteData.tags || [],
+        is_pinned: noteData.is_pinned
+      }
+      console.log('📝 Updating note:', noteData.id, updates)
+      await store.updateNote(noteData.id, updates)
+    } else {
+      console.log('📝 Creating new note:', noteData)
+      await store.addNote(noteData)
+    }
+    closeEditor()
+  } catch (err) {
+    console.error('Failed to save note:', err)
+    alert('無法儲存筆記：' + err.message)
   }
-  closeEditor()
 }
 
 async function confirmDelete(id) {
@@ -192,8 +205,24 @@ function handleAskAI(note) {
   window.dispatchEvent(event)
 }
 
+// Listen for note updates from content script
+function handleNoteUpdate(message) {
+  if (message.type === 'NOTE_SAVED') {
+    console.log('📝 Side panel: Received NOTE_SAVED message, refreshing notes...')
+    store.fetchNotes()
+  }
+}
+
 onMounted(() => {
   store.fetchNotes()
+
+  // Listen for messages from content script
+  chrome.runtime.onMessage.addListener(handleNoteUpdate)
+})
+
+onUnmounted(() => {
+  // Clean up listener
+  chrome.runtime.onMessage.removeListener(handleNoteUpdate)
 })
 </script>
 
@@ -324,20 +353,7 @@ onMounted(() => {
   margin-bottom: 8px;
 }
 
-.btn-create {
-  margin-top: 16px;
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+
 
 .section-label {
   font-size: 12px;

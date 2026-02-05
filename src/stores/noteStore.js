@@ -1,11 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { createClient } from '@supabase/supabase-js'
-
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const useNoteStore = defineStore('notes', () => {
     // State
@@ -13,39 +7,70 @@ export const useNoteStore = defineStore('notes', () => {
     const isLoading = ref(false)
     const error = ref(null)
 
+    // Helper: Get userId from chrome.storage
+    async function getUserId() {
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['supabaseUserId'], (result) => {
+                resolve(result.supabaseUserId || null);
+            });
+        });
+    }
+
+    // Helper: Call server API via background script proxy
+    async function callAPI(endpoint, options = {}) {
+        return new Promise((resolve, reject) => {
+            chrome.runtime.sendMessage({
+                type: 'API_REQUEST',
+                endpoint: endpoint,
+                method: options.method || 'GET',
+                body: options.body,
+                headers: options.headers || {}
+            }, (response) => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                    return;
+                }
+
+                if (response.success) {
+                    // Unwrap the server response (background.js wraps it in another layer)
+                    const serverResponse = response.data;
+                    if (serverResponse && serverResponse.success) {
+                        resolve(serverResponse.data);
+                    } else if (serverResponse && serverResponse.error) {
+                        reject(new Error(serverResponse.error));
+                    } else {
+                        resolve(serverResponse);
+                    }
+                } else {
+                    reject(new Error(response.error || 'API request failed'));
+                }
+            });
+        });
+    }
+
     // Actions
     async function fetchNotes(filters = {}) {
         isLoading.value = true
         error.value = null
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
+            const userId = await getUserId();
+            if (!userId) {
                 console.log('No authenticated user, skipping note fetch')
                 notes.value = []
                 return
             }
 
-            let query = supabase
-                .from('legal_note')
-                .select('*')
-                .eq('is_archived', false)
-                .order('is_pinned', { ascending: false })
-                .order('created_at', { ascending: false })
-
-            // Apply filters if provided
+            const queryParams = new URLSearchParams();
             if (filters.source_type) {
-                query = query.eq('source_type', filters.source_type)
+                queryParams.append('source_type', filters.source_type);
             }
             if (filters.source_id) {
-                query = query.eq('source_id', filters.source_id)
+                queryParams.append('source_id', filters.source_id);
             }
 
-            const { data, error: fetchError } = await query
-
-            if (fetchError) throw fetchError
-
+            const data = await callAPI(`/api/notes?${queryParams.toString()}`);
             notes.value = data || []
-            console.log(`Loaded ${notes.value.length} legal notes from database`)
+            console.log(`Loaded ${notes.value.length} legal notes from server`)
         } catch (err) {
             console.error('Failed to fetch notes:', err)
             error.value = '無法載入筆記'
@@ -58,31 +83,15 @@ export const useNoteStore = defineStore('notes', () => {
         isLoading.value = true
         error.value = null
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
+            const userId = await getUserId();
+            if (!userId) {
                 throw new Error('User not authenticated')
             }
 
-            const { data, error: insertError } = await supabase
-                .from('legal_note')
-                .insert({
-                    user_id: user.id,
-                    title: noteData.title,
-                    content: noteData.content,
-                    content_html: noteData.content_html,
-                    source_type: noteData.source_type,
-                    source_id: noteData.source_id,
-                    source_url: noteData.source_url,
-                    source_metadata: noteData.source_metadata,
-                    highlighted_text: noteData.highlighted_text,
-                    tags: noteData.tags || [],
-                    is_pinned: noteData.is_pinned || false,
-                    is_archived: false
-                })
-                .select()
-                .single()
-
-            if (insertError) throw insertError
+            const data = await callAPI('/api/notes', {
+                method: 'POST',
+                body: noteData
+            });
 
             notes.value.unshift(data)
 
@@ -106,23 +115,18 @@ export const useNoteStore = defineStore('notes', () => {
         isLoading.value = true
         error.value = null
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
+            const userId = await getUserId();
+            if (!userId) {
                 throw new Error('User not authenticated')
             }
 
-            const { data, error: updateError } = await supabase
-                .from('legal_note')
-                .update({
-                    ...updates,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', id)
-                .eq('user_id', user.id)
-                .select()
-                .single()
+            console.log('📤 Sending update request for note:', id, updates);
+            const data = await callAPI(`/api/notes/${id}`, {
+                method: 'PATCH',
+                body: updates
+            });
 
-            if (updateError) throw updateError
+            console.log('✅ Note update response:', data);
 
             const index = notes.value.findIndex(n => n.id === id)
             if (index !== -1) {
@@ -131,13 +135,16 @@ export const useNoteStore = defineStore('notes', () => {
 
             // Re-generate embedding if content changed
             if (updates.content) {
-                await generateEmbedding(data.id, data.content)
+                generateEmbedding(data.id, data.content).catch(err => {
+                    console.error('Failed to generate embedding:', err)
+                })
             }
 
-            console.log('Legal note updated:', data.id)
+            console.log('✅ Legal note updated:', data.id)
+            return data
         } catch (err) {
-            console.error('Failed to update note:', err)
-            error.value = '無法更新筆記'
+            console.error('❌ Failed to update note:', err)
+            error.value = '無法更新筆記: ' + (err.message || '未知錯誤')
             throw err
         } finally {
             isLoading.value = false
@@ -148,19 +155,14 @@ export const useNoteStore = defineStore('notes', () => {
         isLoading.value = true
         error.value = null
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
+            const userId = await getUserId();
+            if (!userId) {
                 throw new Error('User not authenticated')
             }
 
-            // Soft delete (archive)
-            const { error: deleteError } = await supabase
-                .from('legal_note')
-                .update({ is_archived: true })
-                .eq('id', id)
-                .eq('user_id', user.id)
-
-            if (deleteError) throw deleteError
+            await callAPI(`/api/notes/${id}`, {
+                method: 'DELETE'
+            });
 
             // Remove from local state
             const index = notes.value.findIndex(n => n.id === id)
@@ -187,26 +189,17 @@ export const useNoteStore = defineStore('notes', () => {
 
     async function generateEmbedding(noteId, content) {
         try {
-            // Call Express server endpoint for embedding generation
-            const response = await fetch('http://localhost:3000/api/notes/embed', {
+            // Call server API via background proxy for embedding generation
+            await callAPI('/api/notes/embed', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+                body: {
                     note_id: noteId,
                     content: content,
                     table: 'legal_note'
-                })
-            })
+                }
+            });
 
-            if (!response.ok) {
-                throw new Error(`Embedding generation failed: ${response.statusText}`)
-            }
-
-            const result = await response.json()
             console.log('Embedding generated for legal note:', noteId)
-            return result
         } catch (err) {
             console.error('Error generating embedding:', err)
             // Non-blocking - don't throw error
@@ -217,23 +210,23 @@ export const useNoteStore = defineStore('notes', () => {
         isLoading.value = true
         error.value = null
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
+            const userId = await getUserId();
+            if (!userId) {
                 throw new Error('User not authenticated')
             }
 
-            // Simple text search (could be enhanced with semantic search)
-            const { data, error: searchError } = await supabase
-                .from('legal_note')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('is_archived', false)
-                .or(`title.ilike.%${query}%,content.ilike.%${query}%,highlighted_text.ilike.%${query}%`)
-                .order('created_at', { ascending: false })
+            // Simple text search on local notes
+            // In the future, this could be enhanced with a server-side semantic search endpoint
+            const searchLower = query.toLowerCase();
+            const results = notes.value.filter(note => {
+                return (
+                    (note.title && note.title.toLowerCase().includes(searchLower)) ||
+                    (note.content && note.content.toLowerCase().includes(searchLower)) ||
+                    (note.highlighted_text && note.highlighted_text.toLowerCase().includes(searchLower))
+                );
+            });
 
-            if (searchError) throw searchError
-
-            return data || []
+            return results;
         } catch (err) {
             console.error('Failed to search notes:', err)
             error.value = '搜尋失敗'

@@ -22,6 +22,7 @@ const analyticsRoutes = require('./routes/analytics');
 const aiRoutes = require('./routes/ai');
 // ai-chat.js deleted - session-based chat moved to Supabase Edge Functions
 const subscriptionRoutes = require('./routes/subscription');
+const notesRoutes = require('./routes/notes');
 
 // Validate environment variables before starting
 validateEnvironment();
@@ -113,6 +114,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai', aiRoutes);
 // ai-chat routes removed - using Supabase Edge Functions
 app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/notes', notesRoutes);
 
 // 404 handler for undefined routes
 app.use('*', (req, res) => {

@@ -703,18 +703,25 @@ async function handleApiRequest(msg, sendResponse) {
         };
 
         // Try to get Supabase user ID - either from message or from chrome.storage
-        // Try to get Supabase user ID - either from message or from chrome.storage
         let effectiveUserId = supabaseUserId;
 
-        // 1. Check authenticated user
+        // 1. Check authenticated user from new storage key
         if (!effectiveUserId) {
-            const storageResult = await chrome.storage.local.get(['precedent_supabase_user']);
-            if (storageResult.precedent_supabase_user?.userId) {
-                effectiveUserId = storageResult.precedent_supabase_user.userId;
+            const storageResult = await chrome.storage.local.get(['supabaseUserId']);
+            if (storageResult.supabaseUserId) {
+                effectiveUserId = storageResult.supabaseUserId;
             }
         }
 
-        // 2. Fallback to anonymous local user ID
+        // 2. Fallback to old storage key for backwards compatibility
+        if (!effectiveUserId) {
+            const oldStorageResult = await chrome.storage.local.get(['precedent_supabase_user']);
+            if (oldStorageResult.precedent_supabase_user?.userId) {
+                effectiveUserId = oldStorageResult.precedent_supabase_user.userId;
+            }
+        }
+
+        // 3. Fallback to anonymous local user ID
         if (!effectiveUserId) {
             effectiveUserId = await getOrCreateLocalUserId();
             console.log('👤 Background: Using anonymous local user ID:', effectiveUserId);

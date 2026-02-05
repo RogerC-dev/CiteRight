@@ -97,6 +97,7 @@ const textareaRef = ref(null)
 const tagInput = ref('')
 
 const formData = reactive({
+  id: null,
   title: '',
   content: '',
   highlighted_text: '',
@@ -111,6 +112,7 @@ watch(() => props.isVisible, (newVal) => {
   if (newVal) {
     if (props.initialData) {
       Object.assign(formData, {
+        id: props.initialData.id || null,
         title: props.initialData.title || '',
         content: props.initialData.content || '',
         highlighted_text: props.initialData.highlighted_text || '',
@@ -122,6 +124,7 @@ watch(() => props.isVisible, (newVal) => {
     } else {
       // Reset
       Object.assign(formData, {
+        id: null,
         title: '',
         content: '',
         highlighted_text: '',
